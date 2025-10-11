@@ -21,3 +21,7 @@ disallow_subclassing_any = true
 disallow_incomplete_defs = true
 warn_unused_ignores = true
 strict_equality = true
+
+[tool.pytest.ini_options]
+python_files = "*_test.py"
+addopts = '--capture=sys'
