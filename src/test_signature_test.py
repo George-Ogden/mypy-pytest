@@ -77,3 +77,53 @@ def test_test_signature_items_signature_multiple_names() -> None:
             ...
         """
     )
+
+
+def test_signature_test_case_signature_test_body(fn_defs: str) -> None:
+    type_checker, fn_types = parse_types(fn_defs)
+    fn_type = fn_types["test_case"]
+    assert isinstance(fn_type, CallableType)
+    test_signature = test_signature_from_fn_type(type_checker, fn_type)
+
+    expected_type = fn_types["expected"]
+    assert expected_type is not None
+    assert is_same_type(test_signature.test_case_signature, expected_type)
+
+
+test_signature_test_case_signature_test_body.__test__ = False  # type: ignore
+
+
+def test_test_signature_test_case_signature_no_names() -> None:
+    test_signature_test_case_signature_test_body(
+        """
+        def test_case() -> None:
+            ...
+
+        def expected(x: tuple[()], /) -> None:
+            ...
+        """
+    )
+
+
+def test_test_signature_test_case_signature_one_name() -> None:
+    test_signature_test_case_signature_test_body(
+        """
+        def test_case(x: float) -> None:
+            ...
+
+        def expected(x: tuple[float], /) -> None:
+            ...
+        """
+    )
+
+
+def test_test_signature_test_case_signature_multiple_names() -> None:
+    test_signature_test_case_signature_test_body(
+        """
+        def test_case(x: float, z: bool, t: list) -> None:
+            ...
+
+        def expected(x: tuple[float, bool, list], /) -> None:
+            ...
+        """
+    )
