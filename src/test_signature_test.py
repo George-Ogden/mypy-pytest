@@ -11,7 +11,7 @@ import mypy.options
 from mypy.subtypes import is_same_type
 from mypy.types import CallableType, Type
 
-from .test_utils import test_signature_from_fn_type
+from .test_utils import _test_signature_from_fn_type
 
 
 @dataclass(frozen=True)
@@ -42,12 +42,15 @@ def parse_types(code: str) -> tuple[TypeChecker, TypeLookup]:
 
 
 def _test_signature_custom_signature_test_body(
-    fn_defs: str, *, attr: Literal["items_signature", "test_case_signature"], extra_expected: bool
+    fn_defs: str,
+    *,
+    attr: Literal["items_signature", "test_case_signature", "sequence_signature"],
+    extra_expected: bool,
 ) -> None:
     type_checker, fn_types = parse_types(fn_defs)
     fn_type = fn_types["test_case"]
     assert isinstance(fn_type, CallableType)
-    test_signature = test_signature_from_fn_type(type_checker, fn_type)
+    test_signature = _test_signature_from_fn_type(type_checker, fn_type)
 
     expected_key = "expected" if extra_expected else "test_case"
     expected_type = fn_types[expected_key]
@@ -123,6 +126,54 @@ def test_test_signature_test_case_signature_multiple_names() -> None:
             ...
 
         def expected(x: tuple[float, bool, list], /) -> None:
+            ...
+        """
+    )
+
+
+def _test_signature_sequence_signature_test_body(fn_defs: str) -> None:
+    _test_signature_custom_signature_test_body(
+        fn_defs, attr="sequence_signature", extra_expected=True
+    )
+
+
+def test_test_signature_sequence_signature_no_names() -> None:
+    _test_signature_sequence_signature_test_body(
+        """
+        from collections.abc import Iterable
+
+        def test_case() -> None:
+            ...
+
+        def expected(x: Iterable[tuple[()]], /) -> None:
+            ...
+        """
+    )
+
+
+def test_test_signature_sequence_signature_one_name() -> None:
+    _test_signature_sequence_signature_test_body(
+        """
+        from collections.abc import Iterable
+
+        def test_case(_: None) -> None:
+            ...
+
+        def expected(x: Iterable[tuple[None]], /) -> None:
+            ...
+        """
+    )
+
+
+def test_test_signature_sequence_signature_multiple_names() -> None:
+    _test_signature_sequence_signature_test_body(
+        """
+        from collections.abc import Iterable, Sequence
+
+        def test_case(x: tuple[int, ...], z: Any, t: Sequence[set[int]]) -> None:
+            ...
+
+        def expected(x: Iterable[tuple[tuple[int, ...], Any, Sequence[set[int]]]], /) -> None:
             ...
         """
     )

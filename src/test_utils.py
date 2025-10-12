@@ -6,7 +6,7 @@ from mypy.types import CallableType
 from .test_signature import TestSignature
 
 
-def test_signature_from_fn_type(checker: TypeChecker, fn_type: CallableType) -> TestSignature:
+def _test_signature_from_fn_type(checker: TypeChecker, fn_type: CallableType) -> TestSignature:
     assert all(name is not None for name in fn_type.arg_names)
     return TestSignature(
         checker=checker,
