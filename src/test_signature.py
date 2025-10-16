@@ -8,6 +8,7 @@ from mypy.types import CallableType, Instance, NoneType, TupleType, Type
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TestSignature:
     checker: TypeChecker
+    fn_name: str
     arg_names: tuple[str, ...]
     arg_types: tuple[Type, ...]
 
@@ -59,4 +60,22 @@ class TestSignature:
             arg_kinds=[mypy.nodes.ArgKind.ARG_POS],
             fallback=self.checker.named_type("builtins.function"),
             ret_type=NoneType(),
+        )
+
+    def check_one_item(self, node: mypy.nodes.Expression) -> None:
+        self.checker.expr_checker.check_call(
+            callee=self.items_signature,
+            args=[node],
+            arg_kinds=[mypy.nodes.ArgKind.ARG_POS],
+            context=node,
+            callable_name=self.fn_name,
+        )
+
+    def check_many_items(self, node: mypy.nodes.TupleExpr | mypy.nodes.ListExpr) -> None:
+        self.checker.expr_checker.check_call(
+            callee=self.items_signature,
+            args=node.items,
+            arg_kinds=[mypy.nodes.ArgKind.ARG_POS] * len(node.items),
+            context=node,
+            callable_name=self.fn_name,
         )
