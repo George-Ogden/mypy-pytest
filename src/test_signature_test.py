@@ -7,6 +7,7 @@ import mypy.options
 import mypy.parse
 from mypy.subtypes import is_same_type
 from mypy.types import CallableType
+import pytest
 
 from .test_signature import TestSignature
 from .test_utils import parse_defs, parse_types, test_signature_from_fn_type
@@ -164,6 +165,7 @@ def _get_signature_and_vals(defs: str) -> tuple[TestSignature, mypy.nodes.Expres
 
 def _test_signature_check_one_item_test_body(defs: str, *, passes: bool) -> None:
     test_signature, val = _get_signature_and_vals(defs)
+
     assert not test_signature.checker.msg.errors.is_errors()
     test_signature.check_one_item(val)
     assert test_signature.checker.msg.errors.is_errors() != passes
@@ -171,6 +173,7 @@ def _test_signature_check_one_item_test_body(defs: str, *, passes: bool) -> None
 
 def _test_signature_check_many_items_test_body(defs: str, *, passes: bool) -> None:
     test_signature, vals = _get_signature_and_vals(defs)
+
     assert isinstance(vals, mypy.nodes.TupleExpr | mypy.nodes.ListExpr)
     assert not test_signature.checker.msg.errors.is_errors()
     test_signature.check_many_items(vals)
@@ -327,6 +330,105 @@ def test_test_signature_check_items_many_args_incorrect_val_types_list() -> None
             ...
 
         vals = [0, 1.0]
+
+        """,
+        passes=False,
+    )
+
+
+def _test_signature_check_test_case_test_body(defs: str, *, passes: bool) -> None:
+    test_signature, vals = _get_signature_and_vals(defs)
+    assert not test_signature.checker.msg.errors.is_errors()
+    test_signature.check_test_case(vals)
+    assert test_signature.checker.msg.errors.is_errors() != passes
+
+
+def test_test_signature_check_test_case_no_args_no_vals_tuple() -> None:
+    _test_signature_check_test_case_test_body(
+        """
+        def test_case() -> None:
+            ...
+
+        vals = ()
+
+        """,
+        passes=True,
+    )
+
+
+def test_test_signature_check_test_case_no_args_expression() -> None:
+    _test_signature_check_test_case_test_body(
+        """
+        def test_case() -> None:
+            ...
+
+        vals = [()][0]
+
+        """,
+        passes=True,
+    )
+
+
+def test_test_signature_check_test_case_no_args_incorrect_expression() -> None:
+    _test_signature_check_test_case_test_body(
+        """
+        def test_case() -> None:
+            ...
+
+        vals = (1, 2, 3)
+
+        """,
+        passes=False,
+    )
+
+
+def test_test_signature_check_test_case_one_arg_correct_expression() -> None:
+    with pytest.raises(AssertionError):
+        _test_signature_check_test_case_test_body(
+            """
+            def test_case(x: int) -> None:
+                ...
+
+            vals = (3,)
+
+            """,
+            passes=True,
+        )
+
+
+def test_test_signature_check_test_case_multiple_args_correct_expression() -> None:
+    _test_signature_check_test_case_test_body(
+        """
+        def test_case(x: int, y: int, z: int) -> None:
+            ...
+
+        vals = (1, 2, 3)
+
+        """,
+        passes=True,
+    )
+
+
+def test_test_signature_check_test_case_multiple_args_incorrect_expression() -> None:
+    _test_signature_check_test_case_test_body(
+        """
+        def test_case(x: int, y: int, z: int) -> None:
+            ...
+
+        vals = (1, 2, "c")
+
+        """,
+        passes=False,
+    )
+
+
+def test_test_signature_check_test_case_multiple_args_incorrect_list_expression() -> None:
+    _test_signature_check_test_case_test_body(
+        """
+        def test_case(x: int, y: int, z: int) -> None:
+            ...
+
+        vals = [1, 2, 3]
 
         """,
         passes=False,

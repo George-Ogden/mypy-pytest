@@ -79,3 +79,13 @@ class TestSignature:
             context=node,
             callable_name=self.fn_name,
         )
+
+    def check_test_case(self, node: mypy.nodes.Expression) -> None:
+        assert len(self) != 1
+        self.checker.expr_checker.check_call(
+            callee=self.test_case_signature,
+            args=[node],
+            arg_kinds=[mypy.nodes.ArgKind.ARG_POS],
+            context=node,
+            callable_name=self.fn_name,
+        )
