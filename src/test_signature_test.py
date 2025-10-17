@@ -131,7 +131,7 @@ def test_test_signature_sequence_signature_one_arg() -> None:
         def test_case(_: None) -> None:
             ...
 
-        def expected(x: Iterable[tuple[None]], /) -> None:
+        def expected(x: Iterable[None], /) -> None:
             ...
         """
     )
@@ -429,6 +429,104 @@ def test_test_signature_check_test_case_multiple_args_incorrect_list_expression(
             ...
 
         vals = [1, 2, 3]
+
+        """,
+        passes=False,
+    )
+
+
+def _test_signature_check_sequence_test_body(defs: str, *, passes: bool) -> None:
+    test_signature, vals = _get_signature_and_vals(defs)
+    assert not test_signature.checker.msg.errors.is_errors()
+    test_signature.check_sequence(vals)
+    assert test_signature.checker.msg.errors.is_errors() != passes
+
+
+def test_test_signature_check_sequence_no_args_no_vals_list() -> None:
+    _test_signature_check_sequence_test_body(
+        """
+        def test_case() -> None:
+            ...
+
+        vals = [(), (), (), ()]
+
+        """,
+        passes=True,
+    )
+
+
+def test_test_signature_check_sequence_no_args_no_vals_incorrect_list() -> None:
+    _test_signature_check_sequence_test_body(
+        """
+        def test_case() -> None:
+            ...
+
+        vals = [(), (3, ), (), ()]
+
+        """,
+        passes=False,
+    )
+
+
+def test_test_signature_check_sequence_one_arg_one_val_list() -> None:
+    _test_signature_check_sequence_test_body(
+        """
+        def test_case(x: int) -> None:
+            ...
+
+        vals = [1, 2, 3, 4]
+
+        """,
+        passes=True,
+    )
+
+
+def test_test_signature_check_sequence_one_arg_nested_val_list() -> None:
+    _test_signature_check_sequence_test_body(
+        """
+        def test_case(x: int) -> None:
+            ...
+
+        vals = [(1,), (2,)]
+
+        """,
+        passes=False,
+    )
+
+
+def test_test_signature_check_sequence_one_arg_incorrect_list() -> None:
+    _test_signature_check_sequence_test_body(
+        """
+        def test_case(x: int) -> None:
+            ...
+
+        vals = ["a", "b"]
+
+        """,
+        passes=False,
+    )
+
+
+def test_test_signature_check_sequence_multiple_args_list() -> None:
+    _test_signature_check_sequence_test_body(
+        """
+        def test_case(x: int, y: str) -> None:
+            ...
+
+        vals = [(2, "a"), (3, "b")]
+
+        """,
+        passes=True,
+    )
+
+
+def test_test_signature_check_sequence_multiple_args_incorrect_list() -> None:
+    _test_signature_check_sequence_test_body(
+        """
+        def test_case(x: str, y: int) -> None:
+            ...
+
+        vals = [(2, "a"), (3, "b")]
 
         """,
         passes=False,
