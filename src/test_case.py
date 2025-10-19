@@ -5,7 +5,7 @@ from mypy.nodes import Expression, ListExpr, TupleExpr
 from .test_signature import TestSignature
 
 
-@dataclass
+@dataclass(frozen=True, slots=True)
 class TestCase:
     node: Expression
 

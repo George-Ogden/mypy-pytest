@@ -42,7 +42,7 @@ def parse_types(code: str) -> tuple[TypeChecker, TypeLookup]:
         raise ValueError(f"Unable to infer types. Errors: {state.early_errors}")
 
     type_checker = state.type_checker()
-    errors = type_checker.msg.errors
+    errors = type_checker.errors
     if errors.is_errors():
         for info in errors.error_info_map.values():
             for err in info:
@@ -102,9 +102,9 @@ def get_signature_and_vals(defs: str) -> tuple[TestSignature, Expression]:
 
 
 def type_checks(body: Callable[[], Any], checker: TypeChecker) -> bool:
-    assert not checker.msg.errors.is_errors()
+    assert not checker.errors.is_errors()
     body()
-    return not checker.msg.errors.is_errors()
+    return not checker.errors.is_errors()
 
 
 test_signature_from_fn_type.__test__ = False  # type: ignore
