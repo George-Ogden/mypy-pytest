@@ -86,9 +86,11 @@ class TestSignature:
         )
 
     def check_one_item(self, node: Expression) -> None:
+        assert self.is_single
         self._check_call(self.items_signature, [node], node)
 
     def check_many_items(self, node: TupleExpr | ListExpr) -> None:
+        assert not self.is_single
         self._check_call(self.items_signature, node.items, node)
 
     def check_test_case(self, node: Expression) -> None:
