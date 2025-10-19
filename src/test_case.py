@@ -9,6 +9,10 @@ from .test_signature import TestSignature
 class TestCase:
     node: Expression
 
+    @property
+    def is_sequence(self) -> bool:
+        return isinstance(self.node, TupleExpr | ListExpr)
+
     def check_one_item_against(self, signature: TestSignature) -> None:
         assert signature.is_single
         signature.check_one_item(self.node)
@@ -20,3 +24,9 @@ class TestCase:
 
     def check_entire_against(self, signature: TestSignature) -> None:
         signature.check_test_case(self.node)
+
+    def check_multiple_against(self, signature: TestSignature) -> None:
+        if self.is_sequence:
+            self.check_many_items_against(signature)
+        else:
+            self.check_entire_against(signature)

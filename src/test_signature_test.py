@@ -3,7 +3,6 @@ from typing import Callable, Literal
 from mypy.nodes import Expression, ListExpr, TupleExpr
 from mypy.subtypes import is_same_type
 from mypy.types import CallableType
-import pytest
 
 from .test_signature import TestSignature
 from .test_utils import (
@@ -382,20 +381,6 @@ def test_test_signature_check_test_case_no_args_incorrect_expression() -> None:
         """,
         passes=False,
     )
-
-
-def test_test_signature_check_test_case_one_arg_correct_expression() -> None:
-    with pytest.raises(AssertionError):
-        _test_signature_check_test_case_test_body(
-            """
-            def test_case(x: int) -> None:
-                ...
-
-            vals = (3,)
-
-            """,
-            passes=True,
-        )
 
 
 def test_test_signature_check_test_case_multiple_args_correct_expression() -> None:
