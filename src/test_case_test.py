@@ -278,3 +278,85 @@ def test_test_case_check_single_against_one_arg_incorrect_expression() -> None:
         """,
         passes=False,
     )
+
+
+def _test_signature_check_against_test_body(defs: str, *, passes: bool) -> None:
+    _test_signature_check_against_custom_test_body(defs, passes, TestCase.check_against)
+
+
+def test_test_case_check_against_one_arg_correct_expression() -> None:
+    _test_signature_check_against_test_body(
+        """
+        def test_case(x: tuple[int]) -> None:
+            ...
+
+        vals = (1,)
+
+        """,
+        passes=True,
+    )
+
+
+def test_test_case_check_against_one_arg_incorrect_expression() -> None:
+    _test_signature_check_against_test_body(
+        """
+        def test_case(x: int) -> None:
+            ...
+
+        vals = (1,)
+
+        """,
+        passes=False,
+    )
+
+
+def test_test_case_check_against_no_args_correct_expression() -> None:
+    _test_signature_check_against_test_body(
+        """
+        def test_case() -> None:
+            ...
+
+        vals = [()][0]
+
+        """,
+        passes=True,
+    )
+
+
+def test_test_case_check_against_no_args_incorrect_expression() -> None:
+    _test_signature_check_against_test_body(
+        """
+        def test_case() -> None:
+            ...
+
+        vals = ((), 1)[1]
+
+        """,
+        passes=False,
+    )
+
+
+def test_test_case_check_against_many_args_correct_expression() -> None:
+    _test_signature_check_against_test_body(
+        """
+        def test_case(x: int, y: float, z: str) -> None:
+            ...
+
+        vals = [1, 2.5, "true"]
+
+        """,
+        passes=True,
+    )
+
+
+def test_test_case_check_against_many_args_incorrect_expression() -> None:
+    _test_signature_check_against_test_body(
+        """
+        def test_case(x: int, y: float) -> None:
+            ...
+
+        vals = [1, 2.5, "true"]
+
+        """,
+        passes=False,
+    )

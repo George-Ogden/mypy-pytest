@@ -30,3 +30,9 @@ class TestCase:
     def check_single_against(self, signature: TestSignature) -> None:
         assert signature.is_single
         signature.check_one_item(self.node)
+
+    def check_against(self, signature: TestSignature) -> None:
+        if signature.is_single:
+            self.check_single_against(signature)
+        else:
+            self.check_multiple_against(signature)
