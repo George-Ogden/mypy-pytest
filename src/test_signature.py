@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
 from mypy.checker import TypeChecker
-import mypy.nodes
+from mypy.nodes import ArgKind, Context, Expression, ListExpr, TupleExpr
 from mypy.types import CallableType, Instance, NoneType, TupleType, Type
 
 
@@ -23,7 +23,7 @@ class TestSignature:
         return CallableType(
             arg_types=self.arg_types,
             arg_names=self.arg_names,
-            arg_kinds=[mypy.nodes.ArgKind.ARG_POS] * len(self),
+            arg_kinds=[ArgKind.ARG_POS] * len(self),
             fallback=self.checker.named_type("builtins.function"),
             ret_type=NoneType(),
         )
@@ -32,7 +32,7 @@ class TestSignature:
         return CallableType(
             arg_types=[arg_type],
             arg_names=[None],
-            arg_kinds=[mypy.nodes.ArgKind.ARG_POS],
+            arg_kinds=[ArgKind.ARG_POS],
             fallback=self.checker.named_type("builtins.function"),
             ret_type=NoneType(),
         )
@@ -72,26 +72,24 @@ class TestSignature:
     def _multiple_sequence_signature(self) -> CallableType:
         return self._one_unnamed_arg_fn(self._multiple_sequence_arg_type())
 
-    def _check_call(
-        self, callee: CallableType, args: list[mypy.nodes.Expression], node: mypy.nodes.Context
-    ) -> None:
+    def _check_call(self, callee: CallableType, args: list[Expression], node: Context) -> None:
         self.checker.expr_checker.check_call(
             callee=callee,
             args=args,
-            arg_kinds=[mypy.nodes.ArgKind.ARG_POS] * len(args),
+            arg_kinds=[ArgKind.ARG_POS] * len(args),
             context=node,
             callable_name=self.fn_name,
         )
 
-    def check_one_item(self, node: mypy.nodes.Expression) -> None:
+    def check_one_item(self, node: Expression) -> None:
         self._check_call(self.items_signature, [node], node)
 
-    def check_many_items(self, node: mypy.nodes.TupleExpr | mypy.nodes.ListExpr) -> None:
+    def check_many_items(self, node: TupleExpr | ListExpr) -> None:
         self._check_call(self.items_signature, node.items, node)
 
-    def check_test_case(self, node: mypy.nodes.Expression) -> None:
+    def check_test_case(self, node: Expression) -> None:
         assert len(self) != 1
         self._check_call(self.test_case_signature, [node], node)
 
-    def check_sequence(self, node: mypy.nodes.Expression) -> None:
+    def check_sequence(self, node: Expression) -> None:
         self._check_call(self.sequence_signature, [node], node)

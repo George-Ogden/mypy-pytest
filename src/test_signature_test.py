@@ -1,10 +1,6 @@
 from typing import Literal
 
-import mypy.build
-import mypy.modulefinder
-import mypy.nodes
-import mypy.options
-import mypy.parse
+from mypy.nodes import Expression, ListExpr, TupleExpr
 from mypy.subtypes import is_same_type
 from mypy.types import CallableType
 import pytest
@@ -152,7 +148,7 @@ def test_test_signature_sequence_signature_multiple_args() -> None:
     )
 
 
-def _get_signature_and_vals(defs: str) -> tuple[TestSignature, mypy.nodes.Expression]:
+def _get_signature_and_vals(defs: str) -> tuple[TestSignature, Expression]:
     type_checker, fn_types = parse_types(defs)
     fn_type = fn_types["test_case"]
     assert isinstance(fn_type, CallableType)
@@ -174,7 +170,7 @@ def _test_signature_check_one_item_test_body(defs: str, *, passes: bool) -> None
 def _test_signature_check_many_items_test_body(defs: str, *, passes: bool) -> None:
     test_signature, vals = _get_signature_and_vals(defs)
 
-    assert isinstance(vals, mypy.nodes.TupleExpr | mypy.nodes.ListExpr)
+    assert isinstance(vals, TupleExpr | ListExpr)
     assert not test_signature.checker.msg.errors.is_errors()
     test_signature.check_many_items(vals)
     assert test_signature.checker.msg.errors.is_errors() != passes
