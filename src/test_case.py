@@ -17,3 +17,6 @@ class TestCase:
         assert not signature.is_single
         assert isinstance(self.node, TupleExpr | ListExpr)
         signature.check_many_items(self.node)
+
+    def check_entire_against(self, signature: TestSignature) -> None:
+        signature.check_test_case(self.node)
