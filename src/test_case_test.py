@@ -17,38 +17,8 @@ def _test_signature_check_against_custom_test_body(
     )
 
 
-def _test_signature_check_one_item_test_body(defs: str, *, passes: bool) -> None:
-    _test_signature_check_against_custom_test_body(defs, passes, TestCase.check_one_item_against)
-
-
-def test_test_case_check_one_item_against_correct() -> None:
-    _test_signature_check_one_item_test_body(
-        """
-        def test_case(x: str) -> None:
-            ...
-
-        vals = "s"
-
-        """,
-        passes=True,
-    )
-
-
 def _test_signature_check_many_items_test_body(defs: str, *, passes: bool) -> None:
     _test_signature_check_against_custom_test_body(defs, passes, TestCase.check_many_items_against)
-
-
-def test_test_case_check_one_item_against_incorrect() -> None:
-    _test_signature_check_one_item_test_body(
-        """
-        def test_case(x: bool) -> None:
-            ...
-
-        vals = 3.5
-
-        """,
-        passes=False,
-    )
 
 
 def test_test_case_check_many_items_against_correct() -> None:
@@ -274,6 +244,36 @@ def test_test_case_check_multiple_against_many_args_set_expression() -> None:
             ...
 
         vals = {4, 5}
+
+        """,
+        passes=False,
+    )
+
+
+def _test_signature_check_single_test_body(defs: str, *, passes: bool) -> None:
+    _test_signature_check_against_custom_test_body(defs, passes, TestCase.check_single_against)
+
+
+def test_test_case_check_single_against_one_arg_correct_expression() -> None:
+    _test_signature_check_single_test_body(
+        """
+        def test_case(x: int) -> None:
+            ...
+
+        vals = 4
+
+        """,
+        passes=True,
+    )
+
+
+def test_test_case_check_single_against_one_arg_incorrect_expression() -> None:
+    _test_signature_check_single_test_body(
+        """
+        def test_case(x: int) -> None:
+            ...
+
+        vals = [4]
 
         """,
         passes=False,
