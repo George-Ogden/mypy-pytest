@@ -19,3 +19,6 @@ class Argvals:
     def check_sequence_against(self, signature: TestSignature) -> None:
         for test_case in self:
             test_case.check_against(signature)
+
+    def check_entire_against(self, signature: TestSignature) -> None:
+        signature.check_sequence(self.node)

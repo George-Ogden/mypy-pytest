@@ -13,7 +13,7 @@ def _argvals_check_against_custom_sequence_body(
 
     checker = test_signature.checker
     assert type_checks(lambda: body(argvals, test_signature), checker=checker) == (errors == 0)
-    assert checker.errors.num_messages() == errors
+    assert checker.errors.num_messages() == errors, checker.errors.new_messages()
 
 
 def _argvals_check_sequence_test_body(defs: str, *, errors: int) -> None:
@@ -89,4 +89,32 @@ def test_argvals_check_sequence_some_incorrect() -> None:
         vals = [(9, (), ()), [8, ()], [4]]
         """,
         errors=2,
+    )
+
+
+def _argvals_check_entire_test_body(defs: str, *, errors: int) -> None:
+    _argvals_check_against_custom_sequence_body(defs, errors, Argvals.check_entire_against)
+
+
+def test_argvals_check_entire_correct_expression() -> None:
+    _argvals_check_entire_test_body(
+        """
+        def test_case(x: int, y: float) -> None:
+            ...
+
+        vals = [[(2, 3.0), (4, 5.0)]][0]
+        """,
+        errors=0,
+    )
+
+
+def test_argvals_check_entire_incorrect_expression() -> None:
+    _argvals_check_entire_test_body(
+        """
+        def test_case(x: int, y: str) -> None:
+            ...
+
+        vals = [[(1,), (2, 3), ("a", 2)]][0]
+        """,
+        errors=1,
     )
