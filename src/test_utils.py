@@ -1,13 +1,14 @@
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 import textwrap
-from typing import cast
+from typing import Any, cast
 
 import mypy.build
 from mypy.checker import TypeChecker
 from mypy.errors import Errors
 import mypy.modulefinder
 import mypy.nodes
+from mypy.nodes import Expression
 import mypy.options
 import mypy.parse
 from mypy.types import CallableType, Type
@@ -87,6 +88,23 @@ def test_signature_from_fn_type(
         arg_names=tuple(cast(list[str], fn_type.arg_names)),
         arg_types=tuple(fn_type.arg_types),
     )
+
+
+def get_signature_and_vals(defs: str) -> tuple[TestSignature, Expression]:
+    type_checker, fn_types = parse_types(defs)
+    fn_type = fn_types["test_case"]
+    assert isinstance(fn_type, CallableType)
+    test_signature = test_signature_from_fn_type(type_checker, fn_name="test_case", fn_type=fn_type)
+
+    nodes = parse_defs(defs)
+    vals = nodes["vals"]
+    return test_signature, vals
+
+
+def type_checks(body: Callable[[], Any], checker: TypeChecker) -> bool:
+    assert not checker.msg.errors.is_errors()
+    body()
+    return not checker.msg.errors.is_errors()
 
 
 test_signature_from_fn_type.__test__ = False  # type: ignore

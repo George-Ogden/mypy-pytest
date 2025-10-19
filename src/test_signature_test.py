@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Callable, Literal
 
 from mypy.nodes import Expression, ListExpr, TupleExpr
 from mypy.subtypes import is_same_type
@@ -6,7 +6,12 @@ from mypy.types import CallableType
 import pytest
 
 from .test_signature import TestSignature
-from .test_utils import parse_defs, parse_types, test_signature_from_fn_type
+from .test_utils import (
+    get_signature_and_vals,
+    parse_types,
+    test_signature_from_fn_type,
+    type_checks,
+)
 
 
 def _test_signature_custom_signature_test_body(
@@ -148,32 +153,36 @@ def test_test_signature_sequence_signature_multiple_args() -> None:
     )
 
 
-def _get_signature_and_vals(defs: str) -> tuple[TestSignature, Expression]:
-    type_checker, fn_types = parse_types(defs)
-    fn_type = fn_types["test_case"]
-    assert isinstance(fn_type, CallableType)
-    test_signature = test_signature_from_fn_type(type_checker, fn_name="test_case", fn_type=fn_type)
+def _test_signature_custom_check_test_body[T: Expression](
+    defs: str,
+    passes: bool,
+    body: Callable[[TestSignature, T], None],
+    *,
+    bound: type[T] = Expression,  # type: ignore
+) -> None:
+    test_signature, val = get_signature_and_vals(defs)
+    assert isinstance(val, bound)
 
-    nodes = parse_defs(defs)
-    vals = nodes["vals"]
-    return test_signature, vals
+    assert (
+        type_checks(
+            lambda: body(test_signature, val),
+            checker=test_signature.checker,
+        )
+        == passes
+    )
 
 
 def _test_signature_check_one_item_test_body(defs: str, *, passes: bool) -> None:
-    test_signature, val = _get_signature_and_vals(defs)
-
-    assert not test_signature.checker.msg.errors.is_errors()
-    test_signature.check_one_item(val)
-    assert test_signature.checker.msg.errors.is_errors() != passes
+    _test_signature_custom_check_test_body(defs, passes, TestSignature.check_one_item)
 
 
 def _test_signature_check_many_items_test_body(defs: str, *, passes: bool) -> None:
-    test_signature, vals = _get_signature_and_vals(defs)
-
-    assert isinstance(vals, TupleExpr | ListExpr)
-    assert not test_signature.checker.msg.errors.is_errors()
-    test_signature.check_many_items(vals)
-    assert test_signature.checker.msg.errors.is_errors() != passes
+    _test_signature_custom_check_test_body(
+        defs,
+        passes,
+        TestSignature.check_many_items,
+        bound=TupleExpr | ListExpr,  # type: ignore
+    )
 
 
 def test_test_signature_check_items_no_args_no_vals_tuple() -> None:
@@ -333,10 +342,7 @@ def test_test_signature_check_items_many_args_incorrect_val_types_list() -> None
 
 
 def _test_signature_check_test_case_test_body(defs: str, *, passes: bool) -> None:
-    test_signature, vals = _get_signature_and_vals(defs)
-    assert not test_signature.checker.msg.errors.is_errors()
-    test_signature.check_test_case(vals)
-    assert test_signature.checker.msg.errors.is_errors() != passes
+    _test_signature_custom_check_test_body(defs, passes, TestSignature.check_test_case)
 
 
 def test_test_signature_check_test_case_no_args_no_vals_tuple() -> None:
@@ -432,10 +438,7 @@ def test_test_signature_check_test_case_multiple_args_incorrect_list_expression(
 
 
 def _test_signature_check_sequence_test_body(defs: str, *, passes: bool) -> None:
-    test_signature, vals = _get_signature_and_vals(defs)
-    assert not test_signature.checker.msg.errors.is_errors()
-    test_signature.check_sequence(vals)
-    assert test_signature.checker.msg.errors.is_errors() != passes
+    _test_signature_custom_check_test_body(defs, passes, TestSignature.check_sequence)
 
 
 def test_test_signature_check_sequence_no_args_no_vals_list() -> None:

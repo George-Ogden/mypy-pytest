@@ -59,10 +59,14 @@ class TestSignature:
 
     @property
     def sequence_signature(self) -> CallableType:
-        if len(self) == 1:
+        if self.is_single:
             return self._single_sequence_signature
         else:
             return self._multiple_sequence_signature
+
+    @property
+    def is_single(self) -> bool:
+        return len(self) == 1
 
     @property
     def _single_sequence_signature(self) -> CallableType:
@@ -88,7 +92,7 @@ class TestSignature:
         self._check_call(self.items_signature, node.items, node)
 
     def check_test_case(self, node: Expression) -> None:
-        assert len(self) != 1
+        assert not self.is_single
         self._check_call(self.test_case_signature, [node], node)
 
     def check_sequence(self, node: Expression) -> None:
