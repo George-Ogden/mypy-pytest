@@ -13,6 +13,7 @@ import mypy.options
 import mypy.parse
 from mypy.types import CallableType, Type
 
+from .test_info import TestInfo
 from .test_signature import TestSignature
 
 
@@ -105,6 +106,12 @@ def type_checks(body: Callable[[], Any], checker: TypeChecker) -> bool:
     assert not checker.errors.is_errors()
     body()
     return not checker.errors.is_errors()
+
+
+def default_test_info() -> TestInfo:
+    type_checker, _ = parse_types("")
+    test_info = TestInfo(checker=type_checker)
+    return test_info
 
 
 test_signature_from_fn_type.__test__ = False  # type: ignore

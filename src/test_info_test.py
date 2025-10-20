@@ -1,30 +1,39 @@
 import re
+from typing import Callable, cast
 
-from mypy.nodes import StrExpr
+from mypy.nodes import Expression
 
 from .test_info import TestInfo
-from .test_utils import parse_defs, parse_types
+from .test_utils import default_test_info, parse_defs
 
 
-def _test_info_parse_names_string_test_body(
-    source: str, names: list[str] | None, *, errors: list[str] | None = None
+def _test_info_parse_names_custom_test_body[T: Expression](
+    source: str,
+    names: list[str] | None,
+    errors: list[str] | None,
+    parse_names: Callable[[TestInfo, T], list[str] | None],
 ) -> None:
-    type_checker, _ = parse_types("")
-    test_info = TestInfo(checker=type_checker)
+    test_info = default_test_info()
+    type_checker = test_info.checker
 
     source = f"names = {source}"
     node_mapping = parse_defs(source)
-    names_node = node_mapping["names"]
-    assert isinstance(names_node, StrExpr)
+    names_node = cast(T, node_mapping["names"])
 
     assert not type_checker.errors.is_errors()
-    assert test_info.parse_names_string(names_node) == names
+    assert parse_names(test_info, names_node) == names
     messages = "\n".join(type_checker.errors.new_messages())
     if errors:
         error_codes = [match for match in re.findall(r"\[([a-z\-]*)\]", messages)]
         assert error_codes == errors, messages
     else:
         assert not type_checker.errors.is_errors()
+
+
+def _test_info_parse_names_string_test_body(
+    source: str, names: list[str] | None, *, errors: list[str] | None = None
+) -> None:
+    _test_info_parse_names_custom_test_body(source, names, errors, TestInfo.parse_names_string)
 
 
 def test_test_info_parse_names_string_empty() -> None:
@@ -57,3 +66,69 @@ def test_info_parse_names_string_starting_with_number() -> None:
 
 def test_test_info_parse_names_string_with_space() -> None:
     _test_info_parse_names_string_test_body("'aa b'", None, errors=["invalid-argname"])
+
+
+def test_test_info_parse_names_string_with_invalid_name() -> None:
+    _test_info_parse_names_string_test_body("'aaa, b b, c'", None, errors=["invalid-argname"])
+
+
+def test_test_info_parse_names_string_with_multiple_invalid_names() -> None:
+    _test_info_parse_names_string_test_body(
+        "'aaa, b b, c-d'", None, errors=["invalid-argname", "invalid-argname"]
+    )
+
+
+def _test_info_parse_names_sequence_test_body(
+    source: str,
+    names: list[str] | None,
+    *,
+    errors: list[str] | None = None,
+) -> None:
+    _test_info_parse_names_custom_test_body(source, names, errors, TestInfo.parse_names_sequence)
+
+
+def test_test_info_parse_names_sequence_empty() -> None:
+    _test_info_parse_names_sequence_test_body("()", [])
+
+
+def test_test_info_parse_names_sequence_integer_name() -> None:
+    _test_info_parse_names_sequence_test_body("[5]", None, errors=["unreadable-argname"])
+
+
+def test_test_info_parse_names_sequence_one_item() -> None:
+    _test_info_parse_names_sequence_test_body("['bar']", ["bar"])
+
+
+def test_test_info_parse_names_sequence_one_item_extra_space() -> None:
+    _test_info_parse_names_sequence_test_body("['foo ']", None, errors=["invalid-argname"])
+
+
+def test_test_info_parse_names_sequence_three_items() -> None:
+    _test_info_parse_names_sequence_test_body("('a', 'b_', '__c_')", ["a", "b_", "__c_"])
+
+
+def test_test_info_parse_names_sequence_one_starting_with_number() -> None:
+    _test_info_parse_names_sequence_test_body("['8ac']", None, errors=["invalid-argname"])
+
+
+def test_test_info_parse_names_sequence_multiple_errors() -> None:
+    _test_info_parse_names_sequence_test_body(
+        "('a', 10, '28', f'{5}')",
+        None,
+        # unreadable argname message not repeated
+        errors=["unreadable-argname", "invalid-argname"],
+    )
+
+
+def test_test_info_parse_names_sequence_one_int() -> None:
+    _test_info_parse_names_sequence_test_body("('a', 10, 'c')", None, errors=["unreadable-argname"])
+
+
+def test_test_info_parse_names_sequence_one_invalid() -> None:
+    _test_info_parse_names_sequence_test_body("('a', '8ab', 'c')", None, errors=["invalid-argname"])
+
+
+def test_test_info_parse_names_sequence_one_undeterminable() -> None:
+    _test_info_parse_names_sequence_test_body(
+        "('a', 'ab'.upper(), 'c')", None, errors=["unreadable-argname"]
+    )
