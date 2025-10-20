@@ -9,9 +9,9 @@ from .test_utils import default_test_info, parse_defs
 
 def _test_info_parse_names_custom_test_body[T: Expression](
     source: str,
-    names: list[str] | None,
+    names: str | list[str] | None,
     errors: list[str] | None,
-    parse_names: Callable[[TestInfo, T], list[str] | None],
+    parse_names: Callable[[TestInfo, T], str | list[str] | None],
 ) -> None:
     test_info = default_test_info()
     type_checker = test_info.checker
@@ -31,7 +31,7 @@ def _test_info_parse_names_custom_test_body[T: Expression](
 
 
 def _test_info_parse_names_string_test_body(
-    source: str, names: list[str] | None, *, errors: list[str] | None = None
+    source: str, names: str | list[str] | None, *, errors: list[str] | None = None
 ) -> None:
     _test_info_parse_names_custom_test_body(source, names, errors, TestInfo.parse_names_string)
 
@@ -45,11 +45,11 @@ def test_test_info_parse_names_string_noise_only() -> None:
 
 
 def test_test_info_parse_names_string_one_item() -> None:
-    _test_info_parse_names_string_test_body("'bar'", ["bar"])
+    _test_info_parse_names_string_test_body("'bar'", "bar")
 
 
 def test_test_info_parse_names_string_one_item_extra_noise() -> None:
-    _test_info_parse_names_string_test_body("', foo_8,,, , '", ["foo_8"])
+    _test_info_parse_names_string_test_body("', foo_8,,, , '", "foo_8")
 
 
 def test_test_info_parse_names_string_three_items() -> None:

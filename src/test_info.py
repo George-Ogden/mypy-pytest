@@ -19,11 +19,14 @@ class TestInfo:
         )
         return False
 
-    def parse_names_string(self, node: StrExpr) -> list[str] | None:
+    def parse_names_string(self, node: StrExpr) -> str | list[str] | None:
         individual_names = [name.strip() for name in node.value.split(",")]
         filtered_names = [name for name in individual_names if name]
         if any([not self._check_valid_identifier(name, node) for name in filtered_names]):
             return None
+        if len(filtered_names) == 1:
+            [name] = filtered_names
+            return name
         return filtered_names
 
     def _parse_name(self, node: Expression) -> str | None:
