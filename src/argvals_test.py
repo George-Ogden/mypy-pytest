@@ -12,8 +12,10 @@ def _argvals_check_against_custom_sequence_body(
     argvals = Argvals(vals)
 
     checker = test_signature.checker
-    assert type_checks(lambda: body(argvals, test_signature), checker=checker) == (errors == 0)
-    assert checker.errors.num_messages() == errors, "\n".join(checker.errors.new_messages())
+    type_check_result = type_checks(lambda: body(argvals, test_signature), checker=checker)
+    new_messages = "\n".join(checker.errors.new_messages())
+    assert type_check_result == (errors == 0), new_messages
+    assert checker.errors.num_messages() == errors, new_messages
 
 
 def _argvals_check_sequence_test_body(defs: str, *, errors: int) -> None:
@@ -59,7 +61,7 @@ def test_argvals_check_sequence_many_correct() -> None:
 def test_argvals_check_sequence_all_but_one_correct() -> None:
     _argvals_check_sequence_test_body(
         """
-        def test_case(x: int) -> None:
+        def test_case(x_1: int) -> None:
             ...
 
         vals = {8, 9, 10, "b"}
@@ -77,6 +79,18 @@ def test_argvals_check_sequence_all_incorrect() -> None:
         vals = [8, ((),), [""]]
         """,
         errors=3,
+    )
+
+
+def test_argvals_check_sequence_correct_nested_sequence() -> None:
+    _argvals_check_sequence_test_body(
+        """
+        def test_case(x: tuple[int]) -> None:
+            ...
+
+        vals = (((3,),), ((4,),))
+        """,
+        errors=0,
     )
 
 
@@ -151,7 +165,7 @@ def test_argvals_check_against_correct_expression() -> None:
 def test_argvals_check_against_correct_string() -> None:
     _argvals_check_against_test_body(
         """
-        def test_case(c: str) -> None:
+        def test_case(c_1: str) -> None:
             ...
 
         vals = "abracadabra"
@@ -163,7 +177,7 @@ def test_argvals_check_against_correct_string() -> None:
 def test_argvals_check_against_incorrect_tuple() -> None:
     _argvals_check_against_test_body(
         """
-        def test_case(x: int) -> None:
+        def test_case(x_1: int) -> None:
             ...
 
         vals = ("a", "b", "c", "d")
@@ -175,7 +189,7 @@ def test_argvals_check_against_incorrect_tuple() -> None:
 def test_argvals_check_against_incorrect_string() -> None:
     _argvals_check_against_test_body(
         """
-        def test_case(x: int) -> None:
+        def test_case(x_1: int) -> None:
             ...
 
         vals = "abcd"
@@ -187,7 +201,7 @@ def test_argvals_check_against_incorrect_string() -> None:
 def test_argvals_check_against_incorrect_expression() -> None:
     _argvals_check_against_test_body(
         """
-        def test_case(x: int) -> None:
+        def test_case(x_1: int) -> None:
             ...
 
         vals = [*[(), (1,), (2, 3,)], *[]]

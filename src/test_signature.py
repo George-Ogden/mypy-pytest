@@ -1,32 +1,22 @@
+import abc
 from dataclasses import dataclass
 
 from mypy.checker import TypeChecker
 from mypy.nodes import ArgKind, Context, Expression, ListExpr, TupleExpr
-from mypy.types import CallableType, Instance, NoneType, TupleType, Type
+from mypy.types import CallableType, NoneType, Type
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
-class TestSignature:
+class TestSignature(abc.ABC):
     checker: TypeChecker
     fn_name: str
-    arg_names: tuple[str, ...]
-    arg_types: tuple[Type, ...]
 
-    def __post_init__(self) -> None:
-        assert len(self.arg_names) == len(self.arg_types)
-
-    def __len__(self) -> int:
-        return len(self.arg_names)
+    @abc.abstractmethod
+    def __len__(self) -> int: ...
 
     @property
-    def items_signature(self) -> CallableType:
-        return CallableType(
-            arg_types=self.arg_types,
-            arg_names=self.arg_names,
-            arg_kinds=[ArgKind.ARG_POS] * len(self),
-            fallback=self.checker.named_type("builtins.function"),
-            ret_type=NoneType(),
-        )
+    def is_single(self) -> bool:
+        return len(self) == 1
 
     def _one_unnamed_arg_fn(self, arg_type: Type) -> CallableType:
         return CallableType(
@@ -37,44 +27,17 @@ class TestSignature:
             ret_type=NoneType(),
         )
 
-    def _test_case_arg_type(self) -> TupleType:
-        return TupleType(list(self.arg_types), fallback=self.checker.named_type("builtins.tuple"))
+    @property
+    @abc.abstractmethod
+    def sequence_signature(self) -> CallableType: ...
 
     @property
-    def test_case_signature(self) -> CallableType:
-        return self._one_unnamed_arg_fn(self._test_case_arg_type())
-
-    def _single_sequence_arg_type(self) -> Instance:
-        [arg_type] = self.arg_types
-        return self.checker.named_generic_type(
-            "typing.Iterable",
-            args=[arg_type],
-        )
-
-    def _multiple_sequence_arg_type(self) -> Instance:
-        return self.checker.named_generic_type(
-            "typing.Iterable",
-            args=[self._test_case_arg_type()],
-        )
+    @abc.abstractmethod
+    def test_case_signature(self) -> CallableType: ...
 
     @property
-    def sequence_signature(self) -> CallableType:
-        if self.is_single:
-            return self._single_sequence_signature
-        else:
-            return self._multiple_sequence_signature
-
-    @property
-    def is_single(self) -> bool:
-        return len(self) == 1
-
-    @property
-    def _single_sequence_signature(self) -> CallableType:
-        return self._one_unnamed_arg_fn(self._single_sequence_arg_type())
-
-    @property
-    def _multiple_sequence_signature(self) -> CallableType:
-        return self._one_unnamed_arg_fn(self._multiple_sequence_arg_type())
+    @abc.abstractmethod
+    def items_signature(self) -> CallableType: ...
 
     def _check_call(self, callee: CallableType, args: list[Expression], node: Context) -> None:
         self.checker.expr_checker.check_call(
@@ -85,16 +48,10 @@ class TestSignature:
             callable_name=self.fn_name,
         )
 
-    def check_one_item(self, node: Expression) -> None:
-        assert self.is_single
-        self._check_call(self.items_signature, [node], node)
-
-    def check_many_items(self, node: TupleExpr | ListExpr) -> None:
-        assert not self.is_single
+    def check_items(self, node: TupleExpr | ListExpr) -> None:
         self._check_call(self.items_signature, node.items, node)
 
     def check_test_case(self, node: Expression) -> None:
-        assert not self.is_single
         self._check_call(self.test_case_signature, [node], node)
 
     def check_sequence(self, node: Expression) -> None:

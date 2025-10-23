@@ -1,7 +1,7 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 import textwrap
-from typing import Any, cast
+from typing import Any, Literal, cast
 
 import mypy.build
 from mypy.checker import TypeChecker
@@ -11,8 +11,11 @@ import mypy.nodes
 from mypy.nodes import Expression
 import mypy.options
 import mypy.parse
+from mypy.subtypes import is_same_type
 from mypy.types import CallableType, Type
 
+from .many_items_test_signature import ManyItemsTestSignature
+from .one_item_test_signature import OneItemTestSignature
 from .test_info import TestInfo
 from .test_signature import TestSignature
 
@@ -83,15 +86,28 @@ def test_signature_from_fn_type(
     checker: TypeChecker, fn_name: str, fn_type: CallableType
 ) -> TestSignature:
     assert all(name is not None for name in fn_type.arg_names)
-    return TestSignature(
-        checker=checker,
-        fn_name=fn_name,
-        arg_names=tuple(cast(list[str], fn_type.arg_names)),
-        arg_types=tuple(fn_type.arg_types),
-    )
+    arg_names = tuple(cast(list[str], fn_type.arg_names))
+    if any(name.endswith("1") for name in arg_names):
+        [arg_name] = arg_names
+        [arg_type] = fn_type.arg_types
+        return OneItemTestSignature(
+            checker=checker, fn_name=fn_name, arg_name=arg_name, arg_type=arg_type
+        )
+    else:
+        return ManyItemsTestSignature(
+            checker=checker,
+            fn_name=fn_name,
+            arg_names=arg_names,
+            arg_types=tuple(fn_type.arg_types),
+        )
 
 
-def get_signature_and_vals(defs: str) -> tuple[TestSignature, Expression]:
+test_signature_from_fn_type.__test__ = False  # type: ignore
+
+
+def get_signature_and_vals(
+    defs: str,
+) -> tuple[TestSignature, Expression]:
     type_checker, fn_types = parse_types(defs)
     fn_type = fn_types["test_case"]
     assert isinstance(fn_type, CallableType)
@@ -108,10 +124,53 @@ def type_checks(body: Callable[[], Any], checker: TypeChecker) -> bool:
     return not checker.errors.is_errors()
 
 
+def test_signature_custom_signature_test_body(
+    fn_defs: str,
+    *,
+    attr: Literal["items_signature", "test_case_signature", "sequence_signature"],
+    extra_expected: bool,
+) -> None:
+    type_checker, fn_types = parse_types(fn_defs)
+    fn_type = fn_types["test_case"]
+    assert isinstance(fn_type, CallableType)
+    test_signature = test_signature_from_fn_type(type_checker, fn_name="test_case", fn_type=fn_type)
+
+    expected_key = "expected" if extra_expected else "test_case"
+    expected_type = fn_types[expected_key]
+    assert expected_type is not None
+    assert is_same_type(getattr(test_signature, attr), expected_type)
+
+
+test_signature_custom_signature_test_body.__test__ = False  # type: ignore
+
+
+def test_signature_custom_check_test_body[
+    T: TestSignature,
+    U: Expression,
+](
+    defs: str,
+    passes: bool,
+    body: Callable[[T, U], None],
+    *,
+    bound: type[U] = Expression,  # type: ignore
+) -> None:
+    test_signature, val = get_signature_and_vals(defs)
+    assert isinstance(val, bound)
+
+    checker = test_signature.checker
+    type_check_result = type_checks(
+        lambda: body(cast(T, test_signature), val),
+        checker=checker,
+    )
+    new_messages = "\n".join(checker.errors.new_messages())
+
+    assert type_check_result == passes, new_messages
+
+
+test_signature_custom_check_test_body.__test__ = False  # type: ignore
+
+
 def default_test_info() -> TestInfo:
     type_checker, _ = parse_types("")
     test_info = TestInfo(checker=type_checker)
     return test_info
-
-
-test_signature_from_fn_type.__test__ = False  # type: ignore
