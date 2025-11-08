@@ -2,7 +2,7 @@ from collections.abc import Callable
 
 from .argvals import Argvals
 from .test_signature import TestSignature
-from .test_utils import get_signature_and_vals, type_checks
+from .test_utils import get_error_messages, get_signature_and_vals, type_checks
 
 
 def _argvals_check_against_custom_sequence_body(
@@ -13,9 +13,9 @@ def _argvals_check_against_custom_sequence_body(
 
     checker = test_signature.checker
     type_check_result = type_checks(lambda: body(argvals, test_signature), checker=checker)
-    new_messages = "\n".join(checker.errors.new_messages())
-    assert type_check_result == (errors == 0), new_messages
-    assert checker.errors.num_messages() == errors, new_messages
+    messages = get_error_messages(checker)
+    assert type_check_result == (errors == 0), messages
+    assert checker.errors.num_messages() == errors, messages
 
 
 def _argvals_check_sequence_test_body(defs: str, *, errors: int) -> None:

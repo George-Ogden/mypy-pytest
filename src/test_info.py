@@ -1,15 +1,83 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import cast
+from typing import Self, cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import Expression, ListExpr, StrExpr, TupleExpr
+from mypy.nodes import ArgKind, Argument, Expression, FuncDef, ListExpr, StrExpr, TupleExpr
+from mypy.types import AnyType, Type, TypeOfAny
 
-from .error_codes import INVALID_ARGNAME, UNREADABLE_ARGNAME, UNREADABLE_ARGNAMES
+from .error_codes import (
+    INVALID_ARGNAME,
+    POSITIONAL_ONLY_ARGUMENT,
+    UNREADABLE_ARGNAME,
+    UNREADABLE_ARGNAMES,
+    VARIADIC_KEYWORD_ARGUMENT,
+    VARIADIC_POSITIONAL_ARGUMENT,
+)
+
+
+@dataclass(frozen=True, slots=True, kw_only=True)
+class TestArgument:
+    name: str
+    type_: Type
+    initialized: bool
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TestInfo:
+    fn_name: str
+    arguments: Sequence[TestArgument]
     checker: TypeChecker
+
+    @classmethod
+    def from_fn_def(cls, fn_def: FuncDef, *, checker: TypeChecker) -> Self | None:
+        test_arguments = cls._validate_test_arguments(fn_def.arguments, checker=checker)
+        if test_arguments is None:
+            return None
+        return cls(checker=checker, fn_name=fn_def.name, arguments=test_arguments)
+
+    @classmethod
+    def _validate_test_arguments(
+        cls, arguments: Sequence[Argument], *, checker: TypeChecker
+    ) -> Sequence[TestArgument] | None:
+        test_arguments: Sequence[TestArgument | None] = [
+            cls._validate_test_argument(argument, checker=checker) for argument in arguments
+        ]
+        if any(argument is None for argument in test_arguments):
+            return None
+        return cast(list[TestArgument], test_arguments)
+
+    @classmethod
+    def _validate_test_argument(
+        cls, argument: Argument, *, checker: TypeChecker
+    ) -> TestArgument | None:
+        if argument.pos_only:
+            checker.msg.fail(
+                f"`{argument.variable.name}` must not be positional only.",
+                context=argument,
+                code=POSITIONAL_ONLY_ARGUMENT,
+            )
+            return None
+        if argument.kind == ArgKind.ARG_STAR:
+            checker.msg.fail(
+                f"`*{argument.variable.name}` must not be variadic positional.",
+                context=argument,
+                code=VARIADIC_POSITIONAL_ARGUMENT,
+            )
+            return None
+        if argument.kind == ArgKind.ARG_STAR2:
+            checker.msg.fail(
+                f"`**{argument.variable.name}` must not be variadic keyword-only.",
+                context=argument,
+                code=VARIADIC_KEYWORD_ARGUMENT,
+            )
+            return None
+        return TestArgument(
+            name=argument.variable.name,
+            type_=argument.type_annotation
+            or AnyType(TypeOfAny.unannotated, line=argument.line, column=argument.column),
+            initialized=argument.initializer is not None,
+        )
 
     def _parse_names(self, node: Expression) -> str | list[str] | None:
         match node:

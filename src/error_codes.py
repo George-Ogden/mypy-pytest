@@ -13,3 +13,24 @@ UNREADABLE_ARGNAME: Final[ErrorCode] = ErrorCode(
 UNREADABLE_ARGNAMES: Final[ErrorCode] = ErrorCode(
     "unreadable-argnames", "Unable to parse Pytest argnames.", category="Pytest"
 )
+
+
+POSITIONAL_ONLY_ARGUMENT: Final[ErrorCode] = ErrorCode(
+    "pos-only-arg",
+    "Positional only arguments not allowed in Pytest test definitions.",
+    category="Pytest",
+)
+
+
+VARIADIC_POSITIONAL_ARGUMENT: Final[ErrorCode] = ErrorCode(
+    "var-pos-arg",
+    "Variadic positional arguments not allowed in Pytest test definitions.",
+    category="Pytest",
+)
+
+
+VARIADIC_KEYWORD_ARGUMENT: Final[ErrorCode] = ErrorCode(
+    "var-keyword-arg",
+    "Keyword-only positional arguments not allowed in Pytest test definitions.",
+    category="Pytest",
+)

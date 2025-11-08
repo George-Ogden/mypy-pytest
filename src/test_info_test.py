@@ -1,10 +1,15 @@
-import re
 from typing import Callable, cast
 
-from mypy.nodes import Expression
+from mypy.nodes import Expression, FuncDef
 
 from .test_info import TestInfo
-from .test_utils import default_test_info, parse_defs
+from .test_utils import (
+    check_error_messages,
+    default_test_info,
+    default_type_checker,
+    get_error_messages,
+    parse_defs,
+)
 
 
 def _test_info_parse_names_custom_test_body[T: Expression](
@@ -14,20 +19,16 @@ def _test_info_parse_names_custom_test_body[T: Expression](
     parse_names: Callable[[TestInfo, T], str | list[str] | None],
 ) -> None:
     test_info = default_test_info()
-    type_checker = test_info.checker
+    checker = test_info.checker
 
     source = f"names = {source}"
     node_mapping = parse_defs(source)
     names_node = cast(T, node_mapping["names"])
 
-    assert not type_checker.errors.is_errors()
+    assert not checker.errors.is_errors()
     assert parse_names(test_info, names_node) == names
-    messages = "\n".join(type_checker.errors.new_messages())
-    if errors:
-        error_codes = [match for match in re.findall(r"\[([a-z\-]*)\]", messages)]
-        assert error_codes == errors, messages
-    else:
-        assert not type_checker.errors.is_errors()
+    messages = get_error_messages(checker)
+    check_error_messages(messages, errors=errors)
 
 
 def _test_info_parse_names_string_test_body(
@@ -161,3 +162,96 @@ def test_test_info_parse_names_many_as_sequence() -> None:
 
 def test_test_info_parse_names_invalid_type() -> None:
     _test_info_parse_names_test_body("{'a', 'b'}", None, errors=["unreadable-argnames"])
+
+
+def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = None) -> None:
+    checker = default_type_checker()
+
+    node_mapping = parse_defs(source)
+    test_node = cast(FuncDef, node_mapping["test_info"])
+
+    assert not checker.errors.is_errors()
+    test_info = TestInfo.from_fn_def(test_node, checker=checker)
+
+    messages = get_error_messages(checker)
+    if errors is None:
+        assert test_info is not None, messages
+    else:
+        assert test_info is None
+    check_error_messages(messages, errors=errors)
+
+
+def test_test_info_from_fn_def_no_args() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        def test_info() -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_from_fn_def_one_arg() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        def test_info(x: int):
+            ...
+        """
+    )
+
+
+def test_test_info_from_fn_def_keyword_arg() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        def test_info(*, x: int) -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_from_fn_def_many_args() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        def test_info[T: int](x: T, y: T, z: int = 4) -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_from_fn_def_pos_only_arg() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        def test_info(x, /) -> None:
+            ...
+        """,
+        errors=["pos-only-arg"],
+    )
+
+
+def test_test_info_from_fn_def_vararg() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        def test_info(arg: object, *args: object) -> None:
+            ...
+        """,
+        errors=["var-pos-arg"],
+    )
+
+
+def test_test_info_from_fn_def_varkwarg() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        def test_info(arg: object, **kwargs: object) -> None:
+            ...
+        """,
+        errors=["var-keyword-arg"],
+    )
+
+
+def test_test_info_from_fn_def_vararg_and_varkwarg() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        def test_info(*args: object, **kwargs: object) -> None:
+            ...
+        """,
+        errors=["var-pos-arg", "var-keyword-arg"],
+    )

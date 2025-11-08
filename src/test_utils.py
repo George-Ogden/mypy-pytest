@@ -1,5 +1,6 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+import re
 import textwrap
 from typing import Any, Literal, cast
 
@@ -8,7 +9,7 @@ from mypy.checker import TypeChecker
 from mypy.errors import Errors
 import mypy.modulefinder
 import mypy.nodes
-from mypy.nodes import Expression
+from mypy.nodes import AssignmentStmt, Expression, FuncDef, NameExpr
 import mypy.options
 import mypy.parse
 from mypy.subtypes import is_same_type
@@ -55,7 +56,7 @@ def parse_types(code: str) -> tuple[TypeChecker, TypeLookup]:
     return type_checker, TypeLookup(tree.names)
 
 
-def parse_defs(code: str) -> Mapping[str, mypy.nodes.Expression]:
+def parse_defs(code: str) -> Mapping[str, Expression | FuncDef]:
     code = textwrap.dedent(code).strip()
 
     options = mypy.options.Options()
@@ -72,14 +73,28 @@ def parse_defs(code: str) -> Mapping[str, mypy.nodes.Expression]:
         raise_on_error=True,
     )
 
-    node_mapping: dict[str, mypy.nodes.Expression] = {}
+    node_mapping: dict[str, Expression | FuncDef] = {}
     for def_ in tree.defs:
-        if isinstance(def_, mypy.nodes.AssignmentStmt):
+        if isinstance(def_, AssignmentStmt):
             for name in def_.lvalues:
-                if isinstance(name, mypy.nodes.NameExpr):
+                if isinstance(name, NameExpr):
                     node_mapping[name.name] = def_.rvalue
+        elif isinstance(def_, FuncDef):
+            node_mapping[def_.name] = def_
 
     return node_mapping
+
+
+def get_error_messages(checker: TypeChecker) -> str:
+    return "\n".join(checker.errors.new_messages())
+
+
+def check_error_messages(messages: str, *, errors: list[str] | None) -> None:
+    if errors:
+        error_codes = [match for match in re.findall(r"\[([a-z\-]*)\]", messages)]
+        assert error_codes == errors, messages
+    else:
+        assert not errors
 
 
 def test_signature_from_fn_type(
@@ -115,6 +130,7 @@ def get_signature_and_vals(
 
     nodes = parse_defs(defs)
     vals = nodes["vals"]
+    assert isinstance(vals, Expression)
     return test_signature, vals
 
 
@@ -162,15 +178,19 @@ def test_signature_custom_check_test_body[
         lambda: body(cast(T, test_signature), val),
         checker=checker,
     )
-    new_messages = "\n".join(checker.errors.new_messages())
+    messages = get_error_messages(checker)
 
-    assert type_check_result == passes, new_messages
+    assert type_check_result == passes, messages
 
 
 test_signature_custom_check_test_body.__test__ = False  # type: ignore
 
 
-def default_test_info() -> TestInfo:
+def default_type_checker() -> TypeChecker:
     type_checker, _ = parse_types("")
-    test_info = TestInfo(checker=type_checker)
+    return type_checker
+
+
+def default_test_info() -> TestInfo:
+    test_info = TestInfo(checker=default_type_checker(), fn_name="test_info", arguments=[])
     return test_info
