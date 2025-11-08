@@ -9,3 +9,7 @@ INVALID_ARGNAME: Final[ErrorCode] = ErrorCode(
 UNREADABLE_ARGNAME: Final[ErrorCode] = ErrorCode(
     "unreadable-argname", "Unable to parse Pytest argname.", category="Pytest"
 )
+
+UNREADABLE_ARGNAMES: Final[ErrorCode] = ErrorCode(
+    "unreadable-argnames", "Unable to parse Pytest argnames.", category="Pytest"
+)

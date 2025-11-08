@@ -132,3 +132,32 @@ def test_test_info_parse_names_sequence_one_undeterminable() -> None:
     _test_info_parse_names_sequence_test_body(
         "('a', 'ab'.upper(), 'c')", None, errors=["unreadable-argname"]
     )
+
+
+def _test_info_parse_names_test_body(
+    source: str,
+    names: list[str] | str | None,
+    *,
+    errors: list[str] | None = None,
+) -> None:
+    _test_info_parse_names_custom_test_body(source, names, errors, TestInfo._parse_names)
+
+
+def test_test_info_parse_names_one_as_string() -> None:
+    _test_info_parse_names_test_body("'abc'", "abc")
+
+
+def test_test_info_parse_names_multiple_as_string() -> None:
+    _test_info_parse_names_test_body("'a,b,c'", ["a", "b", "c"])
+
+
+def test_test_info_parse_names_one_as_sequence() -> None:
+    _test_info_parse_names_test_body("['foo']", ["foo"])
+
+
+def test_test_info_parse_names_many_as_sequence() -> None:
+    _test_info_parse_names_test_body("('foo', 'bar')", ["foo", "bar"])
+
+
+def test_test_info_parse_names_invalid_type() -> None:
+    _test_info_parse_names_test_body("{'a', 'b'}", None, errors=["unreadable-argnames"])

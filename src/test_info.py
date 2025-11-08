@@ -4,12 +4,26 @@ from typing import cast
 from mypy.checker import TypeChecker
 from mypy.nodes import Expression, ListExpr, StrExpr, TupleExpr
 
-from .error_codes import INVALID_ARGNAME, UNREADABLE_ARGNAME
+from .error_codes import INVALID_ARGNAME, UNREADABLE_ARGNAME, UNREADABLE_ARGNAMES
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TestInfo:
     checker: TypeChecker
+
+    def _parse_names(self, node: Expression) -> str | list[str] | None:
+        match node:
+            case StrExpr():
+                return self.parse_names_string(node)
+            case ListExpr() | TupleExpr():
+                return self.parse_names_sequence(node)
+            case _:
+                self.checker.msg.fail(
+                    "Unable to identify argnames. (Use a comma-separated string, list of strings or tuple of strings).",
+                    context=node,
+                    code=UNREADABLE_ARGNAMES,
+                )
+                return None
 
     def _check_valid_identifier(self, name: str, context: StrExpr) -> bool:
         if name.isidentifier():
