@@ -7,10 +7,9 @@ from .test_info import TestInfo
 from .test_utils import (
     check_error_messages,
     default_test_info,
-    default_type_checker,
     get_error_messages,
-    parse_defs,
-    parse_types,
+    parse,
+    test_info_from_defs,
     test_signature_from_fn_type,
 )
 
@@ -21,12 +20,13 @@ def _test_info_parse_names_custom_test_body[T: Expression](
     errors: list[str] | None,
     parse_names: Callable[[TestInfo, T], str | list[str] | None],
 ) -> None:
-    test_info = default_test_info()
-    checker = test_info.checker
-
     source = f"names = {source}"
-    node_mapping = parse_defs(source)
-    names_node = cast(T, node_mapping["names"])
+    parse_result = parse(source)
+    checker = parse_result.checker
+
+    names_node = cast(T, parse_result.defs["names"])
+
+    test_info = default_test_info(checker)
 
     assert not checker.errors.is_errors()
     assert parse_names(test_info, names_node) == names
@@ -172,10 +172,10 @@ def test_test_info_parse_names_invalid_type() -> None:
 
 
 def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = None) -> None:
-    checker = default_type_checker()
+    parse_result = parse(source)
+    checker = parse_result.checker
 
-    node_mapping = parse_defs(source)
-    test_node = node_mapping["test_info"]
+    test_node = parse_result.defs["test_info"]
     assert isinstance(test_node, FuncDef)
 
     assert not checker.errors.is_errors()
@@ -266,10 +266,12 @@ def test_test_info_from_fn_def_vararg_and_varkwarg() -> None:
 
 
 def _test_info_sub_signature_test_body(
-    source: str, argnames: str | list[str], *, errors: list[str] | None = None
+    defs: str, argnames: str | list[str], *, errors: list[str] | None = None
 ) -> None:
-    checker, fn_types = parse_types(source)
-    fn_type = fn_types.get("sub_signature")
+    parse_result = parse(defs)
+    checker = parse_result.checker
+
+    fn_type = parse_result.types.get("sub_signature")
     assert isinstance(fn_type, CallableType | None)
     expected_signature = (
         None
@@ -277,15 +279,7 @@ def _test_info_sub_signature_test_body(
         else test_signature_from_fn_type(checker, fn_name="test_info", fn_type=fn_type)
     )
 
-    node_mapping = parse_defs(source)
-    test_node = node_mapping["test_info"]
-    assert isinstance(test_node, FuncDef)
-    test_type = fn_types["test_info"]
-    assert isinstance(test_type, CallableType)
-    for argument, arg_type in zip(test_node.arguments, test_type.arg_types, strict=True):
-        argument.type_annotation = arg_type
-    test_info = TestInfo.from_fn_def(test_node, checker=checker)
-    assert test_info is not None
+    test_info = test_info_from_defs(defs, name="test_info")
 
     assert not checker.errors.is_errors()
     sub_signature = test_info.sub_signature(argnames)

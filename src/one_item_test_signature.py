@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
 from mypy.nodes import ArgKind
+from mypy.subtypes import is_same_type
 from mypy.types import CallableType, NoneType, Type
 
 from .test_signature import TestSignature
@@ -15,7 +16,7 @@ class OneItemTestSignature(TestSignature):
         return (
             self._equal_names(other)
             and self.arg_name == other.arg_name
-            and self.arg_type == other.arg_type
+            and is_same_type(self.arg_type, other.arg_type)
         )
 
     def __len__(self) -> int:

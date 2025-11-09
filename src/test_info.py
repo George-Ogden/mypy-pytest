@@ -4,7 +4,15 @@ from dataclasses import dataclass
 from typing import Self, cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import ArgKind, Argument, Expression, FuncDef, ListExpr, StrExpr, TupleExpr
+from mypy.nodes import (
+    ArgKind,
+    Argument,
+    Expression,
+    FuncDef,
+    ListExpr,
+    StrExpr,
+    TupleExpr,
+)
 from mypy.types import AnyType, Type, TypeOfAny
 
 from .error_codes import (

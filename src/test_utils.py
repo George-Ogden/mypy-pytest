@@ -1,17 +1,15 @@
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+import functools
 import re
 import textwrap
 from typing import Any, Literal, cast, overload
 
 import mypy.build
 from mypy.checker import TypeChecker
-from mypy.errors import Errors
 import mypy.modulefinder
-import mypy.nodes
 from mypy.nodes import AssignmentStmt, Expression, FuncDef, NameExpr
 import mypy.options
-import mypy.parse
 from mypy.subtypes import is_same_type
 from mypy.types import CallableType, Type
 
@@ -40,12 +38,21 @@ class TypeLookup:
             return default
 
 
-def parse_types(code: str) -> tuple[TypeChecker, TypeLookup]:
+@dataclass(frozen=True, kw_only=True)
+class ParseResult:
+    checker: TypeChecker
+    types: TypeLookup
+    defs: Mapping[str, Expression | FuncDef]
+
+
+@functools.lru_cache(maxsize=1)
+def parse(code: str) -> ParseResult:
     code = textwrap.dedent(code).strip()
 
     options = mypy.options.Options()
     options.incremental = False
     options.show_traceback = True
+    options.preserve_asts = True
 
     result = mypy.build.build(
         sources=[mypy.modulefinder.BuildSource(path=None, module="test_module", text=code)],
@@ -64,36 +71,17 @@ def parse_types(code: str) -> tuple[TypeChecker, TypeLookup]:
             for err in info:
                 print(f"{err.file}:{err.line}: {err.message}")
         raise TypeError()
-    return type_checker, TypeLookup(tree.names)
 
-
-def parse_defs(code: str) -> Mapping[str, Expression | FuncDef]:
-    code = textwrap.dedent(code).strip()
-
-    options = mypy.options.Options()
-    options.incremental = False
-    options.show_traceback = True
-    errors = Errors(options)
-
-    tree = mypy.parse.parse(
-        code,
-        fnam="test_module.py",
-        module="test_module",
-        errors=errors,
-        options=options,
-        raise_on_error=True,
-    )
-
-    node_mapping: dict[str, Expression | FuncDef] = {}
+    defs: dict[str, Expression | FuncDef] = {}
     for def_ in tree.defs:
         if isinstance(def_, AssignmentStmt):
             for name in def_.lvalues:
                 if isinstance(name, NameExpr):
-                    node_mapping[name.name] = def_.rvalue
+                    defs[name.name] = def_.rvalue
         elif isinstance(def_, FuncDef):
-            node_mapping[def_.name] = def_
+            defs[def_.name] = def_
 
-    return node_mapping
+    return ParseResult(checker=type_checker, types=TypeLookup(tree.names), defs=defs)
 
 
 def get_error_messages(checker: TypeChecker) -> str:
@@ -135,13 +123,14 @@ test_signature_from_fn_type.__test__ = False  # type: ignore
 def get_signature_and_vals(
     defs: str,
 ) -> tuple[TestSignature, Expression]:
-    type_checker, fn_types = parse_types(defs)
-    fn_type = fn_types["test_case"]
+    parse_result = parse(defs)
+    fn_type = parse_result.types["test_case"]
     assert isinstance(fn_type, CallableType)
-    test_signature = test_signature_from_fn_type(type_checker, fn_name="test_case", fn_type=fn_type)
+    test_signature = test_signature_from_fn_type(
+        parse_result.checker, fn_name="test_case", fn_type=fn_type
+    )
 
-    nodes = parse_defs(defs)
-    vals = nodes["vals"]
+    vals = parse_result.defs["vals"]
     assert isinstance(vals, Expression)
     return test_signature, vals
 
@@ -158,13 +147,15 @@ def test_signature_custom_signature_test_body(
     attr: Literal["items_signature", "test_case_signature", "sequence_signature"],
     extra_expected: bool,
 ) -> None:
-    type_checker, fn_types = parse_types(fn_defs)
-    fn_type = fn_types["test_case"]
+    parse_result = parse(fn_defs)
+    fn_type = parse_result.types["test_case"]
     assert isinstance(fn_type, CallableType)
-    test_signature = test_signature_from_fn_type(type_checker, fn_name="test_case", fn_type=fn_type)
+    test_signature = test_signature_from_fn_type(
+        parse_result.checker, fn_name="test_case", fn_type=fn_type
+    )
 
     expected_key = "expected" if extra_expected else "test_case"
-    expected_type = fn_types[expected_key]
+    expected_type = parse_result.types[expected_key]
     assert expected_type is not None
     type_ = getattr(test_signature, attr)
     assert is_same_type(type_, expected_type)
@@ -199,11 +190,23 @@ def test_signature_custom_check_test_body[
 test_signature_custom_check_test_body.__test__ = False  # type: ignore
 
 
-def default_type_checker() -> TypeChecker:
-    type_checker, _ = parse_types("")
-    return type_checker
-
-
-def default_test_info() -> TestInfo:
-    test_info = TestInfo(checker=default_type_checker(), fn_name="test_info", arguments={})
+def default_test_info(checker: TypeChecker) -> TestInfo:
+    test_info = TestInfo(checker=checker, fn_name="test_info", arguments={})
     return test_info
+
+
+def test_info_from_defs(defs: str, *, name: str) -> TestInfo:
+    parse_result = parse(defs)
+    test_node = parse_result.defs[name]
+    assert isinstance(test_node, FuncDef)
+    func = test_node if isinstance(test_node, FuncDef) else test_node.func
+    test_type = parse_result.types[name]
+    assert isinstance(test_type, CallableType)
+    for argument, arg_type in zip(func.arguments, test_type.arg_types, strict=True):
+        argument.type_annotation = arg_type
+    test_info = TestInfo.from_fn_def(test_node, checker=parse_result.checker)
+    assert test_info is not None
+    return test_info
+
+
+test_info_from_defs.__test__ = False  # type: ignore
