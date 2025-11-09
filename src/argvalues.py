@@ -8,7 +8,7 @@ from .test_signature import TestSignature
 
 
 @dataclass(frozen=True, slots=True)
-class Argvals:
+class Argvalues:
     node: Expression
 
     def __iter__(self) -> Iterator[TestCase]:

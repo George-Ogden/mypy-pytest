@@ -14,8 +14,19 @@ UNREADABLE_ARGNAMES: Final[ErrorCode] = ErrorCode(
     "unreadable-argnames", "Unable to parse Pytest argnames.", category="Pytest"
 )
 
+UNKNOWN_ARGNAME: Final[ErrorCode] = ErrorCode(
+    "unknown-argname",
+    "Pytest parametrize contains argname not used in test signature.",
+    category="Pytest",
+)
 DUPLICATE_ARGNAME: Final[ErrorCode] = ErrorCode(
     "duplicate-argname", "Pytest parametrize contains duplicate argnames.", category="Pytest"
+)
+
+VARIADIC_ARGNAMES_ARGVALS: Final[ErrorCode] = ErrorCode(
+    "variadic-argnames-argvalues",
+    "Unable to parse variadic argnames or argvalues.",
+    category="Pytest",
 )
 
 

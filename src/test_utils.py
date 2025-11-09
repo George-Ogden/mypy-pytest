@@ -8,7 +8,7 @@ from typing import Any, Literal, cast, overload
 import mypy.build
 from mypy.checker import TypeChecker
 import mypy.modulefinder
-from mypy.nodes import AssignmentStmt, Expression, FuncDef, NameExpr
+from mypy.nodes import AssignmentStmt, Decorator, Expression, FuncDef, NameExpr
 import mypy.options
 from mypy.subtypes import is_same_type
 from mypy.types import CallableType, Type
@@ -42,7 +42,7 @@ class TypeLookup:
 class ParseResult:
     checker: TypeChecker
     types: TypeLookup
-    defs: Mapping[str, Expression | FuncDef]
+    defs: Mapping[str, Expression | FuncDef | Decorator]
 
 
 @functools.lru_cache(maxsize=1)
@@ -72,13 +72,15 @@ def parse(code: str) -> ParseResult:
                 print(f"{err.file}:{err.line}: {err.message}")
         raise TypeError()
 
-    defs: dict[str, Expression | FuncDef] = {}
+    defs: dict[str, Expression | FuncDef | Decorator] = {}
     for def_ in tree.defs:
         if isinstance(def_, AssignmentStmt):
             for name in def_.lvalues:
                 if isinstance(name, NameExpr):
                     defs[name.name] = def_.rvalue
         elif isinstance(def_, FuncDef):
+            defs[def_.name] = def_
+        elif isinstance(def_, Decorator):
             defs[def_.name] = def_
 
     return ParseResult(checker=type_checker, types=TypeLookup(tree.names), defs=defs)
@@ -191,19 +193,16 @@ test_signature_custom_check_test_body.__test__ = False  # type: ignore
 
 
 def default_test_info(checker: TypeChecker) -> TestInfo:
-    test_info = TestInfo(checker=checker, fn_name="test_info", arguments={})
+    test_info = TestInfo(checker=checker, fn_name="test_info", arguments={}, decorators=[])
     return test_info
 
 
 def test_info_from_defs(defs: str, *, name: str) -> TestInfo:
     parse_result = parse(defs)
     test_node = parse_result.defs[name]
-    assert isinstance(test_node, FuncDef)
-    func = test_node if isinstance(test_node, FuncDef) else test_node.func
+    assert isinstance(test_node, FuncDef | Decorator)
     test_type = parse_result.types[name]
     assert isinstance(test_type, CallableType)
-    for argument, arg_type in zip(func.arguments, test_type.arg_types, strict=True):
-        argument.type_annotation = arg_type
     test_info = TestInfo.from_fn_def(test_node, checker=parse_result.checker)
     assert test_info is not None
     return test_info

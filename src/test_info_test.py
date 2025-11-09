@@ -2,6 +2,7 @@ from typing import Callable, cast
 
 from mypy.nodes import Expression, FuncDef
 from mypy.types import CallableType
+import pytest
 
 from .test_info import TestInfo
 from .test_utils import (
@@ -339,4 +340,150 @@ def test_test_info_sub_signature_multiple_args() -> None:
             ...
         """,
         argnames=["z", "x"],
+    )
+
+
+def _test_info_check_parametrized_decorator_test_body(
+    defs: str, *, errors: list[str] | None = None
+) -> None:
+    test_info = test_info_from_defs(defs, name="test_info")
+    assert test_info is not None
+    [decorator] = test_info.decorators
+    checker = test_info.checker
+
+    assert not checker.errors.is_errors()
+    test_info.check_parametrized_decorator(decorator)
+
+    messages = get_error_messages(checker)
+    check_error_messages(messages, errors=errors)
+
+
+def test_test_info_check_parametrized_decorator_no_errors() -> None:
+    _test_info_check_parametrized_decorator_test_body("""
+        import pytest
+
+        @pytest.mark.parametrize(
+            "x", [1, 2, 3, 4]
+        )
+        def test_info(x: int) -> None:
+            ...
+        """)
+
+
+def test_test_info_check_parametrized_decorator_no_errors_flipped_args() -> None:
+    _test_info_check_parametrized_decorator_test_body("""
+        import pytest
+
+        @pytest.mark.parametrize(
+            argvalues="abcd",
+            argnames="x",
+            ids="dcba",
+        )
+        def test_info(x: str) -> None:
+            ...
+        """)
+
+
+def test_test_info_check_parametrized_decorator_shared_argnames() -> None:
+    _test_info_check_parametrized_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            *("x", [])
+        )
+        def test_info(x: float) -> None:
+            ...
+        """,
+        errors=["variadic-argnames-argvalues"],
+    )
+
+
+def test_test_info_check_parametrized_decorator_shared_argnames_beyond_limit() -> None:
+    with pytest.raises(TypeError):
+        _test_info_check_parametrized_decorator_test_body(
+            """
+            import pytest
+
+            @pytest.mark.parametrize(
+                "x", *((), ())
+            )
+            def test_info(x: float) -> None:
+                ...
+            """,
+            errors=["variadic-argnames-argvalues"],
+        )
+
+
+def test_test_info_check_parametrized_decorator_shared_argnames_as_dict() -> None:
+    with pytest.raises(TypeError):
+        _test_info_check_parametrized_decorator_test_body(
+            """
+            import pytest
+
+            @pytest.mark.parametrize(
+                argvalues=[True, False],
+                **dict(argnames="x", ids=[1, 0])
+            )
+            def test_info(x: bool) -> None:
+                ...
+            """,
+            errors=["variadic-argnames-argvalues"],
+        )
+
+
+def test_test_info_check_parametrized_decorator_wrapped_argvalues() -> None:
+    _test_info_check_parametrized_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            "x", *([True, False],)
+        )
+        def test_info(x: bool) -> None:
+            ...
+        """,
+        errors=["variadic-argnames-argvalues"],
+    )
+
+
+def test_test_info_check_parametrized_decorator_no_errors_unusual_types() -> None:
+    _test_info_check_parametrized_decorator_test_body("""
+        import pytest
+
+        @pytest.mark.parametrize(
+            "x", iter([True, False])
+        )
+        def test_info(x: bool) -> None:
+            ...
+    """)
+
+
+def test_test_info_check_parametrized_decorator_invalid_argname() -> None:
+    _test_info_check_parametrized_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            "foo", [1, 2, 3]
+        )
+        def test_info(bar: int) -> None:
+            ...
+        """,
+        errors=["unknown-argname"],
+    )
+
+
+def test_test_info_check_parametrized_decorator_invalid_type() -> None:
+    _test_info_check_parametrized_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            "x", [1, 2, 3]
+        )
+        def test_info(x: str) -> None:
+            ...
+        """,
+        errors=["arg-type"],
     )

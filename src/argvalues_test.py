@@ -1,29 +1,29 @@
 from collections.abc import Callable
 
-from .argvals import Argvals
+from .argvalues import Argvalues
 from .test_signature import TestSignature
 from .test_utils import get_error_messages, get_signature_and_vals, type_checks
 
 
-def _argvals_check_against_custom_sequence_body(
-    defs: str, errors: int, body: Callable[[Argvals, TestSignature], None]
+def _argvalues_check_against_custom_sequence_body(
+    defs: str, errors: int, body: Callable[[Argvalues, TestSignature], None]
 ) -> None:
     test_signature, vals = get_signature_and_vals(defs)
-    argvals = Argvals(vals)
+    argvalues = Argvalues(vals)
 
     checker = test_signature.checker
-    type_check_result = type_checks(lambda: body(argvals, test_signature), checker=checker)
+    type_check_result = type_checks(lambda: body(argvalues, test_signature), checker=checker)
     messages = get_error_messages(checker)
     assert type_check_result == (errors == 0), messages
     assert checker.errors.num_messages() == errors, messages
 
 
-def _argvals_check_sequence_test_body(defs: str, *, errors: int) -> None:
-    _argvals_check_against_custom_sequence_body(defs, errors, Argvals.check_sequence_against)
+def _argvalues_check_sequence_test_body(defs: str, *, errors: int) -> None:
+    _argvalues_check_against_custom_sequence_body(defs, errors, Argvalues.check_sequence_against)
 
 
-def test_argvals_check_sequence_empty() -> None:
-    _argvals_check_sequence_test_body(
+def test_argvalues_check_sequence_empty() -> None:
+    _argvalues_check_sequence_test_body(
         """
         def test_case(x: int) -> None:
             ...
@@ -34,8 +34,8 @@ def test_argvals_check_sequence_empty() -> None:
     )
 
 
-def test_argvals_check_sequence_one_correct() -> None:
-    _argvals_check_sequence_test_body(
+def test_argvalues_check_sequence_one_correct() -> None:
+    _argvalues_check_sequence_test_body(
         """
         def test_case(x: int, y: float) -> None:
             ...
@@ -46,8 +46,8 @@ def test_argvals_check_sequence_one_correct() -> None:
     )
 
 
-def test_argvals_check_sequence_many_correct() -> None:
-    _argvals_check_sequence_test_body(
+def test_argvalues_check_sequence_many_correct() -> None:
+    _argvalues_check_sequence_test_body(
         """
         def test_case(x: int, y: float, z: str) -> None:
             ...
@@ -58,8 +58,8 @@ def test_argvals_check_sequence_many_correct() -> None:
     )
 
 
-def test_argvals_check_sequence_all_but_one_correct() -> None:
-    _argvals_check_sequence_test_body(
+def test_argvalues_check_sequence_all_but_one_correct() -> None:
+    _argvalues_check_sequence_test_body(
         """
         def test_case(x_1: int) -> None:
             ...
@@ -70,8 +70,8 @@ def test_argvals_check_sequence_all_but_one_correct() -> None:
     )
 
 
-def test_argvals_check_sequence_all_incorrect() -> None:
-    _argvals_check_sequence_test_body(
+def test_argvalues_check_sequence_all_incorrect() -> None:
+    _argvalues_check_sequence_test_body(
         """
         def test_case() -> None:
             ...
@@ -82,8 +82,8 @@ def test_argvals_check_sequence_all_incorrect() -> None:
     )
 
 
-def test_argvals_check_sequence_correct_nested_sequence() -> None:
-    _argvals_check_sequence_test_body(
+def test_argvalues_check_sequence_correct_nested_sequence() -> None:
+    _argvalues_check_sequence_test_body(
         """
         def test_case(x: tuple[int]) -> None:
             ...
@@ -94,8 +94,8 @@ def test_argvals_check_sequence_correct_nested_sequence() -> None:
     )
 
 
-def test_argvals_check_sequence_some_incorrect() -> None:
-    _argvals_check_sequence_test_body(
+def test_argvalues_check_sequence_some_incorrect() -> None:
+    _argvalues_check_sequence_test_body(
         """
         def test_case(x: int, y: tuple[()]) -> None:
             ...
@@ -106,12 +106,12 @@ def test_argvals_check_sequence_some_incorrect() -> None:
     )
 
 
-def _argvals_check_entire_test_body(defs: str, *, errors: int) -> None:
-    _argvals_check_against_custom_sequence_body(defs, errors, Argvals.check_entire_against)
+def _argvalues_check_entire_test_body(defs: str, *, errors: int) -> None:
+    _argvalues_check_against_custom_sequence_body(defs, errors, Argvalues.check_entire_against)
 
 
-def test_argvals_check_entire_correct_expression() -> None:
-    _argvals_check_entire_test_body(
+def test_argvalues_check_entire_correct_expression() -> None:
+    _argvalues_check_entire_test_body(
         """
         def test_case(x: int, y: float) -> None:
             ...
@@ -122,8 +122,8 @@ def test_argvals_check_entire_correct_expression() -> None:
     )
 
 
-def test_argvals_check_entire_incorrect_expression() -> None:
-    _argvals_check_entire_test_body(
+def test_argvalues_check_entire_incorrect_expression() -> None:
+    _argvalues_check_entire_test_body(
         """
         def test_case(x: int, y: str) -> None:
             ...
@@ -134,12 +134,12 @@ def test_argvals_check_entire_incorrect_expression() -> None:
     )
 
 
-def _argvals_check_against_test_body(defs: str, *, errors: int) -> None:
-    _argvals_check_against_custom_sequence_body(defs, errors, Argvals.check_against)
+def _argvalues_check_against_test_body(defs: str, *, errors: int) -> None:
+    _argvalues_check_against_custom_sequence_body(defs, errors, Argvalues.check_against)
 
 
-def test_argvals_check_against_correct_set() -> None:
-    _argvals_check_against_test_body(
+def test_argvalues_check_against_correct_set() -> None:
+    _argvalues_check_against_test_body(
         """
         def test_case(x: int, y: str, z: tuple[()]) -> None:
             ...
@@ -150,8 +150,8 @@ def test_argvals_check_against_correct_set() -> None:
     )
 
 
-def test_argvals_check_against_correct_expression() -> None:
-    _argvals_check_against_test_body(
+def test_argvalues_check_against_correct_expression() -> None:
+    _argvalues_check_against_test_body(
         """
         def test_case(x: int, y: str, z: tuple[()]) -> None:
             ...
@@ -162,8 +162,8 @@ def test_argvals_check_against_correct_expression() -> None:
     )
 
 
-def test_argvals_check_against_correct_string() -> None:
-    _argvals_check_against_test_body(
+def test_argvalues_check_against_correct_string() -> None:
+    _argvalues_check_against_test_body(
         """
         def test_case(c_1: str) -> None:
             ...
@@ -174,8 +174,8 @@ def test_argvals_check_against_correct_string() -> None:
     )
 
 
-def test_argvals_check_against_incorrect_tuple() -> None:
-    _argvals_check_against_test_body(
+def test_argvalues_check_against_incorrect_tuple() -> None:
+    _argvalues_check_against_test_body(
         """
         def test_case(x_1: int) -> None:
             ...
@@ -186,8 +186,8 @@ def test_argvals_check_against_incorrect_tuple() -> None:
     )
 
 
-def test_argvals_check_against_incorrect_string() -> None:
-    _argvals_check_against_test_body(
+def test_argvalues_check_against_incorrect_string() -> None:
+    _argvalues_check_against_test_body(
         """
         def test_case(x_1: int) -> None:
             ...
@@ -198,8 +198,8 @@ def test_argvals_check_against_incorrect_string() -> None:
     )
 
 
-def test_argvals_check_against_incorrect_expression() -> None:
-    _argvals_check_against_test_body(
+def test_argvalues_check_against_incorrect_expression() -> None:
+    _argvalues_check_against_test_body(
         """
         def test_case(x_1: int) -> None:
             ...

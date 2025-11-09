@@ -7,18 +7,22 @@ from mypy.checker import TypeChecker
 from mypy.nodes import (
     ArgKind,
     Argument,
+    Decorator,
     Expression,
     FuncDef,
     ListExpr,
     StrExpr,
     TupleExpr,
 )
-from mypy.types import AnyType, Type, TypeOfAny
+from mypy.types import CallableType, Type
 
+from .argvalues import Argvalues
+from .decorator_wrapper import DecoratorWrapper
 from .error_codes import (
     DUPLICATE_ARGNAME,
     INVALID_ARGNAME,
     POSITIONAL_ONLY_ARGUMENT,
+    UNKNOWN_ARGNAME,
     UNREADABLE_ARGNAME,
     UNREADABLE_ARGNAMES,
     VARIADIC_KEYWORD_ARGUMENT,
@@ -40,25 +44,45 @@ class TestArgument:
 class TestInfo:
     fn_name: str
     arguments: Mapping[str, TestArgument]
+    decorators: Sequence[DecoratorWrapper]
     checker: TypeChecker
 
     @classmethod
-    def from_fn_def(cls, fn_def: FuncDef, *, checker: TypeChecker) -> Self | None:
-        test_arguments = cls._validate_test_arguments(fn_def.arguments, checker=checker)
+    def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
+        fn_def, decorators = cls._get_fn_and_decorators(fn_def)
+        assert isinstance(fn_def.type, CallableType)
+        test_arguments = cls._validate_test_arguments(
+            fn_def.arguments, fn_def.type.arg_types, checker=checker
+        )
         if test_arguments is None:
             return None
+        test_decorators = DecoratorWrapper.decorators_from_nodes(decorators, checker=checker)
         return cls(
             checker=checker,
             fn_name=fn_def.name,
             arguments={test_argument.name: test_argument for test_argument in test_arguments},
+            decorators=test_decorators,
         )
 
     @classmethod
+    def _get_fn_and_decorators(
+        cls, fn_def: FuncDef | Decorator
+    ) -> tuple[FuncDef, Sequence[Expression]]:
+        match fn_def:
+            case FuncDef():
+                return fn_def, []
+            case Decorator():
+                return fn_def.func, fn_def.original_decorators
+            case _:
+                raise TypeError()
+
+    @classmethod
     def _validate_test_arguments(
-        cls, arguments: Sequence[Argument], *, checker: TypeChecker
+        cls, arguments: Sequence[Argument], types: Sequence[Type], *, checker: TypeChecker
     ) -> Sequence[TestArgument] | None:
         test_arguments: Sequence[TestArgument | None] = [
-            cls._validate_test_argument(argument, checker=checker) for argument in arguments
+            cls._validate_test_argument(argument, type_, checker=checker)
+            for argument, type_ in zip(arguments, types, strict=True)
         ]
         if any(argument is None for argument in test_arguments):
             return None
@@ -66,24 +90,24 @@ class TestInfo:
 
     @classmethod
     def _validate_test_argument(
-        cls, argument: Argument, *, checker: TypeChecker
+        cls, argument: Argument, type_: Type, *, checker: TypeChecker
     ) -> TestArgument | None:
         if argument.pos_only:
-            checker.msg.fail(
+            checker.fail(
                 f"`{argument.variable.name}` must not be positional only.",
                 context=argument,
                 code=POSITIONAL_ONLY_ARGUMENT,
             )
             return None
         if argument.kind == ArgKind.ARG_STAR:
-            checker.msg.fail(
+            checker.fail(
                 f"`*{argument.variable.name}` must not be variadic positional.",
                 context=argument,
                 code=VARIADIC_POSITIONAL_ARGUMENT,
             )
             return None
         if argument.kind == ArgKind.ARG_STAR2:
-            checker.msg.fail(
+            checker.fail(
                 f"`**{argument.variable.name}` must not be variadic keyword-only.",
                 context=argument,
                 code=VARIADIC_KEYWORD_ARGUMENT,
@@ -91,7 +115,7 @@ class TestInfo:
             return None
         return TestArgument(
             name=argument.variable.name,
-            type_=argument.type_annotation or AnyType(TypeOfAny.unannotated),
+            type_=type_,
             initialized=argument.initializer is not None,
         )
 
@@ -114,7 +138,7 @@ class TestInfo:
 
     def _warn_duplicate_argnames(self, duplicates: Iterable[str], context: Expression) -> None:
         for argname in duplicates:
-            self.checker.msg.fail(
+            self.checker.fail(
                 f"Duplicated argname {argname!r}.", context=context, code=DUPLICATE_ARGNAME
             )
 
@@ -125,7 +149,7 @@ class TestInfo:
             case ListExpr() | TupleExpr():
                 argnames = self.parse_names_sequence(node)
             case _:
-                self.checker.msg.fail(
+                self.checker.fail(
                     "Unable to identify argnames. (Use a comma-separated string, list of strings or tuple of strings).",
                     context=node,
                     code=UNREADABLE_ARGNAMES,
@@ -137,9 +161,7 @@ class TestInfo:
     def _check_valid_identifier(self, name: str, context: StrExpr) -> bool:
         if name.isidentifier():
             return True
-        self.checker.msg.fail(
-            f"Invalid identifier {name!r}.", context=context, code=INVALID_ARGNAME
-        )
+        self.checker.fail(f"Invalid identifier {name!r}.", context=context, code=INVALID_ARGNAME)
         return False
 
     def parse_names_string(self, node: StrExpr) -> str | list[str] | None:
@@ -158,7 +180,7 @@ class TestInfo:
             if self._check_valid_identifier(name, node):
                 return name
         else:
-            self.checker.msg.fail(
+            self.checker.fail(
                 "Unable to read identifier. (Use a sequence of strings instead.)",
                 context=node,
                 code=UNREADABLE_ARGNAME,
@@ -191,3 +213,33 @@ class TestInfo:
             arg_names=arg_names,
             arg_types=[self.arguments[arg_name].type_ for arg_name in arg_names],
         )
+
+    def check_parametrized_decorator(self, decorator: DecoratorWrapper) -> None:
+        arg_names_and_arg_values = decorator.arg_names_and_arg_values
+        if arg_names_and_arg_values is not None:
+            self._check_argnames_and_argvalues(*arg_names_and_arg_values)
+
+    def _check_argnames_and_argvalues(
+        self, arg_names_node: Expression, arg_values_node: Expression
+    ) -> None:
+        arg_names = self._parse_names(arg_names_node)
+        if arg_names is not None and self._check_arg_names(arg_names, context=arg_names_node):
+            sub_signature = self.sub_signature(arg_names)
+            if sub_signature is not None:
+                arg_values = Argvalues(arg_values_node)
+                arg_values.check_against(sub_signature)
+
+    def _check_arg_names(self, arg_names: str | list[str], *, context: Expression) -> bool:
+        if isinstance(arg_names, str):
+            arg_names = [arg_names]
+        return all([self._check_arg_name(arg_name, context) for arg_name in arg_names])
+
+    def _check_arg_name(self, arg_name: str, context: Expression) -> bool:
+        if arg_name in self.arguments:
+            return True
+        self.checker.fail(
+            f"Unknown argname {arg_name!r} used as test argument.",
+            context=context,
+            code=UNKNOWN_ARGNAME,
+        )
+        return False
