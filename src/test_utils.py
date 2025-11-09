@@ -2,7 +2,7 @@ from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 import re
 import textwrap
-from typing import Any, Literal, cast
+from typing import Any, Literal, cast, overload
 
 import mypy.build
 from mypy.checker import TypeChecker
@@ -27,6 +27,17 @@ class TypeLookup:
 
     def __getitem__(self, name: str) -> Type | None:
         return self._names[name].type
+
+    @overload
+    def get(self, name: str, default: None = None) -> Type | None: ...
+    @overload
+    def get[T](self, name: str, default: T) -> Type | T: ...
+
+    def get(self, name: str, default: Any = None) -> Type | Any:
+        try:
+            return self[name]
+        except KeyError:
+            return default
 
 
 def parse_types(code: str) -> tuple[TypeChecker, TypeLookup]:
@@ -101,9 +112,10 @@ def test_signature_from_fn_type(
     checker: TypeChecker, fn_name: str, fn_type: CallableType
 ) -> TestSignature:
     assert all(name is not None for name in fn_type.arg_names)
-    arg_names = tuple(cast(list[str], fn_type.arg_names))
-    if any(name.endswith("1") for name in arg_names):
+    arg_names = cast(list[str], fn_type.arg_names)
+    if any(name.endswith("_1") for name in arg_names):
         [arg_name] = arg_names
+        arg_name = arg_name[:-2]
         [arg_type] = fn_type.arg_types
         return OneItemTestSignature(
             checker=checker, fn_name=fn_name, arg_name=arg_name, arg_type=arg_type
@@ -113,7 +125,7 @@ def test_signature_from_fn_type(
             checker=checker,
             fn_name=fn_name,
             arg_names=arg_names,
-            arg_types=tuple(fn_type.arg_types),
+            arg_types=fn_type.arg_types,
         )
 
 
@@ -154,7 +166,8 @@ def test_signature_custom_signature_test_body(
     expected_key = "expected" if extra_expected else "test_case"
     expected_type = fn_types[expected_key]
     assert expected_type is not None
-    assert is_same_type(getattr(test_signature, attr), expected_type)
+    type_ = getattr(test_signature, attr)
+    assert is_same_type(type_, expected_type)
 
 
 test_signature_custom_signature_test_body.__test__ = False  # type: ignore
@@ -192,5 +205,5 @@ def default_type_checker() -> TypeChecker:
 
 
 def default_test_info() -> TestInfo:
-    test_info = TestInfo(checker=default_type_checker(), fn_name="test_info", arguments=[])
+    test_info = TestInfo(checker=default_type_checker(), fn_name="test_info", arguments={})
     return test_info

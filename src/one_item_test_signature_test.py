@@ -10,9 +10,12 @@ def test_one_item_test_signature_test_case_signature() -> None:
         """
         def test_case(x_1: float) -> None:
             ...
+
+        def expected(x: float) -> None:
+            ...
         """,
         attr="test_case_signature",
-        extra_expected=False,
+        extra_expected=True,
     )
 
 

@@ -1,5 +1,5 @@
 from collections import Counter
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Self, cast
 
@@ -16,6 +16,9 @@ from .error_codes import (
     VARIADIC_KEYWORD_ARGUMENT,
     VARIADIC_POSITIONAL_ARGUMENT,
 )
+from .many_items_test_signature import ManyItemsTestSignature
+from .one_item_test_signature import OneItemTestSignature
+from .test_signature import TestSignature
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28,7 +31,7 @@ class TestArgument:
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TestInfo:
     fn_name: str
-    arguments: Sequence[TestArgument]
+    arguments: Mapping[str, TestArgument]
     checker: TypeChecker
 
     @classmethod
@@ -36,7 +39,11 @@ class TestInfo:
         test_arguments = cls._validate_test_arguments(fn_def.arguments, checker=checker)
         if test_arguments is None:
             return None
-        return cls(checker=checker, fn_name=fn_def.name, arguments=test_arguments)
+        return cls(
+            checker=checker,
+            fn_name=fn_def.name,
+            arguments={test_argument.name: test_argument for test_argument in test_arguments},
+        )
 
     @classmethod
     def _validate_test_arguments(
@@ -76,8 +83,7 @@ class TestInfo:
             return None
         return TestArgument(
             name=argument.variable.name,
-            type_=argument.type_annotation
-            or AnyType(TypeOfAny.unannotated, line=argument.line, column=argument.column),
+            type_=argument.type_annotation or AnyType(TypeOfAny.unannotated),
             initialized=argument.initializer is not None,
         )
 
@@ -156,3 +162,24 @@ class TestInfo:
         if all([isinstance(name, str) for name in names]):
             return cast(list[str], names)
         return None
+
+    def sub_signature(self, arg_names: str | list[str]) -> TestSignature:
+        if isinstance(arg_names, str):
+            return self.one_item_sub_signature(arg_names)
+        return self.many_items_sub_signature(arg_names)
+
+    def one_item_sub_signature(self, arg_name: str) -> TestSignature:
+        return OneItemTestSignature(
+            checker=self.checker,
+            fn_name=self.fn_name,
+            arg_name=arg_name,
+            arg_type=self.arguments[arg_name].type_,
+        )
+
+    def many_items_sub_signature(self, arg_names: list[str]) -> TestSignature:
+        return ManyItemsTestSignature(
+            checker=self.checker,
+            fn_name=self.fn_name,
+            arg_names=arg_names,
+            arg_types=[self.arguments[arg_name].type_ for arg_name in arg_names],
+        )

@@ -1,5 +1,6 @@
 import abc
 from dataclasses import dataclass
+from typing import Self, TypeGuard, cast
 
 from mypy.checker import TypeChecker
 from mypy.nodes import ArgKind, Context, Expression, ListExpr, TupleExpr
@@ -10,6 +11,9 @@ from mypy.types import CallableType, NoneType, Type
 class TestSignature(abc.ABC):
     checker: TypeChecker
     fn_name: str
+
+    def _equal_names(self, other: object) -> TypeGuard[Self]:
+        return type(other) is type(self) and self.fn_name == cast(Self, other).fn_name
 
     @abc.abstractmethod
     def __len__(self) -> int: ...

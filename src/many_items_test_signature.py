@@ -1,3 +1,4 @@
+from collections.abc import Sequence
 from dataclasses import dataclass
 
 from mypy.nodes import ArgKind
@@ -8,8 +9,14 @@ from .test_signature import TestSignature
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class ManyItemsTestSignature(TestSignature):
-    arg_names: tuple[str, ...]
-    arg_types: tuple[Type, ...]
+    arg_names: Sequence[str]
+    arg_types: Sequence[Type]
+
+    def __eq__(self, other: object) -> bool:
+        return self._equal_names(other) and self._as_dict() == other._as_dict()
+
+    def _as_dict(self) -> dict[str, Type]:
+        return dict(zip(self.arg_names, self.arg_types))
 
     def __post_init__(self) -> None:
         assert len(self.arg_names) == len(self.arg_types)

@@ -19,6 +19,13 @@ DUPLICATE_ARGNAME: Final[ErrorCode] = ErrorCode(
 )
 
 
+UNRECOGNIZED_ARGNAME: Final[ErrorCode] = ErrorCode(
+    "unrecognized-argname",
+    "Pytest parametrize contains an argument not in the function.",
+    category="Pytest",
+)
+
+
 POSITIONAL_ONLY_ARGUMENT: Final[ErrorCode] = ErrorCode(
     "pos-only-arg",
     "Positional only arguments not allowed in Pytest test definitions.",

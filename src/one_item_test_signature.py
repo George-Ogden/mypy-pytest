@@ -11,6 +11,13 @@ class OneItemTestSignature(TestSignature):
     arg_name: str
     arg_type: Type
 
+    def __eq__(self, other: object) -> bool:
+        return (
+            self._equal_names(other)
+            and self.arg_name == other.arg_name
+            and self.arg_type == other.arg_type
+        )
+
     def __len__(self) -> int:
         return 1
 

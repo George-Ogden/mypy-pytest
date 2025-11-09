@@ -1,6 +1,7 @@
 from typing import Callable, cast
 
 from mypy.nodes import Expression, FuncDef
+from mypy.types import CallableType
 
 from .test_info import TestInfo
 from .test_utils import (
@@ -9,6 +10,8 @@ from .test_utils import (
     default_type_checker,
     get_error_messages,
     parse_defs,
+    parse_types,
+    test_signature_from_fn_type,
 )
 
 
@@ -172,7 +175,8 @@ def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = 
     checker = default_type_checker()
 
     node_mapping = parse_defs(source)
-    test_node = cast(FuncDef, node_mapping["test_info"])
+    test_node = node_mapping["test_info"]
+    assert isinstance(test_node, FuncDef)
 
     assert not checker.errors.is_errors()
     test_info = TestInfo.from_fn_def(test_node, checker=checker)
@@ -258,4 +262,87 @@ def test_test_info_from_fn_def_vararg_and_varkwarg() -> None:
             ...
         """,
         errors=["var-pos-arg", "var-keyword-arg"],
+    )
+
+
+def _test_info_sub_signature_test_body(
+    source: str, argnames: str | list[str], *, errors: list[str] | None = None
+) -> None:
+    checker, fn_types = parse_types(source)
+    fn_type = fn_types.get("sub_signature")
+    assert isinstance(fn_type, CallableType | None)
+    expected_signature = (
+        None
+        if fn_type is None
+        else test_signature_from_fn_type(checker, fn_name="test_info", fn_type=fn_type)
+    )
+
+    node_mapping = parse_defs(source)
+    test_node = node_mapping["test_info"]
+    assert isinstance(test_node, FuncDef)
+    test_type = fn_types["test_info"]
+    assert isinstance(test_type, CallableType)
+    for argument, arg_type in zip(test_node.arguments, test_type.arg_types, strict=True):
+        argument.type_annotation = arg_type
+    test_info = TestInfo.from_fn_def(test_node, checker=checker)
+    assert test_info is not None
+
+    assert not checker.errors.is_errors()
+    sub_signature = test_info.sub_signature(argnames)
+
+    messages = get_error_messages(checker)
+    assert sub_signature == expected_signature, messages
+
+    check_error_messages(messages, errors=errors)
+
+
+def test_test_info_sub_signature_no_args() -> None:
+    _test_info_sub_signature_test_body(
+        """
+        def test_info() -> None:
+            ...
+
+        def sub_signature() -> None:
+            ...
+        """,
+        argnames=[],
+    )
+
+
+def test_test_info_sub_signature_single_arg() -> None:
+    _test_info_sub_signature_test_body(
+        """
+        def test_info(x: int, y: bool) -> None:
+            ...
+
+        def sub_signature(x_1: int) -> None:
+            ...
+        """,
+        argnames="x",
+    )
+
+
+def test_test_info_sub_signature_single_arg_sequence() -> None:
+    _test_info_sub_signature_test_body(
+        """
+        def test_info(x: int, y: bool) -> None:
+            ...
+
+        def sub_signature(y: bool) -> None:
+            ...
+        """,
+        argnames=["y"],
+    )
+
+
+def test_test_info_sub_signature_multiple_args() -> None:
+    _test_info_sub_signature_test_body(
+        """
+        def test_info(x: int, y: bool, z: str) -> None:
+            ...
+
+        def sub_signature(z: str, x: int) -> None:
+            ...
+        """,
+        argnames=["z", "x"],
     )
