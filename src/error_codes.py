@@ -14,6 +14,10 @@ UNREADABLE_ARGNAMES: Final[ErrorCode] = ErrorCode(
     "unreadable-argnames", "Unable to parse Pytest argnames.", category="Pytest"
 )
 
+DUPLICATE_ARGNAME: Final[ErrorCode] = ErrorCode(
+    "duplicate-argname", "Pytest parametrize contains duplicate argnames.", category="Pytest"
+)
+
 
 POSITIONAL_ONLY_ARGUMENT: Final[ErrorCode] = ErrorCode(
     "pos-only-arg",

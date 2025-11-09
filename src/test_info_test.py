@@ -160,6 +160,10 @@ def test_test_info_parse_names_many_as_sequence() -> None:
     _test_info_parse_names_test_body("('foo', 'bar')", ["foo", "bar"])
 
 
+def test_test_info_parse_names_duplicate_name() -> None:
+    _test_info_parse_names_test_body("'a, b, a'", None, errors=["duplicate-argname"])
+
+
 def test_test_info_parse_names_invalid_type() -> None:
     _test_info_parse_names_test_body("{'a', 'b'}", None, errors=["unreadable-argnames"])
 

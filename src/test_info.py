@@ -1,4 +1,5 @@
-from collections.abc import Sequence
+from collections import Counter
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from typing import Self, cast
 
@@ -7,6 +8,7 @@ from mypy.nodes import ArgKind, Argument, Expression, FuncDef, ListExpr, StrExpr
 from mypy.types import AnyType, Type, TypeOfAny
 
 from .error_codes import (
+    DUPLICATE_ARGNAME,
     INVALID_ARGNAME,
     POSITIONAL_ONLY_ARGUMENT,
     UNREADABLE_ARGNAME,
@@ -79,12 +81,35 @@ class TestInfo:
             initialized=argument.initializer is not None,
         )
 
+    def _check_duplicate_argnames(
+        self, argnames: str | list[str] | None, context: Expression
+    ) -> str | list[str] | None:
+        if isinstance(argnames, list):
+            return self._check_duplicate_argnames_sequence(argnames, context)
+        return argnames
+
+    def _check_duplicate_argnames_sequence(
+        self, argnames: list[str], context: Expression
+    ) -> None | list[str]:
+        argname_counts = Counter(argnames)
+        duplicates = [argname for argname, count in argname_counts.items() if count > 1]
+        if duplicates:
+            self._warn_duplicate_argnames(duplicates, context)
+            return None
+        return argnames
+
+    def _warn_duplicate_argnames(self, duplicates: Iterable[str], context: Expression) -> None:
+        for argname in duplicates:
+            self.checker.msg.fail(
+                f"Duplicated argname {argname!r}.", context=context, code=DUPLICATE_ARGNAME
+            )
+
     def _parse_names(self, node: Expression) -> str | list[str] | None:
         match node:
             case StrExpr():
-                return self.parse_names_string(node)
+                argnames = self.parse_names_string(node)
             case ListExpr() | TupleExpr():
-                return self.parse_names_sequence(node)
+                argnames = self.parse_names_sequence(node)
             case _:
                 self.checker.msg.fail(
                     "Unable to identify argnames. (Use a comma-separated string, list of strings or tuple of strings).",
@@ -92,6 +117,8 @@ class TestInfo:
                     code=UNREADABLE_ARGNAMES,
                 )
                 return None
+        argnames = self._check_duplicate_argnames(argnames, node)
+        return argnames
 
     def _check_valid_identifier(self, name: str, context: StrExpr) -> bool:
         if name.isidentifier():
