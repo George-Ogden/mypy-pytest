@@ -174,7 +174,7 @@ def test_signature_custom_check_test_body[
     passes: bool,
     body: Callable[[T, U], None],
     *,
-    bound: type[U] = Expression,  # type: ignore
+    bound: type[U] = Expression,  # type: ignore  # noqa: PT028
 ) -> None:
     test_signature, val = get_signature_and_vals(defs)
     assert isinstance(val, bound)
