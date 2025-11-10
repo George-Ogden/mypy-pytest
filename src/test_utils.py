@@ -201,8 +201,6 @@ def test_info_from_defs(defs: str, *, name: str) -> TestInfo:
     parse_result = parse(defs)
     test_node = parse_result.defs[name]
     assert isinstance(test_node, FuncDef | Decorator)
-    test_type = parse_result.types[name]
-    assert isinstance(test_type, CallableType)
     test_info = TestInfo.from_fn_def(test_node, checker=parse_result.checker)
     assert test_info is not None
     return test_info

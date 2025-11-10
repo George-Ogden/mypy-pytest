@@ -1,6 +1,6 @@
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
-from typing import Self
+from typing import Self, TypeGuard
 
 from mypy.argmap import map_actuals_to_formals
 from mypy.checker import TypeChecker
@@ -19,7 +19,23 @@ class DecoratorWrapper:
     def decorators_from_nodes(
         cls, nodes: Sequence[Expression], *, checker: TypeChecker
     ) -> Sequence[Self]:
-        return [cls(node, checker=checker) for node in nodes if isinstance(node, CallExpr)]
+        return [
+            cls(node, checker=checker)
+            for node in nodes
+            if cls._is_parametrized_decorator_node(node, checker=checker)
+        ]
+
+    @classmethod
+    def _is_parametrized_decorator_node(
+        cls, node: Expression, checker: TypeChecker
+    ) -> TypeGuard[CallExpr]:
+        if isinstance(node, CallExpr):
+            callee_type = node.callee.accept(checker.expr_checker)
+            return (
+                isinstance(callee_type, Instance)
+                and callee_type.type.fullname == "_pytest.mark.structures._ParametrizeMarkDecorator"
+            )
+        return False
 
     def _get_arg_type(self, i: int) -> Type:
         # subtract one for self
