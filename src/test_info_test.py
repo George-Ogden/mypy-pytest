@@ -343,23 +343,21 @@ def test_test_info_sub_signature_multiple_args() -> None:
     )
 
 
-def _test_info_check_parametrized_decorator_test_body(
-    defs: str, *, errors: list[str] | None = None
-) -> None:
+def _test_info_check_decorator_test_body(defs: str, *, errors: list[str] | None = None) -> None:
     test_info = test_info_from_defs(defs, name="test_info")
     assert test_info is not None
     [decorator] = test_info.decorators
     checker = test_info.checker
 
     assert not checker.errors.is_errors()
-    test_info.check_parametrized_decorator(decorator)
+    test_info.check_decorator(decorator)
 
     messages = get_error_messages(checker)
     check_error_messages(messages, errors=errors)
 
 
-def test_test_info_check_parametrized_decorator_no_errors() -> None:
-    _test_info_check_parametrized_decorator_test_body("""
+def test_test_info_check_decorator_no_errors() -> None:
+    _test_info_check_decorator_test_body("""
         import pytest
 
         @pytest.mark.parametrize(
@@ -370,8 +368,8 @@ def test_test_info_check_parametrized_decorator_no_errors() -> None:
         """)
 
 
-def test_test_info_check_parametrized_decorator_no_errors_flipped_args() -> None:
-    _test_info_check_parametrized_decorator_test_body("""
+def test_test_info_check_decorator_no_errors_flipped_args() -> None:
+    _test_info_check_decorator_test_body("""
         import pytest
 
         @pytest.mark.parametrize(
@@ -384,8 +382,8 @@ def test_test_info_check_parametrized_decorator_no_errors_flipped_args() -> None
         """)
 
 
-def test_test_info_check_parametrized_decorator_shared_argnames() -> None:
-    _test_info_check_parametrized_decorator_test_body(
+def test_test_info_check_decorator_shared_argnames() -> None:
+    _test_info_check_decorator_test_body(
         """
         import pytest
 
@@ -399,9 +397,9 @@ def test_test_info_check_parametrized_decorator_shared_argnames() -> None:
     )
 
 
-def test_test_info_check_parametrized_decorator_shared_argnames_beyond_limit() -> None:
+def test_test_info_check_decorator_shared_argnames_beyond_limit() -> None:
     with pytest.raises(TypeError):
-        _test_info_check_parametrized_decorator_test_body(
+        _test_info_check_decorator_test_body(
             """
             import pytest
 
@@ -415,9 +413,9 @@ def test_test_info_check_parametrized_decorator_shared_argnames_beyond_limit() -
         )
 
 
-def test_test_info_check_parametrized_decorator_shared_argnames_as_dict() -> None:
+def test_test_info_check_decorator_shared_argnames_as_dict() -> None:
     with pytest.raises(TypeError):
-        _test_info_check_parametrized_decorator_test_body(
+        _test_info_check_decorator_test_body(
             """
             import pytest
 
@@ -432,8 +430,8 @@ def test_test_info_check_parametrized_decorator_shared_argnames_as_dict() -> Non
         )
 
 
-def test_test_info_check_parametrized_decorator_wrapped_argvalues() -> None:
-    _test_info_check_parametrized_decorator_test_body(
+def test_test_info_check_decorator_wrapped_argvalues() -> None:
+    _test_info_check_decorator_test_body(
         """
         import pytest
 
@@ -447,8 +445,8 @@ def test_test_info_check_parametrized_decorator_wrapped_argvalues() -> None:
     )
 
 
-def test_test_info_check_parametrized_decorator_no_errors_unusual_types() -> None:
-    _test_info_check_parametrized_decorator_test_body("""
+def test_test_info_check_decorator_no_errors_unusual_types() -> None:
+    _test_info_check_decorator_test_body("""
         import pytest
 
         @pytest.mark.parametrize(
@@ -459,8 +457,8 @@ def test_test_info_check_parametrized_decorator_no_errors_unusual_types() -> Non
     """)
 
 
-def test_test_info_check_parametrized_decorator_invalid_argname() -> None:
-    _test_info_check_parametrized_decorator_test_body(
+def test_test_info_check_decorator_invalid_argname() -> None:
+    _test_info_check_decorator_test_body(
         """
         import pytest
 
@@ -474,8 +472,8 @@ def test_test_info_check_parametrized_decorator_invalid_argname() -> None:
     )
 
 
-def test_test_info_check_parametrized_decorator_invalid_type() -> None:
-    _test_info_check_parametrized_decorator_test_body(
+def test_test_info_check_decorator_invalid_type() -> None:
+    _test_info_check_decorator_test_body(
         """
         import pytest
 
@@ -486,4 +484,172 @@ def test_test_info_check_parametrized_decorator_invalid_type() -> None:
             ...
         """,
         errors=["arg-type"],
+    )
+
+
+def _test_info_check_test_body(defs: str, *, errors: list[str] | None = None) -> None:
+    test_info = test_info_from_defs(defs, name="test_info")
+    assert test_info is not None
+    checker = test_info.checker
+
+    assert not checker.errors.is_errors()
+    test_info.check()
+
+    messages = get_error_messages(checker)
+    check_error_messages(messages, errors=errors)
+
+
+def test_test_info_check_no_decorators_no_arguments() -> None:
+    _test_info_check_test_body(
+        """
+        def test_info() -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_check_no_decorators_missing_argnames() -> None:
+    _test_info_check_test_body(
+        """
+        def test_info(foo) -> None:
+            ...
+        """,
+        errors=["missing-argname"],
+    )
+
+
+def test_test_info_check_single_decorator_valid_argnames() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            ("foo",),
+            [
+                "bar",
+                10,
+                False
+            ]
+        )
+        def test_info(foo) -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_check_multiple_decorators_valid_split_argnames() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            ["x", "z"],
+            [
+                (1, 2.0),
+                (5, 3.0),
+            ]
+        )
+        @pytest.mark.parametrize(
+            "y",
+            "abcdefg"
+        )
+        def test_info(x: int, y: str, z: float) -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_check_multiple_decorators_missing_argnames() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            ["x", "z"],
+            [
+                (1, 2.0),
+                (5, 3.0),
+            ]
+        )
+        @pytest.mark.parametrize(
+            "y",
+            "abcdefg"
+        )
+        def test_info(x: int, y: str, z: float, missing1, missing2) -> None:
+            ...
+        """,
+        errors=["missing-argname", "missing-argname"],
+    )
+
+
+def test_test_info_check_multiple_decorators_repeated_argnames() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            ["x", "z"],
+            [
+                (1, 2.0),
+                (5, 3.0),
+            ]
+        )
+        @pytest.mark.parametrize(
+            "x, y",
+            [
+                (1, "1"),
+                (5, "2"),
+            ]
+        )
+        def test_info(x: int, y: str, z: float) -> None:
+            ...
+        """,
+        errors=["repeated-argname"],
+    )
+
+
+def test_test_info_check_multiple_decorators_single_type_error() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            ["x", "z"],
+            [
+                (1, 2.0),
+                (5, 3.0),
+            ]
+        )
+        @pytest.mark.parametrize(
+            "y",
+            [["abcde"]]
+        )
+        def test_info(x: int, y: str, z: float) -> None:
+            ...
+        """,
+        errors=["arg-type"],
+    )
+
+
+def test_test_info_check_multiple_decorators_multiple_type_errors() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            "x",
+            [1, 2, 8.0]
+        )
+        @pytest.mark.parametrize(
+            "y",
+            ["a", "b", False]
+        )
+        @pytest.mark.parametrize(
+            "z",
+            [object(), 1.0, "no", 2.0]
+        )
+        def test_info(x: int, y: str, z: float) -> None:
+            ...
+        """,
+        errors=["arg-type"] * 4,
     )

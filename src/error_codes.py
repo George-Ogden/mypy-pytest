@@ -23,7 +23,15 @@ DUPLICATE_ARGNAME: Final[ErrorCode] = ErrorCode(
     "duplicate-argname", "Pytest parametrize contains duplicate argnames.", category="Pytest"
 )
 
-VARIADIC_ARGNAMES_ARGVALS: Final[ErrorCode] = ErrorCode(
+REPEATED_ARGNAME: Final[ErrorCode] = ErrorCode(
+    "repeated-argname", "Pytest parametrizations contain repeated argname.", category="Pytest"
+)
+
+MISSING_ARGNAME: Final[ErrorCode] = ErrorCode(
+    "missing-argname", "Argument not included in Pytest parametrization.", category="Pytest"
+)
+
+VARIADIC_ARGNAMES_ARGVALUES: Final[ErrorCode] = ErrorCode(
     "variadic-argnames-argvalues",
     "Unable to parse variadic argnames or argvalues.",
     category="Pytest",

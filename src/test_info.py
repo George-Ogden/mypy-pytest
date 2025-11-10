@@ -1,6 +1,6 @@
 from collections import Counter
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Self, cast
 
 from mypy.checker import TypeChecker
@@ -21,7 +21,9 @@ from .decorator_wrapper import DecoratorWrapper
 from .error_codes import (
     DUPLICATE_ARGNAME,
     INVALID_ARGNAME,
+    MISSING_ARGNAME,
     POSITIONAL_ONLY_ARGUMENT,
+    REPEATED_ARGNAME,
     UNKNOWN_ARGNAME,
     UNREADABLE_ARGNAME,
     UNREADABLE_ARGNAMES,
@@ -42,10 +44,15 @@ class TestArgument:
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TestInfo:
-    fn_name: str
+    fn_def: FuncDef
     arguments: Mapping[str, TestArgument]
     decorators: Sequence[DecoratorWrapper]
     checker: TypeChecker
+    seen_arg_names: set[str] = field(default_factory=set)
+
+    @property
+    def fn_name(self) -> str:
+        return self.fn_def.name
 
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
@@ -59,7 +66,7 @@ class TestInfo:
         test_decorators = DecoratorWrapper.decorators_from_nodes(decorators, checker=checker)
         return cls(
             checker=checker,
-            fn_name=fn_def.name,
+            fn_def=fn_def,
             arguments={test_argument.name: test_argument for test_argument in test_arguments},
             decorators=test_decorators,
         )
@@ -214,7 +221,24 @@ class TestInfo:
             arg_types=[self.arguments[arg_name].type_ for arg_name in arg_names],
         )
 
-    def check_parametrized_decorator(self, decorator: DecoratorWrapper) -> None:
+    def check(self) -> None:
+        self.check_decorators(reversed(self.decorators))
+        self._check_missing_argnames()
+
+    def _check_missing_argnames(self) -> None:
+        missing_argn_ames = set(self.arguments.keys()).difference(self.seen_arg_names)
+        for arg_name in missing_argn_ames:
+            self.checker.fail(
+                f"Argname {arg_name!r} not included in parametrization.",
+                context=self.fn_def,
+                code=MISSING_ARGNAME,
+            )
+
+    def check_decorators(self, decorators: Iterable[DecoratorWrapper]) -> None:
+        for decorator in decorators:
+            self.check_decorator(decorator)
+
+    def check_decorator(self, decorator: DecoratorWrapper) -> None:
         arg_names_and_arg_values = decorator.arg_names_and_arg_values
         if arg_names_and_arg_values is not None:
             self._check_argnames_and_argvalues(*arg_names_and_arg_values)
@@ -236,6 +260,7 @@ class TestInfo:
 
     def _check_arg_name(self, arg_name: str, context: Expression) -> bool:
         if arg_name in self.arguments:
+            self._check_repeated_arg_name(arg_name, context)
             return True
         self.checker.fail(
             f"Unknown argname {arg_name!r} used as test argument.",
@@ -243,3 +268,13 @@ class TestInfo:
             code=UNKNOWN_ARGNAME,
         )
         return False
+
+    def _check_repeated_arg_name(self, arg_name: str, context: Expression) -> None:
+        if arg_name in self.seen_arg_names:
+            self.checker.fail(
+                f"Repeated argname {arg_name!r} in multiple parametrizations.",
+                context=context,
+                code=REPEATED_ARGNAME,
+            )
+        else:
+            self.seen_arg_names.add(arg_name)

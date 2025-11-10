@@ -7,7 +7,7 @@ from mypy.checker import TypeChecker
 from mypy.nodes import ArgKind, CallExpr, Expression
 from mypy.types import CallableType, Instance, Type
 
-from .error_codes import VARIADIC_ARGNAMES_ARGVALS
+from .error_codes import VARIADIC_ARGNAMES_ARGVALUES
 
 
 @dataclass(frozen=True, slots=True)
@@ -74,7 +74,7 @@ class DecoratorWrapper:
             self.checker.fail(
                 "Unable to read argnames and argvalues in a variadic argument.",
                 context=self.node,
-                code=VARIADIC_ARGNAMES_ARGVALS,
+                code=VARIADIC_ARGNAMES_ARGVALUES,
             )
             return None
         return self.node.args[arg_names_idx], self.node.args[arg_values_idx]
