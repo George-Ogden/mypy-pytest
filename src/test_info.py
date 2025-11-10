@@ -40,19 +40,16 @@ class TestArgument:
     name: str
     type_: Type
     initialized: bool
+    context: Argument
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TestInfo:
-    fn_def: FuncDef
+    fn_name: str
     arguments: Mapping[str, TestArgument]
     decorators: Sequence[DecoratorWrapper]
     checker: TypeChecker
     seen_arg_names: set[str] = field(default_factory=set)
-
-    @property
-    def fn_name(self) -> str:
-        return self.fn_def.name
 
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
@@ -65,8 +62,8 @@ class TestInfo:
             return None
         test_decorators = DecoratorWrapper.decorators_from_nodes(decorators, checker=checker)
         return cls(
+            fn_name=fn_def.name,
             checker=checker,
-            fn_def=fn_def,
             arguments={test_argument.name: test_argument for test_argument in test_arguments},
             decorators=test_decorators,
         )
@@ -124,6 +121,7 @@ class TestInfo:
             name=argument.variable.name,
             type_=type_,
             initialized=argument.initializer is not None,
+            context=argument,
         )
 
     def _check_duplicate_argnames(
@@ -226,11 +224,11 @@ class TestInfo:
         self._check_missing_argnames()
 
     def _check_missing_argnames(self) -> None:
-        missing_argn_ames = set(self.arguments.keys()).difference(self.seen_arg_names)
-        for arg_name in missing_argn_ames:
+        missing_arg_names = set(self.arguments.keys()).difference(self.seen_arg_names)
+        for arg_name in missing_arg_names:
             self.checker.fail(
                 f"Argname {arg_name!r} not included in parametrization.",
-                context=self.fn_def,
+                context=self.arguments[arg_name].context,
                 code=MISSING_ARGNAME,
             )
 
