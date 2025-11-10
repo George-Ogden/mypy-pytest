@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import fnmatch
 import functools
 from pathlib import Path
@@ -5,9 +6,28 @@ from pathlib import Path
 from _pytest.config import get_config
 from _pytest.main import Session
 from _pytest.pathlib import fnmatch_ex
+from mypy.checker import TypeChecker
+from mypy.nodes import Decorator
+from mypy.plugin import MethodContext, Plugin
+from mypy.types import Type
+
+from .test_info import TestInfo
 
 
-class Plugin:
+class PytestPlugin(Plugin):
+    def get_method_hook(self, fullname: str) -> Callable[[MethodContext], Type] | None:
+        if fullname == "_pytest.mark.structures.MarkDecorator.__call__":
+            return self.check
+        return None
+
+    @classmethod
+    def check(self, ctx: MethodContext) -> Type:
+        if isinstance(ctx.context, Decorator) and isinstance(ctx.api, TypeChecker):
+            test_info = TestInfo.from_fn_def(ctx.context, checker=ctx.api)
+            if test_info is not None:
+                test_info.check()
+        return ctx.default_return_type
+
     @classmethod
     def is_test_fn_name(cls, fullname: str) -> bool:
         path, function = cls._split_fullname(fullname)
@@ -16,7 +36,8 @@ class Plugin:
     @classmethod
     def _split_fullname(cls, fullname: str) -> tuple[Path, str]:
         [*path, name] = fullname.split(".")
-        path[-1] += ".py"
+        if path:
+            path[-1] += ".py"
         return Path(*path), name
 
     @classmethod

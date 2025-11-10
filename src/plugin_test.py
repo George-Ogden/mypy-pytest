@@ -1,8 +1,8 @@
-from .plugin import Plugin
+from .plugin import PytestPlugin
 
 
 def _fn_name_test_body(fullname: str, expected: bool) -> None:
-    assert Plugin.is_test_fn_name(fullname) == expected
+    assert PytestPlugin.is_test_fn_name(fullname) == expected
 
 
 def test_is_test_fn_all_valid() -> None:
