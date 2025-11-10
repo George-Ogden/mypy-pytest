@@ -24,7 +24,7 @@ class ManyItemsTestSignature(TestSignature):
         )
 
     def _as_dict(self) -> dict[str, Type]:
-        return dict(zip(self.arg_names, self.arg_types))
+        return dict(zip(self.arg_names, self.arg_types, strict=True))
 
     def __post_init__(self) -> None:
         assert len(self.arg_names) == len(self.arg_types)

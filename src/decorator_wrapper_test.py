@@ -5,7 +5,7 @@ def _decorator_wrapper_from_node_test_body(defs: str, is_decorator: bool) -> Non
     test_info = test_info_from_defs(defs, name="test_info")
     if is_decorator:
         [decorator] = test_info.decorators
-        decorator.arg_names_and_arg_values
+        _ = decorator.arg_names_and_arg_values
     else:
         assert test_info.decorators == []
 

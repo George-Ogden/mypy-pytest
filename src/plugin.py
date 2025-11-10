@@ -21,10 +21,10 @@ class PytestPlugin(Plugin):
         return None
 
     @classmethod
-    def check(self, ctx: MethodContext) -> Type:
+    def check(cls, ctx: MethodContext) -> Type:
         if (
             isinstance(ctx.context, Decorator)
-            and self.is_test_fn_name(ctx.context.fullname)
+            and cls.is_test_fn_name(ctx.context.fullname)
             and isinstance(ctx.api, TypeChecker)
         ):
             test_info = TestInfo.from_fn_def(ctx.context, checker=ctx.api)
@@ -46,7 +46,7 @@ class PytestPlugin(Plugin):
 
     @classmethod
     @functools.cache
-    def session(self) -> Session:
+    def session(cls) -> Session:
         config = get_config()
         config.parse([])
         return Session.from_config(config)

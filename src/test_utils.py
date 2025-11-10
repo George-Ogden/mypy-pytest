@@ -78,9 +78,7 @@ def parse(code: str) -> ParseResult:
             for name in def_.lvalues:
                 if isinstance(name, NameExpr):
                     defs[name.name] = def_.rvalue
-        elif isinstance(def_, FuncDef):
-            defs[def_.name] = def_
-        elif isinstance(def_, Decorator):
+        elif isinstance(def_, FuncDef | Decorator):
             defs[def_.name] = def_
 
     return ParseResult(checker=type_checker, types=TypeLookup(tree.names), defs=defs)
@@ -110,13 +108,12 @@ def test_signature_from_fn_type(
         return OneItemTestSignature(
             checker=checker, fn_name=fn_name, arg_name=arg_name, arg_type=arg_type
         )
-    else:
-        return ManyItemsTestSignature(
-            checker=checker,
-            fn_name=fn_name,
-            arg_names=arg_names,
-            arg_types=fn_type.arg_types,
-        )
+    return ManyItemsTestSignature(
+        checker=checker,
+        fn_name=fn_name,
+        arg_names=arg_names,
+        arg_types=fn_type.arg_types,
+    )
 
 
 test_signature_from_fn_type.__test__ = False  # type: ignore
