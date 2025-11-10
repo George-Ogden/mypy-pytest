@@ -1,5 +1,6 @@
 [tool.ruff]
 line-length = 100
+exclude = ["test_samples/"]
 
 [tool.ruff.lint]
 extend-select = ["I", "UP", "F", "E", "W", "ERA001", "RUF", "PT"]
@@ -22,7 +23,14 @@ disallow_incomplete_defs = true
 disallow_untyped_defs = true
 warn_unused_ignores = true
 strict_equality = true
+exclude = "test_samples"
+plugins = ["plugin.py"]
+
+[[tool.mypy.overrides]]
+module = "pytest_snapshot.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 python_files = "*_test.py"
 addopts = '--capture=sys'
+norecursedirs = ["test_samples"]
