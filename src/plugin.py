@@ -16,13 +16,17 @@ from .test_info import TestInfo
 
 class PytestPlugin(Plugin):
     def get_method_hook(self, fullname: str) -> Callable[[MethodContext], Type] | None:
-        if fullname == "_pytest.mark.structures.MarkDecorator.__call__":
+        if fullname.startswith("_pytest.mark.structures"):
             return self.check
         return None
 
     @classmethod
     def check(self, ctx: MethodContext) -> Type:
-        if isinstance(ctx.context, Decorator) and isinstance(ctx.api, TypeChecker):
+        if (
+            isinstance(ctx.context, Decorator)
+            and self.is_test_fn_name(ctx.context.fullname)
+            and isinstance(ctx.api, TypeChecker)
+        ):
             test_info = TestInfo.from_fn_def(ctx.context, checker=ctx.api)
             if test_info is not None:
                 test_info.check()
