@@ -1,2 +1,6 @@
-mypy
-pytest
+-r requirements.txt
+dbg
+debug @ git+https://github.com/George-Ogden/dbg@v2.2.2
+pytest-dbg @ git+https://github.com/George-Ogden/pytest-dbg@v2.2.2
+pytest-snapshot
+pytest-xdist

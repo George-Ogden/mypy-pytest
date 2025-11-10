@@ -1,0 +1,10 @@
+test_samples/invalid_test.py:5: error: Argname 'arg' not included in parametrization.  [missing-argname]
+test_samples/invalid_test.py:9: error: Argname 'x' not included in parametrization.  [missing-argname]
+test_samples/invalid_test.py:10: error: No return value expected  [return-value]
+test_samples/invalid_test.py:14: error: Unknown argname 'y' used as test argument.  [unknown-argname]
+test_samples/invalid_test.py:15: error: Argname 'x' not included in parametrization.  [missing-argname]
+test_samples/invalid_test.py:22: error: Argument 2 has incompatible type "tuple[int, int]"; expected "tuple[int]"  [arg-type]
+test_samples/invalid_test.py:29: error: Incompatible return value type (got "list[T]", expected "tuple[T, T]")  [return-value]
+test_samples/invalid_test.py:33: error: Argument 1 to "specific_test_case" has incompatible type "str"; expected "int"  [arg-type]
+test_samples/invalid_test.py:33: error: Argument 1 to "specific_test_case" has incompatible type "float"; expected "int"  [arg-type]
+Found 9 errors in 1 file (checked 1 source file)
