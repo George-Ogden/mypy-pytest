@@ -72,3 +72,7 @@ class PytestPlugin(Plugin):
             fn_name.startswith(pattern) or fnmatch.fnmatch(pattern, fn_name)
             for pattern in cls.fn_patterns()
         )
+
+
+def plugin(version: str) -> type[PytestPlugin]:
+    return PytestPlugin

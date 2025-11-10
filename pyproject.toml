@@ -4,6 +4,10 @@ requires-python = ">=3.12,<3.15"
 version = "0.1.0"
 dynamic = ["dependencies"]
 
+[tool.setuptools]
+packages = ["mypy_pytest_plugin"]
+py-modules = ["plugin"]
+
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
 

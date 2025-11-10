@@ -1,5 +1,1 @@
-from src.plugin import PytestPlugin
-
-
-def plugin(version: str) -> type[PytestPlugin]:
-    return PytestPlugin
+from mypy_pytest_plugin import plugin as plugin
