@@ -38,6 +38,15 @@ def test_many_items_test_signature_items_signature_multiple_args() -> None:
     )
 
 
+def test_many_items_test_signature_items_signature_multiple_args_generic() -> None:
+    _many_items_test_signature_items_signature_test_body(
+        """
+        def test_case[T, S: int](x: T, y: T, z: S) -> None:
+            ...
+        """
+    )
+
+
 def _many_items_test_signature_test_case_signature_test_body(fn_defs: str) -> None:
     test_signature_custom_signature_test_body(
         fn_defs, attr="test_case_signature", extra_expected=True
@@ -50,7 +59,7 @@ def test_many_test_signature_test_case_signature_no_args() -> None:
         def test_case() -> None:
             ...
 
-        def expected(x: tuple[()], /) -> None:
+        def expected(_: tuple[()], /) -> None:
             ...
         """
     )
@@ -62,7 +71,7 @@ def test_many_items_test_signature_test_case_signature_one_arg() -> None:
         def test_case(x: float) -> None:
             ...
 
-        def expected(x: tuple[float], /) -> None:
+        def expected(_: tuple[float], /) -> None:
             ...
         """
     )
@@ -75,6 +84,20 @@ def test_many_test_signature_test_case_signature_multiple_args() -> None:
             ...
 
         def expected(x: tuple[float, bool, list], /) -> None:
+            ...
+        """
+    )
+
+
+def test_many_test_signature_test_case_signature_multiple_args_generic() -> None:
+    _many_items_test_signature_test_case_signature_test_body(
+        """
+        from collections.abc import Iterable
+
+        def test_case[T, I: Iterable](x: I, y: T) -> None:
+            ...
+
+        def expected[T, I: Iterable](_: tuple[I, T], /) -> None:
             ...
         """
     )
@@ -108,7 +131,7 @@ def test_many_items_test_signature_sequence_signature_one_arg() -> None:
         def test_case(_: None) -> None:
             ...
 
-        def expected(x: Iterable[tuple[None]], /) -> None:
+        def expected(_: Iterable[tuple[None]], /) -> None:
             ...
         """
     )
@@ -123,7 +146,21 @@ def test_many_items_test_signature_sequence_signature_multiple_args() -> None:
         def test_case(x: tuple[int, ...], z: Any, t: Sequence[set[int]]) -> None:
             ...
 
-        def expected(x: Iterable[tuple[tuple[int, ...], Any, Sequence[set[int]]]], /) -> None:
+        def expected(_: Iterable[tuple[tuple[int, ...], Any, Sequence[set[int]]]], /) -> None:
+            ...
+        """
+    )
+
+
+def test_many_items_test_signature_sequence_signature_multiple_args_generic() -> None:
+    _many_items_test_signature_sequence_signature_test_body(
+        """
+        from collections.abc import Iterable
+
+        def test_case[T](x: tuple[T, ...], y: int) -> T:
+            return x[y]
+
+        def expected[T](_: Iterable[tuple[tuple[T, ...], int]], /) -> None:
             ...
         """
     )

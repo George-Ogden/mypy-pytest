@@ -5,8 +5,12 @@ from .test_utils import (
 )
 
 
+def _one_item_test_signature_test_case_signature_test_body(defs: str) -> None:
+    test_signature_custom_signature_test_body(defs, attr="test_case_signature", extra_expected=True)
+
+
 def test_one_item_test_signature_test_case_signature() -> None:
-    test_signature_custom_signature_test_body(
+    _one_item_test_signature_test_case_signature_test_body(
         """
         def test_case(x_1: float) -> None:
             ...
@@ -14,13 +18,27 @@ def test_one_item_test_signature_test_case_signature() -> None:
         def expected(x: float) -> None:
             ...
         """,
-        attr="test_case_signature",
-        extra_expected=True,
     )
 
 
+def test_one_item_test_signature_test_case_signature_generic() -> None:
+    _one_item_test_signature_test_case_signature_test_body(
+        """
+        def test_case[T](x_1: T) -> None:
+            ...
+
+        def expected[T](x: T) -> None:
+            ...
+        """,
+    )
+
+
+def _one_item_test_signature_sequence_signature_test_body(defs: str) -> None:
+    test_signature_custom_signature_test_body(defs, attr="sequence_signature", extra_expected=True)
+
+
 def test_one_item_test_signature_sequence_signature() -> None:
-    test_signature_custom_signature_test_body(
+    _one_item_test_signature_sequence_signature_test_body(
         """
         from typing import Iterable
 
@@ -30,8 +48,20 @@ def test_one_item_test_signature_sequence_signature() -> None:
         def expected(_: Iterable[int], /) -> None:
             ...
         """,
-        attr="sequence_signature",
-        extra_expected=True,
+    )
+
+
+def test_one_item_test_signature_sequence_signature_generic() -> None:
+    _one_item_test_signature_sequence_signature_test_body(
+        """
+        from typing import Iterable
+
+        def test_case[T: int](x_1: T) -> None:
+            ...
+
+        def expected[T: int](_: Iterable[T], /) -> None:
+            ...
+        """,
     )
 
 

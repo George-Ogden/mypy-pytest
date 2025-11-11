@@ -1,16 +1,18 @@
 import abc
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Self, TypeGuard, cast
 
 from mypy.checker import TypeChecker
 from mypy.nodes import ArgKind, Context, Expression, ListExpr, TupleExpr
-from mypy.types import CallableType, NoneType, Type
+from mypy.types import CallableType, NoneType, Type, TypeVarLikeType
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class TestSignature(abc.ABC):
     checker: TypeChecker
     fn_name: str
+    type_variables: Sequence[TypeVarLikeType]
 
     def _equal_names(self, other: object) -> TypeGuard[Self]:
         return type(other) is type(self) and self.fn_name == cast(Self, other).fn_name
@@ -29,6 +31,7 @@ class TestSignature(abc.ABC):
             arg_kinds=[ArgKind.ARG_POS],
             fallback=self.checker.named_type("builtins.function"),
             ret_type=NoneType(),
+            variables=self.type_variables,
         )
 
     @property
