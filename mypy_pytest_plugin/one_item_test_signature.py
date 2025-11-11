@@ -34,6 +34,7 @@ class OneItemTestSignature(TestSignature):
             arg_kinds=[ArgKind.ARG_POS],
             fallback=self.checker.named_type("builtins.function"),
             ret_type=NoneType(),
+            variables=self.type_variables,
         )
 
     @property

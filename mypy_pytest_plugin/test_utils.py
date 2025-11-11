@@ -5,6 +5,7 @@ import re
 import textwrap
 from typing import Any, Literal, cast, overload
 
+from debug import pprint
 import mypy.build
 from mypy.checker import TypeChecker
 import mypy.modulefinder
@@ -106,13 +107,18 @@ def test_signature_from_fn_type(
         arg_name = arg_name[:-2]
         [arg_type] = fn_type.arg_types
         return OneItemTestSignature(
-            checker=checker, fn_name=fn_name, arg_name=arg_name, arg_type=arg_type
+            checker=checker,
+            fn_name=fn_name,
+            arg_name=arg_name,
+            arg_type=arg_type,
+            type_variables=fn_type.variables,
         )
     return ManyItemsTestSignature(
         checker=checker,
         fn_name=fn_name,
         arg_names=arg_names,
         arg_types=fn_type.arg_types,
+        type_variables=fn_type.variables,
     )
 
 
@@ -157,6 +163,7 @@ def test_signature_custom_signature_test_body(
     expected_type = parse_result.types[expected_key]
     assert expected_type is not None
     type_ = getattr(test_signature, attr)
+    pprint((type_, expected_type))
     assert is_same_type(type_, expected_type)
 
 

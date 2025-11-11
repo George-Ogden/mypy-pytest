@@ -40,6 +40,7 @@ class ManyItemsTestSignature(TestSignature):
             arg_kinds=[ArgKind.ARG_POS] * len(self),
             fallback=self.checker.named_type("builtins.function"),
             ret_type=NoneType(),
+            variables=self.type_variables,
         )
 
     def _test_case_arg_type(self) -> TupleType:
