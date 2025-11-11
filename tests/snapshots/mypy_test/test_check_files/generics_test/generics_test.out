@@ -1,0 +1,3 @@
+test_samples/generics_test.py:21: error: Value of type variable "T" of function cannot be "str"  [type-var]
+test_samples/generics_test.py:21: error: Value of type variable "T" of function cannot be "tuple[()]"  [type-var]
+Found 2 errors in 1 file (checked 1 source file)
