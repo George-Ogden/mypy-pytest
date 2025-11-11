@@ -608,6 +608,29 @@ def test_test_info_check_multiple_decorators_missing_argnames() -> None:
     )
 
 
+def test_test_info_check_multiple_decorators_missing_optional_argname() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.mark.parametrize(
+            ["x", "z"],
+            [
+                (1, 2.0),
+                (5, 3.0),
+            ]
+        )
+        @pytest.mark.parametrize(
+            "y",
+            "abcdefg"
+        )
+        def test_info(x: int, y: str, missing: bool, z: float = 2.0, not_missing: int = 3) -> None:
+            ...
+        """,
+        errors=["missing-argname"],
+    )
+
+
 def test_test_info_check_multiple_decorators_repeated_argnames() -> None:
     _test_info_check_test_body(
         """

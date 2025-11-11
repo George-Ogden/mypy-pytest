@@ -228,7 +228,9 @@ class TestInfo:
         self._check_missing_argnames()
 
     def _check_missing_argnames(self) -> None:
-        missing_arg_names = set(self.arguments.keys()).difference(self.seen_arg_names)
+        missing_arg_names = {
+            arg_name for arg_name, argument in self.arguments.items() if not argument.initialized
+        }.difference(self.seen_arg_names)
         for arg_name in missing_arg_names:
             self.checker.fail(
                 f"Argname {arg_name!r} not included in parametrization.",
