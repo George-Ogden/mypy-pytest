@@ -5,8 +5,10 @@ version = "0.1.2"
 dynamic = ["dependencies"]
 
 [tool.setuptools]
-packages = ["mypy_pytest_plugin"]
-py-modules = ["plugin"]
+package-dir = {"mypy_pytest_plugin" = "mypy_pytest_plugin", "mypy_pytest_plugin_types-stubs" = "mypy_pytest_plugin_types"}
+
+[tool.setuptools.package-data]
+"mypy_pytest_plugin_types" = ["*.pyi", "py.typed"]
 
 [tool.setuptools.dynamic]
 dependencies = {file = ["requirements.txt"]}
