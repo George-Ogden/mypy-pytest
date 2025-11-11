@@ -47,3 +47,4 @@ ignore_missing_imports = true
 python_files = "*_test.py"
 addopts = '--capture=sys'
 norecursedirs = ["test_samples"]
+pythonpath = ["."]

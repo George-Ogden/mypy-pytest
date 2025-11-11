@@ -458,6 +458,31 @@ def test_test_info_check_decorator_no_errors_unusual_types() -> None:
     """)
 
 
+def test_test_info_check_decorator_no_errors_generic_type() -> None:
+    _test_info_check_decorator_test_body("""
+        import pytest
+
+        @pytest.mark.parametrize(
+            "x", iter([True, False])
+        )
+        def test_info[T: bool](x: T) -> None:
+            ...
+    """)
+
+
+def test_test_info_check_decorator_no_errors_extra_generic_types() -> None:
+    _test_info_check_decorator_test_body("""
+        import pytest
+        from typing import Iterable
+
+        @pytest.mark.parametrize(
+            "t", iter([True, False])
+        )
+        def test_info[I: Iterable, T: bool](i: I, t: T) -> None:
+            ...
+    """)
+
+
 def test_test_info_check_decorator_invalid_argname() -> None:
     _test_info_check_decorator_test_body(
         """

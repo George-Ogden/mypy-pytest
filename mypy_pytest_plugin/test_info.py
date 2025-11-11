@@ -14,7 +14,7 @@ from mypy.nodes import (
     StrExpr,
     TupleExpr,
 )
-from mypy.types import CallableType, Type
+from mypy.types import CallableType, Type, TypeVarLikeType
 
 from .argvalues import Argvalues
 from .decorator_wrapper import DecoratorWrapper
@@ -48,6 +48,7 @@ class TestInfo:
     fn_name: str
     arguments: Mapping[str, TestArgument]
     decorators: Sequence[DecoratorWrapper]
+    type_variables: Sequence[TypeVarLikeType]
     checker: TypeChecker
     seen_arg_names: set[str] = field(default_factory=set)
 
@@ -66,6 +67,7 @@ class TestInfo:
             checker=checker,
             arguments={test_argument.name: test_argument for test_argument in test_arguments},
             decorators=test_decorators,
+            type_variables=fn_def.type.variables,
         )
 
     @classmethod
@@ -209,6 +211,7 @@ class TestInfo:
             fn_name=self.fn_name,
             arg_name=arg_name,
             arg_type=self.arguments[arg_name].type_,
+            type_variables=self.type_variables,
         )
 
     def many_items_sub_signature(self, arg_names: list[str]) -> TestSignature:
@@ -217,6 +220,7 @@ class TestInfo:
             fn_name=self.fn_name,
             arg_names=arg_names,
             arg_types=[self.arguments[arg_name].type_ for arg_name in arg_names],
+            type_variables=self.type_variables,
         )
 
     def check(self) -> None:

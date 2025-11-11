@@ -197,7 +197,9 @@ test_signature_custom_check_test_body.__test__ = False  # type: ignore
 
 
 def default_test_info(checker: TypeChecker) -> TestInfo:
-    test_info = TestInfo(checker=checker, arguments={}, decorators=[], fn_name="test_info")
+    test_info = TestInfo(
+        checker=checker, arguments={}, decorators=[], fn_name="test_info", type_variables=[]
+    )
     return test_info
 
 
