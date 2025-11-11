@@ -1,28 +1,9 @@
+from .excluded_test_checker import ExcludedTestChecker
 from .plugin import PytestPlugin
 from .test_utils import parse
 
 
-def _fn_name_test_body(fullname: str, expected: bool) -> None:
-    assert PytestPlugin.is_test_fn_name(fullname) == expected
-
-
-def test_is_test_fn_all_valid() -> None:
-    _fn_name_test_body("file_test.test_fn", True)
-
-
-def test_is_test_fn_nested_valid() -> None:
-    _fn_name_test_body("src.foo_test.test_bar", True)
-
-
-def test_is_test_fn_fn_name_invalid() -> None:
-    _fn_name_test_body("file_test.utility_method", False)
-
-
-def test_is_test_fn_file_name_invalid() -> None:
-    _fn_name_test_body("file.test_fn", False)
-
-
-def test_register_ignored_fns() -> None:
+def test_ignored_names() -> None:
     parse_result = parse(
         f"""
         from {PytestPlugin.TYPES_MODULE} import Testable
@@ -62,7 +43,7 @@ def test_register_ignored_fns() -> None:
 
     for statement in parse_result.raw_defs:
         statement.accept(parse_result.checker)
-    ignored_tests = PytestPlugin._ignored_test_names_from_statements(
+    ignored_tests = ExcludedTestChecker.ignored_test_names(
         parse_result.raw_defs, parse_result.checker
     )
     assert ignored_tests == {"test_1", "test_3", "test_5", "test_6"}
