@@ -9,7 +9,15 @@ from debug import pprint
 import mypy.build
 from mypy.checker import TypeChecker
 import mypy.modulefinder
-from mypy.nodes import AssignmentStmt, Decorator, Expression, FuncDef, NameExpr
+from mypy.nodes import (
+    AssignmentStmt,
+    Decorator,
+    Expression,
+    FuncDef,
+    MemberExpr,
+    NameExpr,
+    Statement,
+)
 import mypy.options
 from mypy.subtypes import is_same_type
 from mypy.types import CallableType, Type
@@ -44,6 +52,7 @@ class ParseResult:
     checker: TypeChecker
     types: TypeLookup
     defs: Mapping[str, Expression | FuncDef | Decorator]
+    raw_defs: list[Statement]
 
 
 @functools.lru_cache(maxsize=1)
@@ -76,13 +85,18 @@ def parse(code: str) -> ParseResult:
     defs: dict[str, Expression | FuncDef | Decorator] = {}
     for def_ in tree.defs:
         if isinstance(def_, AssignmentStmt):
-            for name in def_.lvalues:
-                if isinstance(name, NameExpr):
-                    defs[name.name] = def_.rvalue
+            for lvalue in def_.lvalues:
+                if isinstance(lvalue, NameExpr):
+                    defs[lvalue.name] = def_.rvalue
+                elif isinstance(lvalue, MemberExpr) and isinstance(lvalue.expr, NameExpr):
+                    defs[f"{lvalue.expr.name}.{lvalue.name}"] = def_.rvalue
+
         elif isinstance(def_, FuncDef | Decorator):
             defs[def_.name] = def_
 
-    return ParseResult(checker=type_checker, types=TypeLookup(tree.names), defs=defs)
+    return ParseResult(
+        checker=type_checker, types=TypeLookup(tree.names), defs=defs, raw_defs=tree.defs
+    )
 
 
 def get_error_messages(checker: TypeChecker) -> str:
