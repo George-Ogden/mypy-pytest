@@ -18,6 +18,6 @@ def test_check_files(
 ) -> None:
     sys.modules.pop("plugin", None)  # required for plugin to work correctly
     stdout, stderr, _exit_code = mypy.api.run([str(filepath)])
-    print(stderr)
+    assert stderr == "", stderr
     stdout_snapshot_file = f"{filepath.stem}.out"
     snapshot.assert_match(stdout, stdout_snapshot_file)
