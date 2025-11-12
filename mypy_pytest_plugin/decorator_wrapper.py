@@ -64,20 +64,18 @@ class DecoratorWrapper:
     def _check_actuals_formals_mapping(
         self, mapping: list[list[int]]
     ) -> tuple[Expression, Expression] | None:
-        arg_names_idx, arg_values_idx, extras = self._clean_up_actuals_formals_mapping(mapping)
+        arg_names_idx, arg_values_idx, *_ = self._clean_up_actuals_formals_mapping(mapping)
         if (
-            any(arg_values_idx in extra or arg_names_idx in extra for extra in extras)
-            or arg_values_idx == arg_names_idx
-            or self.node.arg_kinds[arg_values_idx] not in self.accepted_arg_kinds
-            or self.node.arg_kinds[arg_names_idx] not in self.accepted_arg_kinds
+            self.node.arg_kinds[arg_values_idx] in self.accepted_arg_kinds
+            and self.node.arg_kinds[arg_names_idx] in self.accepted_arg_kinds
         ):
-            self.checker.fail(
-                "Unable to read argnames and argvalues in a variadic argument.",
-                context=self.node,
-                code=VARIADIC_ARGNAMES_ARGVALUES,
-            )
-            return None
-        return self.node.args[arg_names_idx], self.node.args[arg_values_idx]
+            return self.node.args[arg_names_idx], self.node.args[arg_values_idx]
+        self.checker.fail(
+            "Unable to read argnames and argvalues in a variadic argument.",
+            context=self.node,
+            code=VARIADIC_ARGNAMES_ARGVALUES,
+        )
+        return None
 
     def _clean_up_actuals_formals_mapping(
         self, mapping: list[list[int]]
