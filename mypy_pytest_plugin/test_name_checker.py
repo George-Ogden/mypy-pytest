@@ -24,7 +24,7 @@ class TestNameChecker:
     @functools.cache
     def session(cls) -> Session:
         config = get_config()
-        config.parse([])
+        config.parse(["-s"])
         return Session.from_config(config)
 
     @classmethod
