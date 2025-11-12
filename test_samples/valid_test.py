@@ -21,3 +21,9 @@ def test_internal_error(x: int, y: int) -> None:
 @pytest.mark.parametrize(argvalues="abcd", argnames="x")
 def test_skipped_error(x: str) -> None:
     return x
+
+
+def test_call_edge_cases() -> None:
+    f_string = f"x{3}"
+    list_addition = [1, 2, 3]
+    list_addition += [4, 5, 6]

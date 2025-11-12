@@ -64,3 +64,9 @@ VARIADIC_KEYWORD_ARGUMENT: Final[ErrorCode] = ErrorCode(
     "Keyword-only positional arguments not allowed in Pytest test definitions.",
     category="Pytest",
 )
+
+ITERABLE_SEQUENCE: Final[ErrorCode] = ErrorCode(
+    "iterable-sequence",
+    """"Sequence" passed into a function expecting "Iterable" in a test.""",
+    category="robust-testing",
+)
