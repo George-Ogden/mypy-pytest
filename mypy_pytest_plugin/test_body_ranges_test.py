@@ -58,7 +58,7 @@ def test_test_body_ranges_mixed_fns() -> None:
 
 
 def test_test_body_range_inclusion() -> None:
-    test_body_ranges = TestBodyRanges.from_ranges([(1, 2), (5, 7), (8, 8)])
+    test_body_ranges = TestBodyRanges.from_ranges(iter([(1, 2), (5, 7), (8, 8)]))
     for i, included in {
         0: False,
         1: True,
