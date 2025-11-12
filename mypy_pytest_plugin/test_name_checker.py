@@ -1,3 +1,4 @@
+from collections.abc import MutableSequence
 import fnmatch
 import functools
 from pathlib import Path
@@ -16,9 +17,13 @@ class TestNameChecker:
     @classmethod
     def _split_fullname(cls, fullname: str) -> tuple[Path, str]:
         [*path, name] = fullname.split(".")
-        if path:
-            path[-1] += ".py"
-        return Path(*path), name
+        return cls._path_from_sections(path), name
+
+    @classmethod
+    def _path_from_sections(cls, sections: MutableSequence[str]) -> Path:
+        if sections:
+            sections[-1] += ".py"
+        return Path(*sections)
 
     @classmethod
     @functools.cache
@@ -36,6 +41,12 @@ class TestNameChecker:
     @functools.cache
     def _fn_patterns(cls) -> list[str]:
         return cls._session().config.getini("python_functions")
+
+    @classmethod
+    @functools.cache
+    def is_test_file_name(cls, name: str) -> bool:
+        path = cls._path_from_sections(name.split("."))
+        return cls.is_test_path(path)
 
     @classmethod
     @functools.cache

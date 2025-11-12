@@ -1,3 +1,4 @@
+from typing import Iterable, Sequence
 import pytest
 
 
@@ -33,3 +34,20 @@ def specific_test_case[T](x: T) -> tuple[T, T]:
     "x, y", (specific_test_case("a"), specific_test_case(2), specific_test_case(3.0))
 )
 def test_invalid_fn(x: int, y: int) -> None: ...
+
+
+def iterable_sequence(it: Iterable, seq: Sequence) -> None: ...
+
+
+class IterableSequenceTester:
+    def iterable_sequence(self, seq: Sequence[int], it: Iterable[int]) -> None: ...
+
+
+def test_iterable_sequence() -> None:
+    iterable_sequence([1], [2])
+    IterableSequenceTester().iterable_sequence([3], [4])
+
+
+def no_test_iterable_sequence() -> None:
+    iterable_sequence([5], [6])
+    IterableSequenceTester().iterable_sequence([7], [8])
