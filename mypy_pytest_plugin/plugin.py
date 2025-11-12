@@ -5,6 +5,7 @@ from mypy.checker import TypeChecker
 from mypy.nodes import (
     CallExpr,
     Decorator,
+    Expression,
     MypyFile,
     TypeInfo,
 )
@@ -42,9 +43,14 @@ class PytestPlugin(Plugin):
             and isinstance(ctx.api, TypeChecker)
             and TestNameChecker.is_test_file_name(ctx.api.tree.fullname)
             and ctx.context.line in TestBodyRanges.from_defs(ctx.api.tree.defs)
+            and all(cls._is_real_argument(arg) for arg in ctx.context.args)
         ):
             IterableSequenceChecker(ctx.api).check_iterable_sequence_call(ctx.context)
         return ctx.default_return_type
+
+    @classmethod
+    def _is_real_argument(cls, argument: Expression) -> bool:
+        return argument.line != -1 and argument.end_line is not None
 
     @classmethod
     def check_parametrization(cls, ctx: MethodContext) -> Type:
