@@ -55,3 +55,21 @@ def test_test_body_ranges_mixed_fns() -> None:
         """,
         [(1, 2), (11, 14), (16, 16), (23, 25)],
     )
+
+
+def test_test_body_range_inclusion() -> None:
+    test_body_ranges = TestBodyRanges.from_ranges([(1, 2), (5, 7), (8, 8)])
+    for i, included in {
+        0: False,
+        1: True,
+        2: True,
+        3: False,
+        4: False,
+        5: True,
+        6: True,
+        7: True,
+        8: True,
+        9: False,
+        10: False,
+    }.items():
+        assert (i in test_body_ranges) == included
