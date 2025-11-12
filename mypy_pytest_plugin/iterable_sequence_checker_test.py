@@ -125,3 +125,47 @@ def test_check_iterable_sequence_many_args_variadic_keyword() -> None:
         call = foo(**map)
         """
     )
+
+
+def test_check_iterable_sequence_default_argument() -> None:
+    _check_iterable_sequence_call_test_body(
+        """
+        from typing import Iterable
+
+        def foo(x: Iterable = [1]) -> int:
+            return 0
+
+        call = foo()
+        """
+    )
+
+
+def test_check_iterable_sequence_instance_method() -> None:
+    _check_iterable_sequence_call_test_body(
+        """
+        from typing import Iterable
+
+        class Foo:
+            def foo(self, it: Iterable) -> int:
+                return 0
+
+        call = Foo().foo([8])
+        """,
+        errors=["iterable-sequence"],
+    )
+
+
+def test_check_iterable_sequence_class_method() -> None:
+    _check_iterable_sequence_call_test_body(
+        """
+        from typing import Iterable
+
+        class Foo:
+            @classmethod
+            def foo(cls, it: Iterable) -> int:
+                return 0
+
+        call = Foo().foo([9])
+        """,
+        errors=["iterable-sequence"],
+    )
