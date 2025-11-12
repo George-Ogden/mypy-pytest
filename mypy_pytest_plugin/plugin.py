@@ -32,7 +32,7 @@ class PytestPlugin(Plugin):
             ignored_testnames = ExcludedTestChecker.ignored_test_names(ctx.api.tree.defs, ctx.api)
             if ignored_testnames is None:
                 ctx.api.defer_node(ctx.context, None)
-            elif ctx.context.name not in ignored_testnames and TestNameChecker.is_test_fn_name(
+            elif ctx.context.name not in ignored_testnames and TestNameChecker.is_test_name(
                 ctx.context.fullname
             ):
                 cls._check_decorators(ctx.context, ctx.api)
