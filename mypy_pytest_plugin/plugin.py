@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Final, cast
+from typing import Final
 
 from mypy.checker import TypeChecker
 from mypy.nodes import (
@@ -7,10 +7,9 @@ from mypy.nodes import (
     Decorator,
     Expression,
     MypyFile,
-    TypeInfo,
 )
 from mypy.plugin import FunctionContext, MethodContext, Plugin
-from mypy.types import CallableType, Instance, Type
+from mypy.types import CallableType, Type
 
 from .excluded_test_checker import ExcludedTestChecker
 from .iterable_sequence_checker import IterableSequenceChecker
@@ -76,10 +75,7 @@ class PytestPlugin(Plugin):
             isinstance(return_type, CallableType)
             and return_type.fallback.type.fullname == "builtins.function"
         ):
-            testable_symbol_table_node = checker.modules[cls.TYPES_MODULE].names[
-                "Testable"
-            ]  # direct lookup not working
-            return_type.fallback = Instance(cast(TypeInfo, testable_symbol_table_node.node), [])
+            return_type.fallback = checker.named_type(f"{cls.TYPES_MODULE}.Testable")
 
 
 def plugin(version: str) -> type[PytestPlugin]:
