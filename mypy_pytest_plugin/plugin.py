@@ -24,8 +24,7 @@ class PytestPlugin(Plugin):
 
     def get_additional_deps(self, file: MypyFile) -> list[tuple[int, str, int]]:
         deps = [(10, "typing", -1)]
-        if TestNameChecker.is_test_file_name(file.fullname):
-            deps.append((10, self.TYPES_MODULE, -1))
+        deps.append((10, self.TYPES_MODULE, -1))
         return deps
 
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
