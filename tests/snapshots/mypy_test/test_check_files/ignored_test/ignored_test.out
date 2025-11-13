@@ -1,1 +1,2 @@
-Success: no issues found in 1 source file
+test_samples/ignored_test.py:13: error: Function is missing a type annotation  [no-untyped-def]
+Found 1 error in 1 file (checked 1 source file)

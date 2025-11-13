@@ -55,7 +55,8 @@ class TestInfo:
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
         fn_def, decorators = cls._get_fn_and_decorators(fn_def)
-        assert isinstance(fn_def.type, CallableType)
+        if not isinstance(fn_def.type, CallableType):
+            return None
         test_arguments = cls._validate_test_arguments(
             fn_def.arguments, fn_def.type.arg_types, checker=checker
         )
