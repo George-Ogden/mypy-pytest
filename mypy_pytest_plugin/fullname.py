@@ -23,3 +23,6 @@ class Fullname:
 
     def pop_back(self) -> tuple[str, Self]:
         return self._parts[-1], type(self)(*self._parts[:-1])
+
+    def push_back(self, extra: str) -> Self:
+        return type(self)(*self._parts, extra)

@@ -41,3 +41,13 @@ def test_fullname_pop_back_multiple() -> None:
         "test_file",
         Fullname("root", "folder_name"),
     )
+
+
+def test_fullname_push_back_empty() -> None:
+    assert Fullname().push_back("extra") == Fullname("extra")
+
+
+def test_fullname_push_back_multiple() -> None:
+    assert Fullname("root", "folder_name", "test_file").push_back("conftest") == Fullname(
+        "root", "folder_name", "test_file", "conftest"
+    )
