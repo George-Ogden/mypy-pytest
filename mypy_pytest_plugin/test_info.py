@@ -5,8 +5,6 @@ from typing import Self, cast
 
 from mypy.checker import TypeChecker
 from mypy.nodes import (
-    ArgKind,
-    Argument,
     Decorator,
     Expression,
     FuncDef,
@@ -14,7 +12,7 @@ from mypy.nodes import (
     StrExpr,
     TupleExpr,
 )
-from mypy.types import CallableType, Type, TypeVarLikeType
+from mypy.types import CallableType, TypeVarLikeType
 
 from .argvalues import Argvalues
 from .decorator_wrapper import DecoratorWrapper
@@ -22,25 +20,15 @@ from .error_codes import (
     DUPLICATE_ARGNAME,
     INVALID_ARGNAME,
     MISSING_ARGNAME,
-    POSITIONAL_ONLY_ARGUMENT,
     REPEATED_ARGNAME,
     UNKNOWN_ARGNAME,
     UNREADABLE_ARGNAME,
     UNREADABLE_ARGNAMES,
-    VARIADIC_KEYWORD_ARGUMENT,
-    VARIADIC_POSITIONAL_ARGUMENT,
 )
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
+from .test_argument import TestArgument
 from .test_signature import TestSignature
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
-class TestArgument:
-    name: str
-    type_: Type
-    initialized: bool
-    context: Argument
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -55,11 +43,7 @@ class TestInfo:
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
         fn_def, decorators = cls._get_fn_and_decorators(fn_def)
-        if not isinstance(fn_def.type, CallableType):
-            return None
-        test_arguments = cls._validate_test_arguments(
-            fn_def.arguments, fn_def.type.arg_types, checker=checker
-        )
+        test_arguments = TestArgument.from_fn_def(fn_def, checker=checker)
         if test_arguments is None:
             return None
         test_decorators = DecoratorWrapper.decorators_from_nodes(decorators, checker=checker)
@@ -68,7 +52,7 @@ class TestInfo:
             checker=checker,
             arguments={test_argument.name: test_argument for test_argument in test_arguments},
             decorators=test_decorators,
-            type_variables=fn_def.type.variables,
+            type_variables=cast(CallableType, fn_def.type).variables,
         )
 
     @classmethod
@@ -82,50 +66,6 @@ class TestInfo:
                 return fn_def.func, fn_def.original_decorators
             case _:
                 raise TypeError()
-
-    @classmethod
-    def _validate_test_arguments(
-        cls, arguments: Sequence[Argument], types: Sequence[Type], *, checker: TypeChecker
-    ) -> Sequence[TestArgument] | None:
-        test_arguments: Sequence[TestArgument | None] = [
-            cls._validate_test_argument(argument, type_, checker=checker)
-            for argument, type_ in zip(arguments, types, strict=True)
-        ]
-        if any(argument is None for argument in test_arguments):
-            return None
-        return cast(list[TestArgument], test_arguments)
-
-    @classmethod
-    def _validate_test_argument(
-        cls, argument: Argument, type_: Type, *, checker: TypeChecker
-    ) -> TestArgument | None:
-        if argument.pos_only:
-            checker.fail(
-                f"`{argument.variable.name}` must not be positional only.",
-                context=argument,
-                code=POSITIONAL_ONLY_ARGUMENT,
-            )
-            return None
-        if argument.kind == ArgKind.ARG_STAR:
-            checker.fail(
-                f"`*{argument.variable.name}` must not be variadic positional.",
-                context=argument,
-                code=VARIADIC_POSITIONAL_ARGUMENT,
-            )
-            return None
-        if argument.kind == ArgKind.ARG_STAR2:
-            checker.fail(
-                f"`**{argument.variable.name}` must not be variadic keyword-only.",
-                context=argument,
-                code=VARIADIC_KEYWORD_ARGUMENT,
-            )
-            return None
-        return TestArgument(
-            name=argument.variable.name,
-            type_=type_,
-            initialized=argument.initializer is not None,
-            context=argument,
-        )
 
     def _check_duplicate_argnames(
         self, argnames: str | list[str] | None, context: Expression
@@ -229,9 +169,7 @@ class TestInfo:
         self._check_missing_argnames()
 
     def _check_missing_argnames(self) -> None:
-        missing_arg_names = {
-            arg_name for arg_name, argument in self.arguments.items() if not argument.initialized
-        }.difference(self.seen_arg_names)
+        missing_arg_names = set(self.arguments.keys()).difference(self.seen_arg_names)
         for arg_name in missing_arg_names:
             self.checker.fail(
                 f"Argname {arg_name!r} not included in parametrization.",

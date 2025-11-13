@@ -19,6 +19,7 @@ UNKNOWN_ARGNAME: Final[ErrorCode] = ErrorCode(
     "Pytest parametrize contains argname not used in test signature.",
     category="Pytest",
 )
+
 DUPLICATE_ARGNAME: Final[ErrorCode] = ErrorCode(
     "duplicate-argname", "Pytest parametrize contains duplicate argnames.", category="Pytest"
 )
@@ -47,21 +48,26 @@ UNRECOGNIZED_ARGNAME: Final[ErrorCode] = ErrorCode(
 
 POSITIONAL_ONLY_ARGUMENT: Final[ErrorCode] = ErrorCode(
     "pos-only-arg",
-    "Positional only arguments not allowed in Pytest test definitions.",
+    "Positional only arguments are ignored in Pytest test or fixture definitions.",
     category="Pytest",
 )
 
+OPTIONAL_ARGUMENT: Final[ErrorCode] = ErrorCode(
+    "opt-arg",
+    "Optionalarguments are ignored in Pytest test or fixture definitions.",
+    category="Pytest",
+)
 
 VARIADIC_POSITIONAL_ARGUMENT: Final[ErrorCode] = ErrorCode(
     "var-pos-arg",
-    "Variadic positional arguments not allowed in Pytest test definitions.",
+    "Variadic positional arguments are ignored in Pytest test or fixture definitions.",
     category="Pytest",
 )
 
 
 VARIADIC_KEYWORD_ARGUMENT: Final[ErrorCode] = ErrorCode(
     "var-keyword-arg",
-    "Keyword-only positional arguments not allowed in Pytest test definitions.",
+    "Keyword-only positional arguments are ignored in Pytest test or fixture definitions.",
     category="Pytest",
 )
 

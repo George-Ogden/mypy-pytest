@@ -184,10 +184,8 @@ def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = 
     test_info = TestInfo.from_fn_def(test_node, checker=checker)
 
     messages = get_error_messages(checker)
-    if errors is None:
-        assert test_info is not None, messages
-    else:
-        assert test_info is None
+    assert test_info is not None, messages
+
     check_error_messages(messages, errors=errors)
 
 
@@ -223,7 +221,8 @@ def test_test_info_from_fn_def_many_args() -> None:
         """
         def test_info[T: int](x: T, y: T, z: int = 4) -> None:
             ...
-        """
+        """,
+        errors=["opt-arg"],
     )
 
 
@@ -624,7 +623,7 @@ def test_test_info_check_multiple_decorators_missing_optional_argname() -> None:
             "y",
             "abcdefg"
         )
-        def test_info(x: int, y: str, missing: bool, z: float = 2.0, not_missing: int = 3) -> None:
+        def test_info(x: int, y: str, missing: bool, z: float) -> None:
             ...
         """,
         errors=["missing-argname"],
