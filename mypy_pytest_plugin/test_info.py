@@ -225,7 +225,7 @@ class TestInfo:
         )
 
     def check(self) -> None:
-        self.check_decorators(reversed(self.decorators))
+        self.check_decorators(self.decorators)
         self._check_missing_argnames()
 
     def _check_missing_argnames(self) -> None:
