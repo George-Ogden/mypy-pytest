@@ -32,7 +32,7 @@ repos:
         additional_dependencies: [prettier]
 
   - repo: https://github.com/George-Ogden/pre-commit-hooks
-    rev: v2.0.1
+    rev: v2.0.2
     hooks:
       - id: check-merge-conflict
       - id: dbg-check

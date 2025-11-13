@@ -55,7 +55,8 @@ class TestInfo:
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
         fn_def, decorators = cls._get_fn_and_decorators(fn_def)
-        assert isinstance(fn_def.type, CallableType)
+        if not isinstance(fn_def.type, CallableType):
+            return None
         test_arguments = cls._validate_test_arguments(
             fn_def.arguments, fn_def.type.arg_types, checker=checker
         )
@@ -224,7 +225,7 @@ class TestInfo:
         )
 
     def check(self) -> None:
-        self.check_decorators(reversed(self.decorators))
+        self.check_decorators(self.decorators)
         self._check_missing_argnames()
 
     def _check_missing_argnames(self) -> None:
