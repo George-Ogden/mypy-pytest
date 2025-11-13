@@ -18,8 +18,11 @@ class Fullname:
     def __str__(self) -> str:
         return ".".join(self._parts)
 
-    def _repr__(self) -> str:
+    def __repr__(self) -> str:
         return f"{type(self).__name__}({self})"
+
+    def __bool__(self) -> bool:
+        return bool(self._parts)
 
     def pop_back(self) -> tuple[str, Self]:
         return self._parts[-1], type(self)(*self._parts[:-1])

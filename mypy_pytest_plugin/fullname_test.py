@@ -6,7 +6,8 @@ from .fullname import Fullname
 def _fullname_to_from_string_test_body(fullname: str, name: Fullname) -> None:
     assert Fullname.from_string(fullname) == name
     assert str(name) == fullname
-    assert repr(name) != fullname
+    assert repr(name) == f"Fullname({fullname})"
+    assert bool(name) == bool(fullname)
 
 
 def test_fullname_to_from_string_empty() -> None:
