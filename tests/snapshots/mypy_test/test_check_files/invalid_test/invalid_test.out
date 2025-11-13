@@ -11,4 +11,5 @@ test_samples/invalid_test.py:47: error: Expected "Iterable[Any]", got "list[Any]
 test_samples/invalid_test.py:47: note: This still type checks, but could be made more robust by using `iter()`
 test_samples/invalid_test.py:48: error: Expected "Iterable[int]", got "list[int]".  [iterable-sequence]
 test_samples/invalid_test.py:48: note: This still type checks, but could be made more robust by using `iter()`
-Found 11 errors in 1 file (checked 1 source file)
+test_samples/invalid_test.py:61: error: Function is missing a type annotation  [no-untyped-def]
+Found 12 errors in 1 file (checked 1 source file)
