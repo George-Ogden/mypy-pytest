@@ -29,3 +29,8 @@ class Fullname:
 
     def push_back(self, extra: str) -> Self:
         return type(self)(*self._parts, extra)
+
+    def __lt__(self, other: Self) -> bool:
+        if isinstance(other, type(self)):
+            return self._parts < other._parts
+        return NotImplemented

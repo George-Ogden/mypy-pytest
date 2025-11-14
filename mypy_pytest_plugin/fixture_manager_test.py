@@ -1,3 +1,5 @@
+from inline_snapshot import snapshot
+
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 
@@ -49,4 +51,25 @@ def test_fixture_manager_full_resolution_sequence_nested_folder() -> None:
             "conftest",
             "",
         ],
+    )
+
+
+def test_fixture_manager_default_fixture_modules() -> None:
+    modules = FixtureManager.default_fixture_modules()
+    assert sorted(map(str, modules)) == snapshot(
+        [
+            "_pytest.cacheprovider",
+            "_pytest.capture",
+            "_pytest.doctest",
+            "_pytest.fixtures",
+            "_pytest.junitxml",
+            "_pytest.logging",
+            "_pytest.monkeypatch",
+            "_pytest.recwarn",
+            "_pytest.subtests",
+            "_pytest.tmpdir",
+            "inline_snapshot.pytest_plugin",
+            "pytest_snapshot.plugin",
+            "xdist.plugin",
+        ]
     )

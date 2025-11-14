@@ -1,4 +1,10 @@
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
+import functools
+
+import _pytest.config
+from _pytest.fixtures import FixtureManager as PytestFixtureManager
+from _pytest.main import Session
+from pytest import FixtureDef  # noqa: PT013
 
 from .fullname import Fullname
 
@@ -16,3 +22,22 @@ class FixtureManager:
         yield from cls.conftest_names(name)
         if name:
             yield Fullname()
+
+    @classmethod
+    @functools.lru_cache
+    def default_fixture_modules(cls) -> Sequence[Fullname]:
+        config = _pytest.config.get_config()
+        config.parse(["-s", "--fixtures", "--noconftest"])
+
+        session = Session.from_config(config)
+        fixture_manager = PytestFixtureManager(session)
+        return tuple(
+            {
+                cls._fixture_module(fixture_defs[-1])
+                for fixture_defs in fixture_manager._arg2fixturedefs.values()
+            }
+        )
+
+    @classmethod
+    def _fixture_module(cls, fixture: FixtureDef) -> Fullname:
+        return Fullname.from_string(fixture.func.__module__)
