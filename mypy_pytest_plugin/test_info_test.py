@@ -252,7 +252,7 @@ def test_test_info_from_fn_def_varkwarg() -> None:
         def test_info(arg: object, **kwargs: object) -> None:
             ...
         """,
-        errors=["var-keyword-arg"],
+        errors=["var-kwarg"],
     )
 
 
@@ -262,7 +262,7 @@ def test_test_info_from_fn_def_vararg_and_varkwarg() -> None:
         def test_info(*args: object, **kwargs: object) -> None:
             ...
         """,
-        errors=["var-pos-arg", "var-keyword-arg"],
+        errors=["var-pos-arg", "var-kwarg"],
     )
 
 

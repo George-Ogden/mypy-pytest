@@ -66,8 +66,20 @@ VARIADIC_POSITIONAL_ARGUMENT: Final[ErrorCode] = ErrorCode(
 
 
 VARIADIC_KEYWORD_ARGUMENT: Final[ErrorCode] = ErrorCode(
-    "var-keyword-arg",
+    "var-kwarg",
     "Keyword-only positional arguments are ignored in Pytest test or fixture definitions.",
+    category="Pytest",
+)
+
+DUPLICATE_FIXTURE: Final[ErrorCode] = ErrorCode(
+    "duplicate-fixture",
+    "Only one use of `pytest.fixture` is allowed per test.",
+    category="Pytest",
+)
+
+INVALID_FIXTURE_SCOPE: Final[ErrorCode] = ErrorCode(
+    "invalid-fixture-scope",
+    "Use literal value for the scope of a Pytest fixture.",
     category="Pytest",
 )
 
