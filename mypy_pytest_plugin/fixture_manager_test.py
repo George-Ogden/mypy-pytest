@@ -21,3 +21,32 @@ def test_fixture_manager_conftest_names_nested_folder() -> None:
         "folder.nested_test.file_test",
         ["folder.nested_test.conftest", "folder.conftest", "conftest"],
     )
+
+
+def _fixture_manager_full_resolution_sequence_test_body(
+    fullname: str, expected_fullnames: list[str]
+) -> None:
+    name = Fullname.from_string(fullname)
+    expected = [Fullname.from_string(fullname) for fullname in expected_fullnames]
+    assert list(FixtureManager.full_resolution_sequence(name)) == expected
+
+
+def test_fixture_manager_full_resolution_sequence_empty() -> None:
+    _fixture_manager_full_resolution_sequence_test_body("", [""])
+
+
+def test_fixture_manager_full_resolution_sequence_file() -> None:
+    _fixture_manager_full_resolution_sequence_test_body("file_test", ["file_test", "conftest", ""])
+
+
+def test_fixture_manager_full_resolution_sequence_nested_folder() -> None:
+    _fixture_manager_full_resolution_sequence_test_body(
+        "folder.nested_test.file_test",
+        [
+            "folder.nested_test.file_test",
+            "folder.nested_test.conftest",
+            "folder.conftest",
+            "conftest",
+            "",
+        ],
+    )
