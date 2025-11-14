@@ -6,6 +6,7 @@ from mypy.checker import TypeChecker
 from mypy.nodes import (
     ArgKind,
     Argument,
+    Context,
     FuncDef,
 )
 from mypy.types import CallableType, Type
@@ -22,7 +23,7 @@ from .error_codes import (
 class TestArgument:
     name: str
     type_: Type
-    context: Argument
+    context: Context
 
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef, *, checker: TypeChecker) -> Sequence[Self] | None:

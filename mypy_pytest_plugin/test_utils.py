@@ -1,5 +1,5 @@
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 import functools
 import re
 import textwrap
@@ -48,6 +48,14 @@ class TypeLookup:
 
 
 @dataclass(frozen=True, kw_only=True)
+class MultiParseResult:
+    checkers: dict[str, TypeChecker] = field(default_factory=dict)
+    types: dict[str, TypeLookup] = field(default_factory=dict)
+    defs: dict[str, Expression | FuncDef | Decorator] = field(default_factory=dict)
+    raw_defs: list[Statement] = field(default_factory=list)
+
+
+@dataclass(frozen=True, kw_only=True)
 class ParseResult:
     checker: TypeChecker
     types: TypeLookup
@@ -55,9 +63,8 @@ class ParseResult:
     raw_defs: list[Statement]
 
 
-@functools.lru_cache(maxsize=1)
-def parse(code: str) -> ParseResult:
-    code = textwrap.dedent(code).strip()
+def parse_multiple(modules: Sequence[tuple[str, str]]) -> MultiParseResult:
+    modules = [(module_name, textwrap.dedent(code).strip()) for module_name, code in modules]
 
     options = mypy.options.Options()
     options.incremental = False
@@ -65,37 +72,60 @@ def parse(code: str) -> ParseResult:
     options.preserve_asts = True
 
     result = mypy.build.build(
-        sources=[mypy.modulefinder.BuildSource(path=None, module="test_module", text=code)],
+        sources=[
+            mypy.modulefinder.BuildSource(path=None, module=module_name, text=code)
+            for module_name, code in modules
+        ],
         options=options,
     )
 
-    state = result.graph["test_module"]
-    tree = state.tree
-    if tree is None:
-        raise ValueError(f"Unable to infer types. Errors: {state.early_errors}")
+    module_names = [module_name for module_name, _ in modules]
 
-    type_checker = state.type_checker()
-    errors = type_checker.errors
-    if errors.is_errors():
-        for info in errors.error_info_map.values():
-            for err in info:
-                print(f"{err.file}:{err.line}: {err.message}")
-        raise TypeError()
+    parse_result = MultiParseResult()
+    for module_name in module_names:
+        state = result.graph[module_name]
+        tree = state.tree
+        if tree is None:
+            raise ValueError(f"Unable to infer types. Errors: {state.early_errors}")
 
-    defs: dict[str, Expression | FuncDef | Decorator] = {}
-    for def_ in tree.defs:
-        if isinstance(def_, AssignmentStmt):
-            for lvalue in def_.lvalues:
-                if isinstance(lvalue, NameExpr):
-                    defs[lvalue.name] = def_.rvalue
-                elif isinstance(lvalue, MemberExpr) and isinstance(lvalue.expr, NameExpr):
-                    defs[f"{lvalue.expr.name}.{lvalue.name}"] = def_.rvalue
+        type_checker = state.type_checker()
+        errors = type_checker.errors
+        if errors.is_errors():
+            for info in errors.error_info_map.values():
+                for err in info:
+                    print(f"{err.file}:{err.line}: {err.message}")
+            raise TypeError()
 
-        elif isinstance(def_, FuncDef | Decorator):
-            defs[def_.name] = def_
+        defs: dict[str, Expression | FuncDef | Decorator] = {}
+        for def_ in tree.defs:
+            if isinstance(def_, AssignmentStmt):
+                for lvalue in def_.lvalues:
+                    if isinstance(lvalue, NameExpr):
+                        defs[lvalue.name] = def_.rvalue
+                    elif isinstance(lvalue, MemberExpr) and isinstance(lvalue.expr, NameExpr):
+                        defs[f"{lvalue.expr.name}.{lvalue.name}"] = def_.rvalue
 
+            elif isinstance(def_, FuncDef | Decorator):
+                defs[def_.name] = def_
+
+        parse_result.checkers[module_name] = type_checker
+        parse_result.raw_defs.extend(tree.defs)
+        parse_result.types[module_name] = TypeLookup(tree.names)
+        parse_result.defs.update({f"{module_name}.{name}": def_ for name, def_ in defs.items()})
+        if len(parse_result.defs) == 1:
+            parse_result.defs.update(defs)
+    return parse_result
+
+
+@functools.lru_cache(maxsize=1)
+def parse(code: str) -> ParseResult:
+    module_name = "test_module"
+    parse_result = parse_multiple([(module_name, code)])
     return ParseResult(
-        checker=type_checker, types=TypeLookup(tree.names), defs=defs, raw_defs=tree.defs
+        checker=parse_result.checkers[module_name],
+        types=parse_result.types[module_name],
+        defs=parse_result.defs,
+        raw_defs=parse_result.raw_defs,
     )
 
 

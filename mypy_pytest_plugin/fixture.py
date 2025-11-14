@@ -4,7 +4,7 @@ import enum
 from typing import Final, Self, cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import CallExpr, Decorator, Expression
+from mypy.nodes import CallExpr, Context, Decorator, Expression
 from mypy.types import CallableType, Instance, LiteralType, Overloaded, Type
 
 from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE
@@ -21,6 +21,7 @@ class Fixture:
     return_type: Type
     arguments: Sequence[TestArgument]
     scope: FixtureScope
+    context: Context
 
     @classmethod
     def from_decorator(cls, decorator: Decorator, checker: TypeChecker) -> Self | None:
@@ -33,7 +34,11 @@ class Fixture:
             return_type=cast(CallableType, decorator.func.type).ret_type,
             arguments=arguments,
             scope=cls._fixture_scope_from_decorator(fixture_decorator, checker),
+            context=decorator.func,
         )
+
+    def as_argument(self) -> TestArgument:
+        return TestArgument(name=self.fullname.back, type_=self.return_type, context=self.context)
 
     @classmethod
     def fixture_decorator(
