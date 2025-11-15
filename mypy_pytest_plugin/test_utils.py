@@ -112,7 +112,7 @@ def parse_multiple(modules: Sequence[tuple[str, str]]) -> MultiParseResult:
         parse_result.raw_defs.extend(tree.defs)
         parse_result.types[module_name] = TypeLookup(tree.names)
         parse_result.defs.update({f"{module_name}.{name}": def_ for name, def_ in defs.items()})
-        if len(parse_result.defs) == 1:
+        if len(module_names) == 1:
             parse_result.defs.update(defs)
     return parse_result
 

@@ -77,6 +77,12 @@ DUPLICATE_FIXTURE: Final[ErrorCode] = ErrorCode(
     category="Pytest",
 )
 
+MARKED_FIXTURE: Final[ErrorCode] = ErrorCode(
+    "marked-fixture",
+    "Do not use `pytest.mark` with `pytest.fixture`.",
+    category="Pytest",
+)
+
 INVALID_FIXTURE_SCOPE: Final[ErrorCode] = ErrorCode(
     "invalid-fixture-scope",
     "Use literal value for the scope of a Pytest fixture.",

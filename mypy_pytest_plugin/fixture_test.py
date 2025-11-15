@@ -157,3 +157,21 @@ def test_fixture_from_fn_defs_wrong_type_scope() -> None:
         is_fixture=True,
         errors=["invalid-fixture-scope"],
     )
+
+
+def test_fixture_from_fn_defs_mark() -> None:
+    _fixture_from_defs_test_body(
+        """
+        import pytest
+
+        skipper = pytest.mark.skip
+
+        @pytest.fixture
+        @skipper
+        @pytest.mark.slow
+        def fixture(x: str) -> None:
+            ...
+        """,
+        is_fixture=False,
+        errors=["marked-fixture", "marked-fixture"],
+    )

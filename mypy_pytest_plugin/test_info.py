@@ -107,10 +107,11 @@ class TestInfo:
         return argnames
 
     def _check_valid_identifier(self, name: str, context: StrExpr) -> bool:
-        if name.isidentifier():
-            return True
-        self.checker.fail(f"Invalid identifier {name!r}.", context=context, code=INVALID_ARGNAME)
-        return False
+        if not (valid_identifier := name.isidentifier()):
+            self.checker.fail(
+                f"Invalid identifier {name!r}.", context=context, code=INVALID_ARGNAME
+            )
+        return valid_identifier
 
     def parse_names_string(self, node: StrExpr) -> str | list[str] | None:
         individual_names = [name.strip() for name in node.value.split(",")]
@@ -202,15 +203,15 @@ class TestInfo:
         return all([self._check_arg_name(arg_name, context) for arg_name in arg_names])
 
     def _check_arg_name(self, arg_name: str, context: Expression) -> bool:
-        if arg_name in self.arguments:
+        if known_name := arg_name in self.arguments:
             self._check_repeated_arg_name(arg_name, context)
-            return True
-        self.checker.fail(
-            f"Unknown argname {arg_name!r} used as test argument.",
-            context=context,
-            code=UNKNOWN_ARGNAME,
-        )
-        return False
+        else:
+            self.checker.fail(
+                f"Unknown argname {arg_name!r} used as test argument.",
+                context=context,
+                code=UNKNOWN_ARGNAME,
+            )
+        return known_name
 
     def _check_repeated_arg_name(self, arg_name: str, context: Expression) -> None:
         if arg_name in self.seen_arg_names:

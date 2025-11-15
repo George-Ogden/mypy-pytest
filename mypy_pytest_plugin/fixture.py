@@ -5,9 +5,11 @@ from typing import Final, Self, cast
 
 from mypy.checker import TypeChecker
 from mypy.nodes import CallExpr, Context, Decorator, Expression
+from mypy.subtypes import is_subtype
 from mypy.types import CallableType, Instance, LiteralType, Overloaded, Type
 
-from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE
+from .defer import DeferralError
+from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTURE
 from .fullname import Fullname
 from .test_argument import TestArgument
 
@@ -26,8 +28,12 @@ class Fixture:
     @classmethod
     def from_decorator(cls, decorator: Decorator, checker: TypeChecker) -> Self | None:
         fixture_decorator = cls.fixture_decorator(decorator.decorators, checker)
+        if fixture_decorator is None or cls._contains_mark_decorators(
+            decorator.decorators, checker
+        ):
+            return None
         arguments = TestArgument.from_fn_def(decorator.func, checker=checker)
-        if fixture_decorator is None or arguments is None:
+        if arguments is None:
             return None
         return cls(
             fullname=Fullname(decorator.fullname),
@@ -41,18 +47,44 @@ class Fixture:
         return TestArgument(name=self.fullname.back, type_=self.return_type, context=self.context)
 
     @classmethod
+    def is_fixture_and_mark(cls, decorator: Decorator, *, checker: TypeChecker) -> bool:
+        return bool(
+            cls.fixture_decorators(decorator.decorators, checker)
+        ) and cls._contains_mark_decorators(decorator.decorators, checker)
+
+    @classmethod
+    def _contains_mark_decorators(cls, decorators: list[Expression], checker: TypeChecker) -> bool:
+        return any([cls._is_mark(decorator, checker) for decorator in decorators])
+
+    @classmethod
+    def _is_mark(cls, expression: Expression, checker: TypeChecker) -> bool:
+        if is_mark := is_subtype(
+            checker.lookup_type(expression), checker.named_type("pytest.MarkDecorator")
+        ):
+            checker.fail(
+                "Marks cannot be applied to fixtures.", context=expression, code=MARKED_FIXTURE
+            )
+        return is_mark
+
+    @classmethod
     def fixture_decorator(
         cls, decorators: Sequence[Expression], checker: TypeChecker
     ) -> Expression | None:
-        fixture_decorators = [
-            decorator for decorator in decorators if cls._is_fixture_decorator(decorator, checker)
-        ]
+        fixture_decorators = cls.fixture_decorators(decorators, checker)
         if len(fixture_decorators) == 1:
             [fixture_decorator] = fixture_decorators
             return fixture_decorator
-        for decorator in fixture_decorators[:-1]:
+        for decorator in fixture_decorators[1:]:
             cls._warn_extra_decorator(decorator, checker)
         return None
+
+    @classmethod
+    def fixture_decorators(
+        cls, decorators: Sequence[Expression], checker: TypeChecker
+    ) -> list[Expression]:
+        return [
+            decorator for decorator in decorators if cls._is_fixture_decorator(decorator, checker)
+        ]
 
     @classmethod
     def _warn_extra_decorator(cls, decorator: Expression, checker: TypeChecker) -> None:
@@ -64,7 +96,9 @@ class Fixture:
 
     @classmethod
     def _is_fixture_decorator(cls, decorator: Expression, checker: TypeChecker) -> bool:
-        decorator_type = checker.lookup_type(decorator)
+        decorator_type = checker.lookup_type_or_none(decorator)
+        if decorator_type is None:
+            raise DeferralError()
         return cls._is_fixture_type(decorator_type) or (
             isinstance(decorator_type, Overloaded)
             and any(cls._is_fixture_type(overload.ret_type) for overload in decorator_type.items)

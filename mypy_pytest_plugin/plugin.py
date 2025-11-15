@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Final
+from typing import Final, cast
 
 from mypy.checker import TypeChecker
 from mypy.nodes import (
@@ -11,7 +11,9 @@ from mypy.nodes import (
 from mypy.plugin import FunctionContext, MethodContext, Plugin
 from mypy.types import CallableType, Type
 
+from .defer import DeferralError
 from .excluded_test_checker import ExcludedTestChecker
+from .fixture import Fixture
 from .iterable_sequence_checker import IterableSequenceChecker
 from .test_body_ranges import TestBodyRanges
 from .test_info import TestInfo
@@ -22,16 +24,20 @@ class PytestPlugin(Plugin):
     TYPES_MODULE: Final[str] = "mypy_pytest_plugin_types"
 
     def get_additional_deps(self, file: MypyFile) -> list[tuple[int, str, int]]:
-        deps = [(10, "typing", -1)]
-        deps.append((10, self.TYPES_MODULE, -1))
+        deps = [
+            (10, "typing", -1),
+            (10, self.TYPES_MODULE, -1),
+        ]
         return deps
 
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
         return self.check_iterable_sequence
 
     def get_method_hook(self, fullname: str) -> Callable[[MethodContext], Type] | None:
-        if fullname.startswith("_pytest.mark.structures"):
-            return self.check_parametrization
+        if (
+            fullname.startswith("_pytest.mark.structures") and "Mark" in fullname
+        ) or fullname.startswith("_pytest.fixtures.FixtureFunctionMarker"):
+            return self.check_pytest_structure
         return self.check_iterable_sequence
 
     @classmethod
@@ -51,16 +57,28 @@ class PytestPlugin(Plugin):
         return argument.line != -1 and argument.end_line is not None
 
     @classmethod
-    def check_parametrization(cls, ctx: MethodContext) -> Type:
+    def check_pytest_structure(cls, ctx: MethodContext) -> Type:
+        try:
+            return cls._check_pytest_structure(ctx)
+        except DeferralError:
+            assert isinstance(ctx.api, TypeChecker)
+            ctx.api.defer_node(cast(Decorator, ctx.context), None)
+            return ctx.default_return_type
+
+    @classmethod
+    def _check_pytest_structure(cls, ctx: MethodContext) -> Type:
         if isinstance(ctx.context, Decorator) and isinstance(ctx.api, TypeChecker):
-            ignored_testnames = ExcludedTestChecker.ignored_test_names(ctx.api.tree.defs, ctx.api)
-            if ignored_testnames is None:
-                ctx.api.defer_node(ctx.context, None)
-            elif ctx.context.name not in ignored_testnames and TestNameChecker.is_test_name(
-                ctx.context.fullname
-            ):
-                cls._check_decorators(ctx.context, ctx.api)
             cls._update_return_type(ctx.default_return_type, ctx.api)
+            if not Fixture.is_fixture_and_mark(
+                ctx.context, checker=ctx.api
+            ) and not Fixture.from_decorator(ctx.context, checker=ctx.api):
+                ignored_testnames = ExcludedTestChecker.ignored_test_names(
+                    ctx.api.tree.defs, ctx.api
+                )
+                if ctx.context.name not in ignored_testnames and TestNameChecker.is_test_name(
+                    ctx.context.fullname
+                ):
+                    cls._check_decorators(ctx.context, ctx.api)
         return ctx.default_return_type
 
     @classmethod
