@@ -5,6 +5,7 @@ from typing import cast
 
 from mypy.checker import TypeChecker
 from mypy.nodes import (
+    Context,
     Expression,
     ListExpr,
     StrExpr,
@@ -76,14 +77,14 @@ class ArgnamesParser:
         return None
 
     def _check_duplicate_argnames(
-        self, argnames: str | list[str] | None, context: Expression
+        self, argnames: str | list[str] | None, context: Context
     ) -> str | list[str] | None:
         if isinstance(argnames, list):
             return self._check_duplicate_argnames_sequence(argnames, context)
         return argnames
 
     def _check_duplicate_argnames_sequence(
-        self, argnames: list[str], context: Expression
+        self, argnames: list[str], context: Context
     ) -> None | list[str]:
         argname_counts = Counter(argnames)
         duplicates = [argname for argname, count in argname_counts.items() if count > 1]
@@ -92,7 +93,7 @@ class ArgnamesParser:
             return None
         return argnames
 
-    def _warn_duplicate_argnames(self, duplicates: Iterable[str], context: Expression) -> None:
+    def _warn_duplicate_argnames(self, duplicates: Iterable[str], context: Context) -> None:
         for argname in duplicates:
             self.checker.fail(
                 f"Duplicated argname {argname!r}.", context=context, code=DUPLICATE_ARGNAME

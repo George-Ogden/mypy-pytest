@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from mypy.argmap import map_formals_to_actuals
 from mypy.checker import TypeChecker
 from mypy.messages import format_type
-from mypy.nodes import ArgKind, CallExpr, Expression
+from mypy.nodes import ArgKind, CallExpr, Context, Expression
 from mypy.subtypes import is_subtype
 from mypy.types import CallableType, Instance, Type
 
@@ -22,7 +22,7 @@ class IterableSequenceChecker:
                 self._display_error_message(expected_type, argument_type, argument)
 
     def _display_error_message(
-        self, expected_type: Type, argument_type: Type, context: Expression
+        self, expected_type: Type, argument_type: Type, context: Context
     ) -> None:
         self.checker.fail(
             f"Expected {format_type(expected_type, self.checker.options)}, got {format_type(argument_type, self.checker.options)}.",

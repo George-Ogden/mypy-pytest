@@ -133,7 +133,7 @@ class Fixture:
 
     @classmethod
     def _fixture_scope_from_type(
-        cls, type_: Type, context: Expression, checker: TypeChecker
+        cls, type_: Type, context: Context, checker: TypeChecker
     ) -> FixtureScope:
         if isinstance(type_, LiteralType) and type_.value in FixtureScope._member_names_:
             return FixtureScope[cast(str, type_.value)]

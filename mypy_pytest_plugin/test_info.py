@@ -5,6 +5,7 @@ from typing import Self, cast
 
 from mypy.checker import TypeChecker
 from mypy.nodes import (
+    Context,
     Decorator,
     Expression,
     FuncDef,
@@ -173,12 +174,12 @@ class TestInfo:
                 arg_values = Argvalues(arg_values_node)
                 arg_values.check_against(sub_signature)
 
-    def _check_arg_names(self, arg_names: str | list[str], *, context: Expression) -> bool:
+    def _check_arg_names(self, arg_names: str | list[str], *, context: Context) -> bool:
         if isinstance(arg_names, str):
             arg_names = [arg_names]
         return all([self._check_arg_name(arg_name, context) for arg_name in arg_names])
 
-    def _check_arg_name(self, arg_name: str, context: Expression) -> bool:
+    def _check_arg_name(self, arg_name: str, context: Context) -> bool:
         if known_name := arg_name in self.arguments:
             self._check_repeated_arg_name(arg_name, context)
         else:
@@ -189,7 +190,7 @@ class TestInfo:
             )
         return known_name
 
-    def _check_repeated_arg_name(self, arg_name: str, context: Expression) -> None:
+    def _check_repeated_arg_name(self, arg_name: str, context: Context) -> None:
         if arg_name in self.seen_arg_names:
             self.checker.fail(
                 f"Repeated argname {arg_name!r} in multiple parametrizations.",
