@@ -96,6 +96,12 @@ INVALID_FIXTURE_SCOPE: Final[ErrorCode] = ErrorCode(
     category="Pytest",
 )
 
+INVERTED_FIXTURE_SCOPE: Final[ErrorCode] = ErrorCode(
+    "inverted-fixture-scope",
+    "Fixtures are not allowed to request other fixtures with wider scopes.",
+    category="Pytest",
+)
+
 ITERABLE_SEQUENCE: Final[ErrorCode] = ErrorCode(
     "iterable-sequence",
     """"Sequence" passed into a function expecting "Iterable" in a test.""",

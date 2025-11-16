@@ -575,9 +575,6 @@ def test_test_info_check_unused_fixture_argument() -> None:
         def fixture(arg: int) -> str:
             return str(arg)
 
-        @pytest.mark.parametrize(
-            "", [()]
-        )
         def test_info(fixture: int) -> None:
             ...
         """,
@@ -620,12 +617,91 @@ def test_test_info_check_cyclic_fixture() -> None:
         def cycle_1(cycle_2: int) -> int:
             return cycle_2 + 1
 
-        @pytest.mark.parametrize(
-            "", [()]
-        )
         def test_info(cycle_1: int) -> None:
             ...
         """
+    )
+
+
+def test_test_info_check_fixture_valid_scopes() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture(scope="class")
+        def class_fixture() -> None:
+            ...
+
+        @pytest.fixture(scope="function")
+        def function_fixture(class_fixture: None) -> None:
+            ...
+
+        def test_info(function_fixture: None) -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_check_fixture_invalid_scopes() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture(scope="class")
+        def class_fixture(function_fixture: None) -> None:
+            ...
+
+        @pytest.fixture(scope="function")
+        def function_fixture() -> None:
+            ...
+
+        def test_info(class_fixture: None) -> None:
+            ...
+        """,
+        errors=["inverted-fixture-scope"],
+    )
+
+
+def test_test_info_check_fixture_shadowed_scope() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture(scope="class")
+        def class_fixture(function_fixture: None) -> None:
+            ...
+
+        @pytest.fixture(scope="function")
+        def function_fixture() -> None:
+            ...
+
+        @pytest.mark.parametrize("function_fixture", [None])
+        def test_info(class_fixture: None) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_check_fixture_unknown_scope() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        scope: Literal["module", "class"] = "module"
+
+        @pytest.fixture(scope=scope)
+        def unknown_fixture(function_fixture: None) -> None:
+            ...
+
+        @pytest.fixture(scope="function")
+        def function_fixture(unknown_fixture: None) -> None:
+            ...
+
+        def test_info(unknown_fixture: None) -> None:
+            ...
+        """,
+        errors=["invalid-fixture-scope"],
     )
 
 

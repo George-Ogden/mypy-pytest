@@ -13,7 +13,9 @@ from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTUR
 from .fullname import Fullname
 from .test_argument import TestArgument
 
-FixtureScope = enum.IntEnum("FixtureScope", ["function", "class", "module", "package", "session"])
+FixtureScope = enum.IntEnum(
+    "FixtureScope", ["function", "class", "module", "package", "session", "unknown"]
+)
 DEFAULT_SCOPE: Final[FixtureScope] = FixtureScope.function
 
 
@@ -139,4 +141,8 @@ class Fixture:
             return FixtureScope[cast(str, type_.value)]
         checker.fail("Invalid type for fixture scope.", context=context, code=INVALID_FIXTURE_SCOPE)
 
-        return DEFAULT_SCOPE
+        return FixtureScope.unknown
+
+    @property
+    def name(self) -> str:
+        return self.fullname.back

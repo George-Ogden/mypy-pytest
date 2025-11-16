@@ -16,12 +16,13 @@ from .argnames_parser import ArgnamesParser
 from .argvalues import Argvalues
 from .decorator_wrapper import DecoratorWrapper
 from .error_codes import (
+    INVERTED_FIXTURE_SCOPE,
     MISSING_ARGNAME,
     REPEATED_ARGNAME,
     REPEATED_FIXTURE_ARGNAME,
     UNKNOWN_ARGNAME,
 )
-from .fixture import Fixture
+from .fixture import Fixture, FixtureScope
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .many_items_test_signature import ManyItemsTestSignature
@@ -123,9 +124,7 @@ class TestInfo:
         assert not self._available_requests
         assert not self._available_fixtures
         self._available_requests.update(available_requests)
-        self._available_fixtures.update(
-            {fixture.fullname.back: fixture for fixture in available_fixtures}
-        )
+        self._available_fixtures.update({fixture.name: fixture for fixture in available_fixtures})
 
     def _prune_active_nodes_and_fixtures(self) -> tuple[dict[str, Request], dict[str, Fixture]]:
         queue = deque(
@@ -153,6 +152,7 @@ class TestInfo:
     ) -> None:
         self._check_used(active_requests, active_fixtures)
         self._check_unused(active_requests)
+        self._check_scope(active_fixtures)
 
     def _check_used(
         self, active_requests: dict[str, Request], active_fixtures: dict[str, Fixture]
@@ -173,6 +173,25 @@ class TestInfo:
                     context=self.dummy_context,
                     code=REPEATED_FIXTURE_ARGNAME,
                 )
+
+    def _check_scope(self, active_fixtures: dict[str, Fixture]) -> None:
+        for fixture in active_fixtures.values():
+            for argument in fixture.arguments:
+                requested_fixture = active_fixtures.get(argument.name)
+                if (
+                    requested_fixture is not None
+                    and requested_fixture.scope < fixture.scope
+                    and FixtureScope.unknown
+                    not in [
+                        requested_fixture.scope,
+                        fixture.scope,
+                    ]
+                ):
+                    self.checker.fail(
+                        f"{fixture.name!r} (scope={fixture.scope.name}) requests {requested_fixture.name!r} (scope={requested_fixture.scope.name}).",
+                        context=fixture.context,
+                        code=INVERTED_FIXTURE_SCOPE,
+                    )
 
     def check_decorators(self, decorators: Iterable[DecoratorWrapper]) -> None:
         for decorator in decorators:
