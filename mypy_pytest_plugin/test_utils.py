@@ -22,6 +22,7 @@ import mypy.options
 from mypy.subtypes import is_same_type
 from mypy.types import CallableType, Type
 
+from .argnames_parser import ArgnamesParser
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
 from .test_info import TestInfo
@@ -240,11 +241,8 @@ def test_signature_custom_check_test_body[
 test_signature_custom_check_test_body.__test__ = False  # type: ignore
 
 
-def default_test_info(checker: TypeChecker) -> TestInfo:
-    test_info = TestInfo(
-        checker=checker, arguments={}, decorators=[], fn_name="test_info", type_variables=[]
-    )
-    return test_info
+def default_argnames_parser(checker: TypeChecker) -> ArgnamesParser:
+    return ArgnamesParser(checker)
 
 
 def test_info_from_defs(defs: str, *, name: str) -> TestInfo:
