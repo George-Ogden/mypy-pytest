@@ -185,6 +185,7 @@ def test_test_info_sub_signature_multiple_args() -> None:
 def _test_info_check_decorator_test_body(defs: str, *, errors: list[str] | None = None) -> None:
     test_info = test_info_from_defs(defs, name="test_info")
     assert test_info is not None
+    test_info.setup_available_requests_and_fixtures()
     [decorator] = test_info.decorators
     checker = test_info.checker
 
@@ -356,6 +357,10 @@ def _test_info_check_test_body(defs: str, *, errors: list[str] | None = None) ->
     assert test_info is not None
     checker = test_info.checker
 
+    parse_result = parse(defs)
+    for def_ in parse_result.raw_defs:
+        def_.accept(checker)
+
     assert not checker.errors.is_errors()
     test_info.check()
 
@@ -390,9 +395,9 @@ def test_test_info_check_single_decorator_valid_argnames() -> None:
         @pytest.mark.parametrize(
             ("foo",),
             [
-                "bar",
-                10,
-                False
+                ("bar",),
+                (10,),
+                (False,),
             ]
         )
         def test_info(foo) -> None:
@@ -539,6 +544,44 @@ def test_test_info_check_multiple_decorators_multiple_type_errors() -> None:
             ...
         """,
         errors=["arg-type"] * 4,
+    )
+
+
+def test_test_info_check_used_fixture_argument() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(arg: int) -> str:
+            return str(arg)
+
+        @pytest.mark.parametrize(
+            "arg",
+            range(3)
+        )
+        def test_info(fixture: int) -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_check_unused_fixture_argument() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(arg: int) -> str:
+            return str(arg)
+
+        @pytest.mark.parametrize(
+            "", [()]
+        )
+        def test_info(fixture: int) -> None:
+            ...
+        """,
+        errors=["missing-argname"],
     )
 
 

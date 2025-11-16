@@ -1,5 +1,5 @@
 from collections import deque
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
 from typing import Self, cast
 
@@ -34,11 +34,10 @@ from .test_signature import TestSignature
 class TestInfo:
     fullname: Fullname
     fn_name: str
-    arguments: Mapping[str, TestArgument]
+    arguments: Sequence[TestArgument]
     decorators: Sequence[DecoratorWrapper]
     type_variables: Sequence[TypeVarLikeType]
     checker: TypeChecker
-    seen_arg_names: set[str] = field(default_factory=set)
     _available_requests: dict[str, Request] = field(
         default_factory=dict, init=True, repr=False, hash=False, compare=False
     )
@@ -57,7 +56,7 @@ class TestInfo:
             fullname=Fullname.from_string(fn_def.fullname),
             fn_name=fn_def.name,
             checker=checker,
-            arguments={test_argument.name: test_argument for test_argument in test_arguments},
+            arguments=test_arguments,
             decorators=test_decorators,
             type_variables=cast(CallableType, fn_def.type).variables,
         )
@@ -84,7 +83,7 @@ class TestInfo:
             checker=self.checker,
             fn_name=self.fn_name,
             arg_name=arg_name,
-            arg_type=self.arguments[arg_name].type_,
+            arg_type=self._available_requests[arg_name].type_,
             type_variables=self.type_variables,
         )
 
@@ -93,13 +92,15 @@ class TestInfo:
             checker=self.checker,
             fn_name=self.fn_name,
             arg_names=arg_names,
-            arg_types=[self.arguments[arg_name].type_ for arg_name in arg_names],
+            arg_types=[self._available_requests[arg_name].type_ for arg_name in arg_names],
             type_variables=self.type_variables,
         )
 
     def check(self) -> None:
+        self.setup_available_requests_and_fixtures()
         self.check_decorators(self.decorators)
-        self._check_missing_argnames()
+        active_requests, active_fixtures = self._prune_active_nodes_and_fixtures()
+        self._check_request_graph(active_requests, active_fixtures)
 
     @property
     def module_name(self) -> Fullname:
@@ -112,7 +113,7 @@ class TestInfo:
 
     def setup_available_requests_and_fixtures(self) -> None:
         available_requests, available_fixtures = self.fixture_manager.resolve_requests_and_fixtures(
-            list(self.arguments.values()), self.module_name
+            self.arguments, self.module_name
         )
         assert not self._available_requests
         assert not self._available_fixtures
@@ -142,14 +143,21 @@ class TestInfo:
             if name in self._available_fixtures and not self._available_requests[name].used
         }
 
-    def _check_missing_argnames(self) -> None:
-        missing_arg_names = set(self.arguments.keys()).difference(self.seen_arg_names)
-        for arg_name in missing_arg_names:
-            self.checker.fail(
-                f"Argname {arg_name!r} not included in parametrization.",
-                context=self.arguments[arg_name].context,
-                code=MISSING_ARGNAME,
-            )
+    def _check_request_graph(
+        self, active_requests: dict[str, Request], active_fixtures: dict[str, Fixture]
+    ) -> None:
+        self._check_use(active_requests, active_fixtures)
+
+    def _check_use(
+        self, active_requests: dict[str, Request], active_fixtures: dict[str, Fixture]
+    ) -> None:
+        for request in active_requests.values():
+            if not request.used and request.name not in active_fixtures:
+                self.checker.fail(
+                    f"Argname {request.name!r} not included in parametrization.",
+                    context=request.context,
+                    code=MISSING_ARGNAME,
+                )
 
     def check_decorators(self, decorators: Iterable[DecoratorWrapper]) -> None:
         for decorator in decorators:
@@ -180,7 +188,7 @@ class TestInfo:
         return all([self._check_arg_name(arg_name, context) for arg_name in arg_names])
 
     def _check_arg_name(self, arg_name: str, context: Context) -> bool:
-        if known_name := arg_name in self.arguments:
+        if known_name := arg_name in self._available_requests:
             self._check_repeated_arg_name(arg_name, context)
         else:
             self.checker.fail(
@@ -191,11 +199,11 @@ class TestInfo:
         return known_name
 
     def _check_repeated_arg_name(self, arg_name: str, context: Context) -> None:
-        if arg_name in self.seen_arg_names:
+        if self._available_requests[arg_name].used:
             self.checker.fail(
                 f"Repeated argname {arg_name!r} in multiple parametrizations.",
                 context=context,
                 code=REPEATED_ARGNAME,
             )
         else:
-            self.seen_arg_names.add(arg_name)
+            self._available_requests[arg_name].used = True

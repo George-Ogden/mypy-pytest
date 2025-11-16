@@ -139,7 +139,7 @@ def check_error_messages(messages: str, *, errors: list[str] | None) -> None:
         error_codes = [match for match in re.findall(r"\[([a-z\-]*)\]$", messages, re.MULTILINE)]
         assert error_codes == errors, messages
     else:
-        assert not errors
+        assert not messages, messages
 
 
 def test_signature_from_fn_type(
