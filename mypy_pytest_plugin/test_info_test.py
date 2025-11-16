@@ -585,6 +585,50 @@ def test_test_info_check_unused_fixture_argument() -> None:
     )
 
 
+def test_test_info_check_double_used_fixture_argument() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(arg: int) -> str:
+            return str(arg)
+
+        @pytest.mark.parametrize(
+            "arg", [1, 2, 3]
+        )
+        @pytest.mark.parametrize(
+            "fixture", "bar"
+        )
+        def test_info(fixture: str) -> None:
+            ...
+        """,
+        errors=["repeated-fixture-argname"],
+    )
+
+
+def test_test_info_check_cyclic_fixture() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def cycle_2(cycle_1: int) -> int:
+            return cycle_1 + 1
+
+        @pytest.fixture
+        def cycle_1(cycle_2: int) -> int:
+            return cycle_2 + 1
+
+        @pytest.mark.parametrize(
+            "", [()]
+        )
+        def test_info(cycle_1: int) -> None:
+            ...
+        """
+    )
+
+
 def _test_info_prune_active_requests_and_fixtures_test_body(
     defs: str, arguments: list[str], expected_requests: list[str], expected_fixtures: list[str]
 ) -> None:

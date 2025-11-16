@@ -18,6 +18,7 @@ from .decorator_wrapper import DecoratorWrapper
 from .error_codes import (
     MISSING_ARGNAME,
     REPEATED_ARGNAME,
+    REPEATED_FIXTURE_ARGNAME,
     UNKNOWN_ARGNAME,
 )
 from .fixture import Fixture
@@ -44,6 +45,10 @@ class TestInfo:
     _available_fixtures: dict[str, Fixture] = field(
         default_factory=dict, init=True, repr=False, hash=False, compare=False
     )
+
+    @property
+    def dummy_context(self) -> Context:
+        return Context(-1, -1)
 
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
@@ -146,9 +151,10 @@ class TestInfo:
     def _check_request_graph(
         self, active_requests: dict[str, Request], active_fixtures: dict[str, Fixture]
     ) -> None:
-        self._check_use(active_requests, active_fixtures)
+        self._check_used(active_requests, active_fixtures)
+        self._check_unused(active_requests)
 
-    def _check_use(
+    def _check_used(
         self, active_requests: dict[str, Request], active_fixtures: dict[str, Fixture]
     ) -> None:
         for request in active_requests.values():
@@ -157,6 +163,15 @@ class TestInfo:
                     f"Argname {request.name!r} not included in parametrization.",
                     context=request.context,
                     code=MISSING_ARGNAME,
+                )
+
+    def _check_unused(self, active_requests: dict[str, Request]) -> None:
+        for request in self._available_requests.values():
+            if request.used and request.name not in active_requests:
+                self.checker.fail(
+                    f"Argname {request.name!r} is invalid as the fixture is already provided.",
+                    context=self.dummy_context,
+                    code=REPEATED_FIXTURE_ARGNAME,
                 )
 
     def check_decorators(self, decorators: Iterable[DecoratorWrapper]) -> None:

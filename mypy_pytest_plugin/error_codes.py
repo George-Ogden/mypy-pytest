@@ -28,6 +28,13 @@ REPEATED_ARGNAME: Final[ErrorCode] = ErrorCode(
     "repeated-argname", "Pytest parametrizations contain repeated argname.", category="Pytest"
 )
 
+
+REPEATED_FIXTURE_ARGNAME: Final[ErrorCode] = ErrorCode(
+    "repeated-fixture-argname",
+    "Pytest parametrization contains an argument that is shadowed by a fixture.",
+    category="Pytest",
+)
+
 MISSING_ARGNAME: Final[ErrorCode] = ErrorCode(
     "missing-argname", "Argument not included in Pytest parametrization.", category="Pytest"
 )
