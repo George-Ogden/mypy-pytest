@@ -135,6 +135,22 @@ def test_fixture_manager_resolve_requests_no_requests() -> None:
     )
 
 
+def test_fixture_manager_resolve_requests_no_fixtures() -> None:
+    _fixture_manager_resolve_requests_and_fixtures_test_body(
+        [
+            (
+                "file_test",
+                """
+                def test_request(x: int, y: str) -> None:
+                    ...
+                """,
+            ),
+        ],
+        ["x", "y"],
+        [],
+    )
+
+
 def test_fixture_manager_resolve_requests_single_request_same_file() -> None:
     _fixture_manager_resolve_requests_and_fixtures_test_body(
         [
@@ -164,6 +180,36 @@ def test_fixture_manager_resolve_requests_single_request_same_file() -> None:
         ],
         ["fixture"],
         ["file_test.fixture"],
+    )
+
+
+def test_fixture_manager_resolve_requests_long_chain_same_file() -> None:
+    _fixture_manager_resolve_requests_and_fixtures_test_body(
+        [
+            (
+                "file_test",
+                """
+                import pytest
+
+                @pytest.fixture
+                def fixture_3(fixture_4: None) -> None:
+                    ...
+
+                @pytest.fixture
+                def fixture_2(fixture_3: None) -> None:
+                    ...
+
+                @pytest.fixture
+                def fixture_1(fixture_2: None) -> None:
+                    ...
+
+                def test_request(fixture_1: None) -> None:
+                    ...
+                """,
+            ),
+        ],
+        ["fixture_1", "fixture_2", "fixture_3", "fixture_4"],
+        ["file_test.fixture_1", "file_test.fixture_2", "file_test.fixture_3"],
     )
 
 

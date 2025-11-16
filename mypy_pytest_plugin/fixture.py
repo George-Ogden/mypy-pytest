@@ -36,7 +36,7 @@ class Fixture:
         if arguments is None:
             return None
         return cls(
-            fullname=Fullname(decorator.fullname),
+            fullname=Fullname.from_string(decorator.fullname),
             return_type=cast(CallableType, decorator.func.type).ret_type,
             arguments=arguments,
             scope=cls._fixture_scope_from_decorator(fixture_decorator, checker),
