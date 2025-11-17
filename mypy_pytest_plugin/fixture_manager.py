@@ -25,7 +25,7 @@ class FixtureManager:
     @classmethod
     def conftest_names(cls, name: Fullname) -> Iterable[Fullname]:
         while name:
-            _, name = name.pop_back()
+            name = name.module_name
             yield name.push_back("conftest")
 
     @classmethod

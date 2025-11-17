@@ -18,15 +18,16 @@ class Fullname:
     def __bool__(self) -> bool:
         return bool(self._parts)
 
-    def pop_back(self) -> tuple[str, Self]:
-        return self.back, type(self)(self._parts[:-1])
-
     def push_back(self, extra: str) -> Self:
         return type(self)((*self._parts, extra))
 
     @property
-    def back(self) -> str:
+    def name(self) -> str:
         return self._parts[-1]
+
+    @property
+    def module_name(self) -> Self:
+        return type(self)(self._parts[:-1])
 
     def __lt__(self, other: Self) -> bool:
         if isinstance(other, type(self)):

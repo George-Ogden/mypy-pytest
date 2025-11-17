@@ -56,7 +56,7 @@ class Fixture:
 
     def as_argument(self) -> TestArgument:
         return TestArgument(
-            name=self.fullname.back,
+            name=self.fullname.name,
             type_=self.return_type,
             context=self.context,
             type_variables=self.type_variables,
@@ -165,12 +165,11 @@ class Fixture:
 
     @property
     def name(self) -> str:
-        return self.fullname.back
+        return self.fullname.name
 
     @property
     def module_name(self) -> Fullname:
-        _, module_name = self.fullname.pop_back()
-        return module_name
+        return self.fullname.module_name
 
     @property
     def extended_context(self) -> ExtendedContext:

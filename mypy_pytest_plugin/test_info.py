@@ -120,12 +120,11 @@ class TestInfo:
 
     @property
     def name(self) -> str:
-        return self.fullname.back
+        return self.fullname.name
 
     @property
     def module_name(self) -> Fullname:
-        _, module_name = self.fullname.pop_back()
-        return module_name
+        return self.fullname.module_name
 
     @property
     def fixture_manager(self) -> FixtureManager:
