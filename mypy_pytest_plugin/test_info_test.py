@@ -781,6 +781,106 @@ def test_test_info_check_fixture_valid_argname_generic_types() -> None:
     )
 
 
+def test_test_info_check_fixture_valid_subtype() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def true_fixture() -> Literal[True]:
+            return True
+
+        def test_info(true_fixture: bool) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_check_valid_argument_subtype() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def true_fixture() -> Literal[True]:
+            return True
+
+        @pytest.fixture
+        def fixture(true_fixture: bool) -> None:
+            ...
+
+        def test_info(fixture: None) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_check_fixture_invalid_subtype() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def bool_fixture() -> bool:
+            return True
+
+        def test_info(bool_fixture: Literal[True]) -> None:
+            ...
+        """,
+        errors=["fixture-arg-type"],
+    )
+
+
+def test_test_info_check_invalid_argument_subtypes() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def bool_fixture() -> bool:
+            return True
+
+        @pytest.fixture
+        def fixture(bool_fixture: Literal[True]) -> None:
+            ...
+
+        def test_info(fixture: None) -> None:
+            ...
+        """,
+        errors=["fixture-arg-type"],
+    )
+
+
+def test_test_info_check_valid_shadowed_subtypes() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def bool_fixture() -> bool:
+            return True
+
+        @pytest.fixture
+        def int_fixture(bool_fixture: int) -> int:
+            return bool_fixture
+
+        @pytest.mark.parametrize(
+            "int_fixture", [1]
+        )
+        @pytest.mark.parametrize(
+            "bool_fixture", [0]
+        )
+        def test_info(int_fixture: int, bool_fixture: int) -> None:
+            ...
+        """
+    )
+
+
 def _test_info_prune_active_requests_and_fixtures_test_body(
     defs: str, arguments: list[str], expected_requests: list[str], expected_fixtures: list[str]
 ) -> None:

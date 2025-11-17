@@ -115,6 +115,10 @@ class TestInfo:
         self._check_request_graph(active_requests, active_fixtures)
 
     @property
+    def name(self) -> str:
+        return self.fullname.back
+
+    @property
     def module_name(self) -> Fullname:
         _, module_name = self.fullname.pop_back()
         return module_name
@@ -158,6 +162,7 @@ class TestInfo:
         self._check_unused(active_requests)
         self._check_scope(active_fixtures)
         self._check_fixture_types(active_fixtures)
+        self._check_argument_types(active_fixtures)
 
     def _check_used(
         self, active_requests: dict[str, Request], active_fixtures: dict[str, Fixture]
@@ -205,18 +210,33 @@ class TestInfo:
                 for argument in fixture.arguments
                 if argument.name in active_fixtures
             }
-            self._check_fixture_call(fixture, requested_types)
+            self._check_fixture_call(fixture.name, fixture.arguments, requested_types)
 
-    def _check_fixture_call(self, fixture: Fixture, requested_types: dict[str, Type]) -> None:
-        for argument in fixture.arguments:
+    def _check_fixture_call(
+        self, name: str, arguments: Sequence[TestArgument], requested_types: dict[str, Type]
+    ) -> None:
+        for argument in arguments:
             if argument.name in requested_types.keys() and not is_subtype(
                 requested_types[argument.name], argument.type_
             ):
                 self.checker.fail(
-                    f"{fixture.name!r} requests {argument.name!r} with type {format_type(requested_types[argument.name], self.checker.options)}, but expects type {format_type(argument.type_, self.checker.options)}.",
+                    f"{name!r} requests {argument.name!r} with type {format_type(requested_types[argument.name], self.checker.options)}, but expects type {format_type(argument.type_, self.checker.options)}.",
                     context=argument.context,
                     code=FIXTURE_ARGUMENT_TYPE,
                 )
+
+    def _check_argument_types(self, active_fixtures: dict[str, Fixture]) -> None:
+        arguments = [
+            request.request
+            for request in self._available_requests.values()
+            if request.source == "argument"
+        ]
+        requested_types = {
+            argument.name: active_fixtures[argument.name].return_type
+            for argument in arguments
+            if argument.name in active_fixtures
+        }
+        self._check_fixture_call(self.name, arguments, requested_types)
 
     def check_decorators(self, decorators: Iterable[DecoratorWrapper]) -> None:
         for decorator in decorators:
