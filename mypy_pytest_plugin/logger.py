@@ -16,14 +16,10 @@ class Logger:
         cls._record_error(ErrorInfo(message, context=context, code=code, severity="error"))
 
     @classmethod
-    def info(cls, message: str, *, context: ExtendedContext, code: ErrorCode | None = None) -> None:
-        cls._record_error(ErrorInfo(message, context=context, code=code, severity="info"))
-
-    @classmethod
     def _record_error(cls, error: ErrorInfo) -> None:
-        if error.context.file not in cls._errors:
-            cls._errors[error.context.file] = []
-        cls._errors[error.context.file].append(error)
+        if error.context.path not in cls._errors:
+            cls._errors[error.context.path] = []
+        cls._errors[error.context.path].append(error)
 
     @classmethod
     def messages(cls) -> str:

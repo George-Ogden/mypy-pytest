@@ -2,7 +2,7 @@ from mypy.nodes import Decorator
 import pytest
 
 from .fixture import Fixture
-from .test_utils import check_error_messages, get_error_messages, parse
+from .test_utils import check_error_codes, parse
 
 
 def _fixture_from_defs_test_body(
@@ -22,8 +22,7 @@ def _fixture_from_defs_test_body(
     else:
         assert fixture is None
 
-    messages = get_error_messages(checker)
-    check_error_messages(messages, errors=errors)
+    check_error_codes(errors)
 
 
 def test_fixture_from_fn_defs_no_decorator() -> None:

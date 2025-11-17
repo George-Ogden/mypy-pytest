@@ -18,54 +18,58 @@ from .error_codes import (
     UNREADABLE_ARGNAME,
     UNREADABLE_ARGNAMES,
 )
+from .error_info import ExtendedContext
+from .logger import Logger
 
 
 @dataclass(frozen=True)
 class ArgnamesParser:
     checker: TypeChecker
 
-    def parse_names(self, node: Expression) -> str | list[str] | None:
-        match node:
+    def parse_names(self, expression: Expression) -> str | list[str] | None:
+        match expression:
             case StrExpr():
-                argnames = self.parse_names_string(node)
+                argnames = self.parse_names_string(expression)
             case ListExpr() | TupleExpr():
-                argnames = self.parse_names_sequence(node)
+                argnames = self.parse_names_sequence(expression)
             case _:
-                self.checker.fail(
+                Logger.error(
                     "Unable to identify argnames. (Use a comma-separated string, list of strings or tuple of strings).",
-                    context=node,
+                    context=ExtendedContext.from_context(expression, self.checker),
                     code=UNREADABLE_ARGNAMES,
                 )
                 return None
-        argnames = self._check_duplicate_argnames(argnames, node)
+        argnames = self._check_duplicate_argnames(argnames, expression)
         return argnames
 
     def _check_valid_identifier(self, name: str, context: StrExpr) -> bool:
         if not (valid_identifier := name.isidentifier()):
-            self.checker.fail(
-                f"Invalid identifier {name!r}.", context=context, code=INVALID_ARGNAME
+            Logger.error(
+                f"Invalid identifier {name!r}.",
+                context=ExtendedContext.from_context(context, self.checker),
+                code=INVALID_ARGNAME,
             )
         return valid_identifier
 
-    def parse_names_string(self, node: StrExpr) -> str | list[str] | None:
-        individual_names = [name.strip() for name in node.value.split(",")]
+    def parse_names_string(self, expression: StrExpr) -> str | list[str] | None:
+        individual_names = [name.strip() for name in expression.value.split(",")]
         filtered_names = [name for name in individual_names if name]
-        if any([not self._check_valid_identifier(name, node) for name in filtered_names]):
+        if any([not self._check_valid_identifier(name, expression) for name in filtered_names]):
             return None
         if len(filtered_names) == 1:
             [name] = filtered_names
             return name
         return filtered_names
 
-    def _parse_name(self, node: Expression) -> str | None:
-        if isinstance(node, StrExpr):
-            name = node.value
-            if self._check_valid_identifier(name, node):
+    def _parse_name(self, expression: Expression) -> str | None:
+        if isinstance(expression, StrExpr):
+            name = expression.value
+            if self._check_valid_identifier(name, expression):
                 return name
         else:
-            self.checker.fail(
+            Logger.error(
                 "Unable to read identifier. (Use a sequence of strings instead.)",
-                context=node,
+                context=ExtendedContext.from_context(expression, self.checker),
                 code=UNREADABLE_ARGNAME,
             )
         return None
@@ -95,6 +99,8 @@ class ArgnamesParser:
 
     def _warn_duplicate_argnames(self, duplicates: Iterable[str], context: Context) -> None:
         for argname in duplicates:
-            self.checker.fail(
-                f"Duplicated argname {argname!r}.", context=context, code=DUPLICATE_ARGNAME
+            Logger.error(
+                f"Duplicated argname {argname!r}.",
+                context=ExtendedContext.from_context(context, self.checker),
+                code=DUPLICATE_ARGNAME,
             )

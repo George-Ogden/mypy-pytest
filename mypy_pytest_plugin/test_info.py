@@ -26,9 +26,11 @@ from .error_codes import (
     REPEATED_FIXTURE_ARGNAME,
     UNKNOWN_ARGNAME,
 )
+from .error_info import ExtendedContext
 from .fixture import Fixture, FixtureScope
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
+from .logger import Logger
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
 from .request import Request
@@ -51,8 +53,10 @@ class TestInfo:
     )
 
     @property
-    def dummy_context(self) -> Context:
-        return Context(-1, -1)
+    def dummy_context(self) -> ExtendedContext:
+        return ExtendedContext(
+            context=Context(-1, -1), path=ExtendedContext.checker_path(self.checker)
+        )
 
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
@@ -169,7 +173,7 @@ class TestInfo:
     ) -> None:
         for request in active_requests.values():
             if not request.used and request.name not in active_fixtures:
-                self.checker.fail(
+                Logger.error(
                     f"Argname {request.name!r} not included in parametrization.",
                     context=request.context,
                     code=MISSING_ARGNAME,
@@ -178,7 +182,7 @@ class TestInfo:
     def _check_unused(self, active_requests: dict[str, Request]) -> None:
         for request in self._available_requests.values():
             if request.used and request.name not in active_requests:
-                self.checker.fail(
+                Logger.error(
                     f"Argname {request.name!r} is invalid as the fixture is already provided.",
                     context=self.dummy_context,
                     code=REPEATED_FIXTURE_ARGNAME,
@@ -197,9 +201,9 @@ class TestInfo:
                         fixture.scope,
                     ]
                 ):
-                    self.checker.fail(
+                    Logger.error(
                         f"{fixture.name!r} (scope={fixture.scope.name!r}) requests {requested_fixture.name!r} (scope={requested_fixture.scope.name!r}).",
-                        context=fixture.context,
+                        context=fixture.extended_context,
                         code=INVERTED_FIXTURE_SCOPE,
                     )
 
@@ -210,33 +214,34 @@ class TestInfo:
                 for argument in fixture.arguments
                 if argument.name in active_fixtures
             }
-            self._check_fixture_call(fixture.name, fixture.arguments, requested_types)
+            self._check_fixture_call(fixture, requested_types)
 
-    def _check_fixture_call(
-        self, name: str, arguments: Sequence[TestArgument], requested_types: dict[str, Type]
-    ) -> None:
-        for argument in arguments:
+    def _check_fixture_call(self, fixture: Fixture, requested_types: dict[str, Type]) -> None:
+        for argument in fixture.arguments:
             if argument.name in requested_types.keys() and not is_subtype(
                 requested_types[argument.name], argument.type_
             ):
-                self.checker.fail(
-                    f"{name!r} requests {argument.name!r} with type {format_type(requested_types[argument.name], self.checker.options)}, but expects type {format_type(argument.type_, self.checker.options)}.",
-                    context=argument.context,
+                Logger.error(
+                    f"{fixture.name!r} requests {argument.name!r} with type {format_type(requested_types[argument.name], self.checker.options)}, but expects type {format_type(argument.type_, self.checker.options)}. "
+                    f"This happens when executing {self.name!r}.",
+                    context=fixture.extended_context,
                     code=FIXTURE_ARGUMENT_TYPE,
                 )
 
     def _check_argument_types(self, active_fixtures: dict[str, Fixture]) -> None:
-        arguments = [
-            request.request
-            for request in self._available_requests.values()
-            if request.source == "argument"
-        ]
-        requested_types = {
-            argument.name: active_fixtures[argument.name].return_type
-            for argument in arguments
-            if argument.name in active_fixtures
-        }
-        self._check_fixture_call(self.name, arguments, requested_types)
+        for request in self._available_requests.values():
+            if (
+                request.source == "argument"
+                and request.name in active_fixtures.keys()
+                and not is_subtype(
+                    received_type := active_fixtures[request.name].return_type, request.type_
+                )
+            ):
+                Logger.error(
+                    f"{self.name!r} requests {request.name!r} with type {format_type(received_type, self.checker.options)}, but expects type {format_type(request.request.type_, self.checker.options)}.",
+                    context=request.context,
+                    code=FIXTURE_ARGUMENT_TYPE,
+                )
 
     def check_decorators(self, decorators: Iterable[DecoratorWrapper]) -> None:
         for decorator in decorators:
@@ -270,18 +275,18 @@ class TestInfo:
         if known_name := arg_name in self._available_requests:
             self._check_repeated_arg_name(arg_name, context)
         else:
-            self.checker.fail(
+            Logger.error(
                 f"Unknown argname {arg_name!r} used as test argument.",
-                context=context,
+                context=ExtendedContext.from_context(context, self.checker),
                 code=UNKNOWN_ARGNAME,
             )
         return known_name
 
     def _check_repeated_arg_name(self, arg_name: str, context: Context) -> None:
         if self._available_requests[arg_name].used:
-            self.checker.fail(
+            Logger.error(
                 f"Repeated argname {arg_name!r} in multiple parametrizations.",
-                context=context,
+                context=ExtendedContext.from_context(context, self.checker),
                 code=REPEATED_ARGNAME,
             )
         else:

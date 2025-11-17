@@ -11,6 +11,7 @@ from mypy.nodes import Decorator, MypyFile
 from pytest import FixtureDef  # noqa: PT013
 
 from .defer import DeferralError
+from .error_info import ExtendedContext
 from .fixture import Fixture
 from .fullname import Fullname
 from .request import Request
@@ -57,7 +58,10 @@ class FixtureManager:
         self, start: Sequence[TestArgument], module: Fullname
     ) -> tuple[dict[str, Request], list[Fixture]]:
         unresolved_requests = {
-            argument.name: Request(argument, source="argument") for argument in start
+            argument.name: Request(
+                argument, source="argument", path=ExtendedContext.checker_path(self.checker)
+            )
+            for argument in start
         }
         resolved_requests: dict[str, Request] = {}
         fixtures: list[Fixture] = []
@@ -98,7 +102,13 @@ class FixtureManager:
                 resolved[request.name] = request
                 yield fixture
                 for argument in fixture.arguments:
-                    maybe_resolved.append(Request(argument, source="fixture"))
+                    maybe_resolved.append(
+                        Request(
+                            argument,
+                            source="fixture",
+                            path=fixture.file,
+                        )
+                    )
 
     def lookup_or_none(self, module: MypyFile | None, request_name: str) -> Fixture | None:
         if module is None:

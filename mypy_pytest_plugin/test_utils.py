@@ -23,6 +23,7 @@ from mypy.subtypes import is_same_type
 from mypy.types import CallableType, Type
 
 from .argnames_parser import ArgnamesParser
+from .logger import Logger
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
 from .test_info import TestInfo
@@ -140,6 +141,21 @@ def check_error_messages(messages: str, *, errors: list[str] | None) -> None:
         assert error_codes == errors, messages
     else:
         assert not messages, messages
+
+
+def get_error_codes() -> list[str | None]:
+    return [
+        None if error.code is None else error.code.code
+        for errors in Logger._errors.values()
+        for error in errors
+    ]
+
+
+def check_error_codes(error_codes: list[str] | None) -> None:
+    if error_codes:
+        assert get_error_codes() == error_codes, Logger.messages()
+    else:
+        assert not Logger.messages(), Logger.messages()
 
 
 def test_signature_from_fn_type(

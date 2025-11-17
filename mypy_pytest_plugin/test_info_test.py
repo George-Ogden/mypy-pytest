@@ -2,10 +2,10 @@ from mypy.nodes import FuncDef
 from mypy.types import CallableType
 import pytest
 
+from .logger import Logger
 from .test_info import TestInfo
 from .test_utils import (
-    check_error_messages,
-    get_error_messages,
+    check_error_codes,
     parse,
     test_info_from_defs,
     test_signature_from_fn_type,
@@ -22,10 +22,9 @@ def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = 
     assert not checker.errors.is_errors()
     test_info = TestInfo.from_fn_def(test_node, checker=checker)
 
-    messages = get_error_messages(checker)
-    assert test_info is not None, messages
+    assert test_info is not None, Logger.messages()
 
-    check_error_messages(messages, errors=errors)
+    check_error_codes(errors)
 
 
 def test_test_info_from_fn_def_no_args() -> None:
@@ -125,10 +124,9 @@ def _test_info_sub_signature_test_body(
     assert not checker.errors.is_errors()
     sub_signature = test_info.sub_signature(argnames)
 
-    messages = get_error_messages(checker)
-    assert sub_signature == expected_signature, messages
+    assert sub_signature == expected_signature, Logger.messages()
 
-    check_error_messages(messages, errors=errors)
+    check_error_codes(errors)
 
 
 def test_test_info_sub_signature_no_args() -> None:
@@ -193,8 +191,7 @@ def _test_info_check_decorator_test_body(defs: str, *, errors: list[str] | None 
     assert not checker.errors.is_errors()
     test_info.check_decorator(decorator)
 
-    messages = get_error_messages(checker)
-    check_error_messages(messages, errors=errors)
+    check_error_codes(errors)
 
 
 def test_test_info_check_decorator_no_errors() -> None:
@@ -365,8 +362,7 @@ def _test_info_check_test_body(defs: str, *, errors: list[str] | None = None) ->
     assert not checker.errors.is_errors()
     test_info.check()
 
-    messages = get_error_messages(checker)
-    check_error_messages(messages, errors=errors)
+    check_error_codes(errors)
 
 
 def test_test_info_check_no_decorators_no_arguments() -> None:

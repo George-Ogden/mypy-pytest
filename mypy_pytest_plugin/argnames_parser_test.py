@@ -7,9 +7,8 @@ from mypy.nodes import (
 
 from .argnames_parser import ArgnamesParser
 from .test_utils import (
-    check_error_messages,
+    check_error_codes,
     default_argnames_parser,
-    get_error_messages,
     parse,
 )
 
@@ -30,8 +29,7 @@ def _argnames_parser_parse_names_custom_test_body[T: Expression](
 
     assert not checker.errors.is_errors()
     assert parse_names(argnames_parser, names_node) == names
-    messages = get_error_messages(checker)
-    check_error_messages(messages, errors=errors)
+    check_error_codes(errors)
 
 
 def _argnames_parser_parse_names_string_test_body(
@@ -125,8 +123,7 @@ def test_argnames_parser_parse_names_sequence_multiple_errors() -> None:
     _argnames_parser_parse_names_sequence_test_body(
         "('a', 10, '28', f'{5}')",
         None,
-        # unreadable argname message not repeated
-        errors=["unreadable-argname", "invalid-argname"],
+        errors=["unreadable-argname", "invalid-argname", "unreadable-argname"],
     )
 
 

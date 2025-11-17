@@ -8,11 +8,13 @@ from mypy.nodes import ArgKind, CallExpr, Expression
 from mypy.types import CallableType, Instance, Type
 
 from .error_codes import VARIADIC_ARGNAMES_ARGVALUES
+from .error_info import ExtendedContext
+from .logger import Logger
 
 
 @dataclass(frozen=True, slots=True)
 class DecoratorWrapper:
-    node: CallExpr
+    call: CallExpr
     checker: TypeChecker
 
     @classmethod
@@ -40,13 +42,13 @@ class DecoratorWrapper:
     def _get_arg_type(self, i: int) -> Type:
         # subtract one for self
         i -= 1
-        return self.node.args[i].accept(self.checker.expr_checker)
+        return self.call.args[i].accept(self.checker.expr_checker)
 
     @property
     def arg_names_and_arg_values(self) -> tuple[Expression, Expression] | None:
         mapping = map_actuals_to_formals(
-            actual_kinds=[ArgKind.ARG_POS, *self.node.arg_kinds],
-            actual_names=[None, *self.node.arg_names],
+            actual_kinds=[ArgKind.ARG_POS, *self.call.arg_kinds],
+            actual_names=[None, *self.call.arg_names],
             formal_kinds=self.fn_type.arg_kinds,
             formal_names=self.fn_type.arg_names,
             actual_arg_type=self._get_arg_type,
@@ -55,7 +57,7 @@ class DecoratorWrapper:
 
     @property
     def fn_type(self) -> CallableType:
-        callee_type = self.node.callee.accept(self.checker.expr_checker)
+        callee_type = self.call.callee.accept(self.checker.expr_checker)
         assert isinstance(callee_type, Instance)
         fn_type = callee_type.type.names["__call__"].type
         assert isinstance(fn_type, CallableType)
@@ -66,13 +68,13 @@ class DecoratorWrapper:
     ) -> tuple[Expression, Expression] | None:
         arg_names_idx, arg_values_idx, *_ = self._clean_up_actuals_formals_mapping(mapping)
         if (
-            self.node.arg_kinds[arg_values_idx] in self.accepted_arg_kinds
-            and self.node.arg_kinds[arg_names_idx] in self.accepted_arg_kinds
+            self.call.arg_kinds[arg_values_idx] in self.accepted_arg_kinds
+            and self.call.arg_kinds[arg_names_idx] in self.accepted_arg_kinds
         ):
-            return self.node.args[arg_names_idx], self.node.args[arg_values_idx]
-        self.checker.fail(
+            return self.call.args[arg_names_idx], self.call.args[arg_values_idx]
+        Logger.error(
             "Unable to read argnames and argvalues in a variadic argument.",
-            context=self.node,
+            context=ExtendedContext.from_context(self.call, self.checker),
             code=VARIADIC_ARGNAMES_ARGVALUES,
         )
         return None

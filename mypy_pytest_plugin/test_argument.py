@@ -17,6 +17,8 @@ from .error_codes import (
     VARIADIC_KEYWORD_ARGUMENT,
     VARIADIC_POSITIONAL_ARGUMENT,
 )
+from .error_info import ExtendedContext
+from .logger import Logger
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -79,5 +81,5 @@ class TestArgument:
                 context=argument,
                 type_variables=type_variables,
             )
-        checker.fail(message, context=argument, code=code)
+        Logger.error(message, context=ExtendedContext.from_context(argument, checker), code=code)
         return None
