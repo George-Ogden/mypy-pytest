@@ -10,6 +10,7 @@ from mypy.checker import TypeChecker
 from mypy.nodes import Decorator, MypyFile
 from pytest import FixtureDef  # noqa: PT013
 
+from .defer import DeferralError
 from .fixture import Fixture
 from .fullname import Fullname
 from .request import Request
@@ -107,7 +108,11 @@ class FixtureManager:
     def _module_lookup(self, module: MypyFile, request_name: str) -> Fixture | None:
         decorator = module.names.get(request_name)
         if decorator is not None and isinstance(decorator.node, Decorator):
-            return Fixture.from_decorator(decorator.node, self.checker)
+            try:
+                return Fixture.from_decorator(decorator.node, self.checker)
+            except DeferralError as e:
+                self.checker.defer_node(decorator.node, None)
+                raise e from e
         return None
 
     def _default_lookup(self, request_name: str) -> Fixture | None:

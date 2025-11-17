@@ -561,7 +561,7 @@ def test_test_info_check_used_fixture_argument() -> None:
             "arg",
             range(3)
         )
-        def test_info(fixture: int) -> None:
+        def test_info(fixture: str) -> None:
             ...
         """
     )
@@ -576,7 +576,7 @@ def test_test_info_check_unused_fixture_argument() -> None:
         def fixture(arg: int) -> str:
             return str(arg)
 
-        def test_info(fixture: int) -> None:
+        def test_info(fixture: str) -> None:
             ...
         """,
         errors=["missing-argname"],
@@ -723,7 +723,7 @@ def test_test_info_check_fixture_invalid_types() -> None:
         def test_info(direct_fixture: Literal[2]) -> None:
             ...
         """,
-        errors=["fixture-arg-type"],
+        errors=["fixture-arg-type"] * 2,
     )
 
 
@@ -767,6 +767,7 @@ def test_test_info_check_fixture_valid_argname_generic_types() -> None:
     _test_info_check_test_body(
         """
         import pytest
+        from typing import Any
 
         @pytest.fixture
         def fixture[T](arg: T) -> T:
@@ -775,7 +776,7 @@ def test_test_info_check_fixture_valid_argname_generic_types() -> None:
         @pytest.mark.parametrize(
             "arg", [1, 2, 3]
         )
-        def test_info[U](fixture: U) -> None:
+        def test_info(fixture: Any) -> None:
             ...
         """,
     )

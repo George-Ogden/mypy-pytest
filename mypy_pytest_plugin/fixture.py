@@ -155,3 +155,8 @@ class Fixture:
     @property
     def name(self) -> str:
         return self.fullname.back
+
+    @property
+    def module_name(self) -> Fullname:
+        _, module_name = self.fullname.pop_back()
+        return module_name

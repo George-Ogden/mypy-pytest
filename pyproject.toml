@@ -45,6 +45,10 @@ plugins = ["plugin.py"]
 module = "pytest_snapshot.*"
 ignore_missing_imports = true
 
+[[tool.mypy.overrides]]
+module = "xdist.*"
+ignore_missing_imports = true
+
 [tool.pytest.ini_options]
 python_files = "*_test.py"
 addopts = '--capture=sys'

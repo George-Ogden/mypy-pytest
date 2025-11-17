@@ -14,6 +14,8 @@ from mypy.types import CallableType, Type
 from .defer import DeferralError
 from .excluded_test_checker import ExcludedTestChecker
 from .fixture import Fixture
+from .fixture_manager import FixtureManager
+from .fullname import Fullname
 from .iterable_sequence_checker import IterableSequenceChecker
 from .test_body_ranges import TestBodyRanges
 from .test_info import TestInfo
@@ -25,10 +27,24 @@ class PytestPlugin(Plugin):
 
     def get_additional_deps(self, file: MypyFile) -> list[tuple[int, str, int]]:
         deps = [
-            (10, "typing", -1),
-            (10, self.TYPES_MODULE, -1),
+            self.module_to_dep("typing"),
+            self.module_to_dep(self.TYPES_MODULE),
         ]
+        if TestNameChecker.is_test_file_name(file.name) or file.name == "conftest":
+            deps.extend(map(self.module_to_dep, FixtureManager.default_fixture_module_names()))
+            deps.extend(
+                map(
+                    self.module_to_dep,
+                    FixtureManager.conftest_names(Fullname.from_string(file.name)),
+                )
+            )
         return deps
+
+    @classmethod
+    def module_to_dep(cls, module: str | Fullname) -> tuple[int, str, int]:
+        if not isinstance(module, str):
+            module = str(module)
+        return (10, module, -1)
 
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
         return self.check_iterable_sequence
