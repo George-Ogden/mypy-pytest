@@ -1,62 +1,44 @@
-from collections import deque
 from collections.abc import Iterable, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+import functools
 import itertools
 from typing import Self
 
 from mypy.checker import TypeChecker
-from mypy.messages import format_type
 from mypy.nodes import (
     Context,
     Decorator,
     Expression,
     FuncDef,
 )
-from mypy.subtypes import is_subtype
-from mypy.types import Type
 
 from .argnames_parser import ArgnamesParser
 from .argvalues import Argvalues
 from .decorator_wrapper import DecoratorWrapper
 from .error_codes import (
-    FIXTURE_ARGUMENT_TYPE,
-    INVERTED_FIXTURE_SCOPE,
-    MISSING_ARGNAME,
     REPEATED_ARGNAME,
-    REPEATED_FIXTURE_ARGNAME,
     UNKNOWN_ARGNAME,
 )
 from .error_info import ExtendedContext
-from .fixture import Fixture, FixtureScope
+from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .logger import Logger
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
 from .request import Request
+from .request_graph import RequestGraph
 from .test_argument import TestArgument
 from .test_signature import TestSignature
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclass(frozen=True, kw_only=True)
 class TestInfo:
     fullname: Fullname
     fn_name: str
     arguments: Sequence[TestArgument]
     decorators: Sequence[DecoratorWrapper]
     checker: TypeChecker
-    _available_requests: dict[str, Request] = field(
-        default_factory=dict, init=True, repr=False, hash=False, compare=False
-    )
-    _available_fixtures: dict[str, Fixture] = field(
-        default_factory=dict, init=True, repr=False, hash=False, compare=False
-    )
-
-    @property
-    def dummy_context(self) -> ExtendedContext:
-        return ExtendedContext(
-            context=Context(-1, -1), path=ExtendedContext.checker_path(self.checker)
-        )
 
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
@@ -112,12 +94,6 @@ class TestInfo:
             ),
         )
 
-    def check(self) -> None:
-        self.setup_available_requests_and_fixtures()
-        self.check_decorators(self.decorators)
-        active_requests, active_fixtures = self._prune_active_nodes_and_fixtures()
-        self._check_request_graph(active_requests, active_fixtures)
-
     @property
     def name(self) -> str:
         return self.fullname.name
@@ -130,117 +106,30 @@ class TestInfo:
     def fixture_manager(self) -> FixtureManager:
         return FixtureManager(self.checker)
 
-    def setup_available_requests_and_fixtures(self) -> None:
+    @functools.cached_property
+    def request_graph(self) -> RequestGraph:
         available_requests, available_fixtures = self.fixture_manager.resolve_requests_and_fixtures(
             self.arguments, self.module_name
         )
-        assert not self._available_requests
-        assert not self._available_fixtures
-        self._available_requests.update(available_requests)
-        self._available_fixtures.update({fixture.name: fixture for fixture in available_fixtures})
-
-    def _prune_active_nodes_and_fixtures(self) -> tuple[dict[str, Request], dict[str, Fixture]]:
-        queue = deque(
-            request for request in self._available_requests.values() if request.source == "argument"
+        return RequestGraph(
+            available_fixtures={fixture.name: fixture for fixture in available_fixtures},
+            available_requests=available_requests,
+            options=self.checker.options,
+            name=self.name,
+            path=ExtendedContext.checker_path(self.checker),
         )
-        active_requests: dict[str, Request] = {}
-        active_fixtures = {}
-        while queue:
-            request = queue.pop()
-            if request.name in active_requests.keys():
-                continue
-            active_requests[request.name] = request
-            if not request.used and request.name in self._available_fixtures:
-                active_fixtures[request.name] = self._available_fixtures[request.name]
-                queue.extend(
-                    self._available_requests[argument.name]
-                    for argument in self._available_fixtures[request.name].arguments
-                )
-        return active_requests, active_fixtures
 
-    def _check_request_graph(
-        self, active_requests: dict[str, Request], active_fixtures: dict[str, Fixture]
-    ) -> None:
-        self._check_used(active_requests, active_fixtures)
-        self._check_unused(active_requests)
-        self._check_scope(active_fixtures)
-        self._check_fixture_types(active_fixtures)
-        self._check_argument_types(active_fixtures)
+    @property
+    def _available_requests(self) -> dict[str, Request]:
+        return self.request_graph.available_requests
 
-    def _check_used(
-        self, active_requests: dict[str, Request], active_fixtures: dict[str, Fixture]
-    ) -> None:
-        for request in active_requests.values():
-            if not request.used and request.name not in active_fixtures:
-                Logger.error(
-                    f"Argname {request.name!r} not included in parametrization.",
-                    context=request.context,
-                    code=MISSING_ARGNAME,
-                )
+    @property
+    def _available_fixtures(self) -> dict[str, Fixture]:
+        return self.request_graph.available_fixtures
 
-    def _check_unused(self, active_requests: dict[str, Request]) -> None:
-        for request in self._available_requests.values():
-            if request.used and request.name not in active_requests:
-                Logger.error(
-                    f"Argname {request.name!r} is invalid as the fixture is already provided.",
-                    context=self.dummy_context,
-                    code=REPEATED_FIXTURE_ARGNAME,
-                )
-
-    def _check_scope(self, active_fixtures: dict[str, Fixture]) -> None:
-        for fixture in active_fixtures.values():
-            for argument in fixture.arguments:
-                requested_fixture = active_fixtures.get(argument.name)
-                if (
-                    requested_fixture is not None
-                    and requested_fixture.scope < fixture.scope
-                    and FixtureScope.unknown
-                    not in [
-                        requested_fixture.scope,
-                        fixture.scope,
-                    ]
-                ):
-                    Logger.error(
-                        f"{fixture.name!r} (scope={fixture.scope.name!r}) requests {requested_fixture.name!r} (scope={requested_fixture.scope.name!r}).",
-                        context=fixture.extended_context,
-                        code=INVERTED_FIXTURE_SCOPE,
-                    )
-
-    def _check_fixture_types(self, active_fixtures: dict[str, Fixture]) -> None:
-        for fixture in active_fixtures.values():
-            requested_types = {
-                argument.name: active_fixtures[argument.name].return_type
-                for argument in fixture.arguments
-                if argument.name in active_fixtures
-            }
-            self._check_fixture_call(fixture, requested_types)
-
-    def _check_fixture_call(self, fixture: Fixture, requested_types: dict[str, Type]) -> None:
-        for argument in fixture.arguments:
-            if argument.name in requested_types.keys() and not is_subtype(
-                requested_types[argument.name], argument.type_
-            ):
-                Logger.error(
-                    f"{fixture.name!r} requests {argument.name!r} with type {format_type(requested_types[argument.name], self.checker.options)}, but expects type {format_type(argument.type_, self.checker.options)}. "
-                    f"This happens when executing {self.name!r}.",
-                    context=fixture.extended_context,
-                    code=FIXTURE_ARGUMENT_TYPE,
-                )
-
-    def _check_argument_types(self, active_fixtures: dict[str, Fixture]) -> None:
-        for request in self._available_requests.values():
-            if (
-                request.source == "argument"
-                and request.name in active_fixtures.keys()
-                and not is_subtype(
-                    received_type := active_fixtures[request.name].return_type, request.type_
-                )
-            ):
-                Logger.error(
-                    f"{self.name!r} requests {request.name!r} with type {format_type(received_type, self.checker.options)}, but expects type {format_type(request.request.type_, self.checker.options)}.",
-                    context=request.context,
-                    code=FIXTURE_ARGUMENT_TYPE,
-                )
+    def check(self) -> None:
+        self.check_decorators(self.decorators)
+        self.request_graph.check()
 
     def check_decorators(self, decorators: Iterable[DecoratorWrapper]) -> None:
         for decorator in decorators:
