@@ -1,21 +1,25 @@
 from collections import deque
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field
-from typing import Self, cast
+import itertools
+from typing import Self
 
 from mypy.checker import TypeChecker
+from mypy.messages import format_type
 from mypy.nodes import (
     Context,
     Decorator,
     Expression,
     FuncDef,
 )
-from mypy.types import CallableType, TypeVarLikeType
+from mypy.subtypes import is_subtype
+from mypy.types import Type
 
 from .argnames_parser import ArgnamesParser
 from .argvalues import Argvalues
 from .decorator_wrapper import DecoratorWrapper
 from .error_codes import (
+    FIXTURE_ARGUMENT_TYPE,
     INVERTED_FIXTURE_SCOPE,
     MISSING_ARGNAME,
     REPEATED_ARGNAME,
@@ -38,7 +42,6 @@ class TestInfo:
     fn_name: str
     arguments: Sequence[TestArgument]
     decorators: Sequence[DecoratorWrapper]
-    type_variables: Sequence[TypeVarLikeType]
     checker: TypeChecker
     _available_requests: dict[str, Request] = field(
         default_factory=dict, init=True, repr=False, hash=False, compare=False
@@ -64,7 +67,6 @@ class TestInfo:
             checker=checker,
             arguments=test_arguments,
             decorators=test_decorators,
-            type_variables=cast(CallableType, fn_def.type).variables,
         )
 
     @classmethod
@@ -90,7 +92,7 @@ class TestInfo:
             fn_name=self.fn_name,
             arg_name=arg_name,
             arg_type=self._available_requests[arg_name].type_,
-            type_variables=self.type_variables,
+            type_variables=self._available_requests[arg_name].type_variables,
         )
 
     def many_items_sub_signature(self, arg_names: list[str]) -> TestSignature:
@@ -99,7 +101,11 @@ class TestInfo:
             fn_name=self.fn_name,
             arg_names=arg_names,
             arg_types=[self._available_requests[arg_name].type_ for arg_name in arg_names],
-            type_variables=self.type_variables,
+            type_variables=list(
+                itertools.chain.from_iterable(
+                    self._available_requests[arg_name].type_variables for arg_name in arg_names
+                )
+            ),
         )
 
     def check(self) -> None:
@@ -130,22 +136,20 @@ class TestInfo:
         queue = deque(
             request for request in self._available_requests.values() if request.source == "argument"
         )
-        active_request_names = set()
+        active_requests: dict[str, Request] = {}
+        active_fixtures = {}
         while queue:
             request = queue.pop()
-            if request.name in active_request_names:
+            if request.name in active_requests.keys():
                 continue
-            active_request_names.add(request.name)
+            active_requests[request.name] = request
             if not request.used and request.name in self._available_fixtures:
+                active_fixtures[request.name] = self._available_fixtures[request.name]
                 queue.extend(
                     self._available_requests[argument.name]
                     for argument in self._available_fixtures[request.name].arguments
                 )
-        return {name: self._available_requests[name] for name in active_request_names}, {
-            name: self._available_fixtures[name]
-            for name in active_request_names
-            if name in self._available_fixtures and not self._available_requests[name].used
-        }
+        return active_requests, active_fixtures
 
     def _check_request_graph(
         self, active_requests: dict[str, Request], active_fixtures: dict[str, Fixture]
@@ -153,6 +157,7 @@ class TestInfo:
         self._check_used(active_requests, active_fixtures)
         self._check_unused(active_requests)
         self._check_scope(active_fixtures)
+        self._check_fixture_types(active_fixtures)
 
     def _check_used(
         self, active_requests: dict[str, Request], active_fixtures: dict[str, Fixture]
@@ -188,10 +193,30 @@ class TestInfo:
                     ]
                 ):
                     self.checker.fail(
-                        f"{fixture.name!r} (scope={fixture.scope.name}) requests {requested_fixture.name!r} (scope={requested_fixture.scope.name}).",
+                        f"{fixture.name!r} (scope={fixture.scope.name!r}) requests {requested_fixture.name!r} (scope={requested_fixture.scope.name!r}).",
                         context=fixture.context,
                         code=INVERTED_FIXTURE_SCOPE,
                     )
+
+    def _check_fixture_types(self, active_fixtures: dict[str, Fixture]) -> None:
+        for fixture in active_fixtures.values():
+            requested_types = {
+                argument.name: active_fixtures[argument.name].return_type
+                for argument in fixture.arguments
+                if argument.name in active_fixtures
+            }
+            self._check_fixture_call(fixture, requested_types)
+
+    def _check_fixture_call(self, fixture: Fixture, requested_types: dict[str, Type]) -> None:
+        for argument in fixture.arguments:
+            if argument.name in requested_types.keys() and not is_subtype(
+                requested_types[argument.name], argument.type_
+            ):
+                self.checker.fail(
+                    f"{fixture.name!r} requests {argument.name!r} with type {format_type(requested_types[argument.name], self.checker.options)}, but expects type {format_type(argument.type_, self.checker.options)}.",
+                    context=argument.context,
+                    code=FIXTURE_ARGUMENT_TYPE,
+                )
 
     def check_decorators(self, decorators: Iterable[DecoratorWrapper]) -> None:
         for decorator in decorators:

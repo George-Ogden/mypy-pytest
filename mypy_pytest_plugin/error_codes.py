@@ -102,6 +102,12 @@ INVERTED_FIXTURE_SCOPE: Final[ErrorCode] = ErrorCode(
     category="Pytest",
 )
 
+FIXTURE_ARGUMENT_TYPE: Final[ErrorCode] = ErrorCode(
+    "fixture-arg-type",
+    "Fixture requests a different fixture with the incorrect argument type.",
+    category="Pytest",
+)
+
 ITERABLE_SEQUENCE: Final[ErrorCode] = ErrorCode(
     "iterable-sequence",
     """"Sequence" passed into a function expecting "Iterable" in a test.""",

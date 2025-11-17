@@ -4,9 +4,9 @@ import enum
 from typing import Final, Self, cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import CallExpr, Context, Decorator, Expression
+from mypy.nodes import CallExpr, Context, Decorator, Expression, FuncDef
 from mypy.subtypes import is_subtype
-from mypy.types import CallableType, Instance, LiteralType, Overloaded, Type
+from mypy.types import CallableType, Instance, LiteralType, Overloaded, Type, TypeVarLikeType
 
 from .defer import DeferralError
 from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTURE
@@ -25,7 +25,8 @@ class Fixture:
     return_type: Type
     arguments: Sequence[TestArgument]
     scope: FixtureScope
-    context: Context
+    type_variables: Sequence[TypeVarLikeType]
+    context: FuncDef
 
     @classmethod
     def from_decorator(cls, decorator: Decorator, checker: TypeChecker) -> Self | None:
@@ -43,10 +44,18 @@ class Fixture:
             arguments=arguments,
             scope=cls._fixture_scope_from_decorator(fixture_decorator, checker),
             context=decorator.func,
+            type_variables=decorator.func.type.variables
+            if isinstance(decorator.func.type, CallableType)
+            else [],
         )
 
     def as_argument(self) -> TestArgument:
-        return TestArgument(name=self.fullname.back, type_=self.return_type, context=self.context)
+        return TestArgument(
+            name=self.fullname.back,
+            type_=self.return_type,
+            context=self.context,
+            type_variables=self.type_variables,
+        )
 
     @classmethod
     def is_fixture_and_mark(cls, decorator: Decorator, *, checker: TypeChecker) -> bool:

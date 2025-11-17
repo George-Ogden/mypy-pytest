@@ -88,7 +88,7 @@ class FixtureManager:
         )
         while maybe_resolved:
             request = maybe_resolved.popleft()
-            if request.name in resolved.keys():
+            if request.name in resolved.keys() or request.name in unresolved.keys():
                 continue
             fixture: Fixture | None = self.lookup_or_none(module, request.name)
             if fixture is None:

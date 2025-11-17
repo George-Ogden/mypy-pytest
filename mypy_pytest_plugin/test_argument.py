@@ -9,7 +9,7 @@ from mypy.nodes import (
     Context,
     FuncDef,
 )
-from mypy.types import CallableType, Type
+from mypy.types import CallableType, Type, TypeVarLikeType
 
 from .error_codes import (
     OPTIONAL_ARGUMENT,
@@ -23,27 +23,38 @@ from .error_codes import (
 class TestArgument:
     name: str
     type_: Type
+    type_variables: Sequence[TypeVarLikeType]
     context: Context
 
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef, *, checker: TypeChecker) -> Sequence[Self] | None:
         if not isinstance(fn_def.type, CallableType):
             return None
-        return cls._validate_test_arguments(fn_def.arguments, fn_def.type.arg_types, checker)
+        return cls._validate_test_arguments(
+            fn_def.arguments, fn_def.type.arg_types, fn_def.type.variables, checker
+        )
 
     @classmethod
     def _validate_test_arguments(
-        cls, arguments: Sequence[Argument], types: Sequence[Type], checker: TypeChecker
+        cls,
+        arguments: Sequence[Argument],
+        types: Sequence[Type],
+        type_variables: Sequence[TypeVarLikeType],
+        checker: TypeChecker,
     ) -> Sequence[Self] | None:
         test_arguments: Sequence[Self | None] = [
-            cls._validate_test_argument(argument, type_, checker=checker)
+            cls._validate_test_argument(argument, type_, type_variables, checker)
             for argument, type_ in zip(arguments, types, strict=True)
         ]
         return [argument for argument in test_arguments if argument is not None]
 
     @classmethod
     def _validate_test_argument(
-        cls, argument: Argument, type_: Type, *, checker: TypeChecker
+        cls,
+        argument: Argument,
+        type_: Type,
+        type_variables: Sequence[TypeVarLikeType],
+        checker: TypeChecker,
     ) -> Self | None:
         if argument.initializer is not None:
             message = f"`{argument.variable.name}` has a default value and is therefore ignored."
@@ -62,6 +73,11 @@ class TestArgument:
             )
             code = VARIADIC_KEYWORD_ARGUMENT
         else:
-            return cls(name=argument.variable.name, type_=type_, context=argument)
+            return cls(
+                name=argument.variable.name,
+                type_=type_,
+                context=argument,
+                type_variables=type_variables,
+            )
         checker.fail(message, context=argument, code=code)
         return None

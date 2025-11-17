@@ -120,6 +120,7 @@ def _test_info_sub_signature_test_body(
     )
 
     test_info = test_info_from_defs(defs, name="test_info")
+    test_info.setup_available_requests_and_fixtures()
 
     assert not checker.errors.is_errors()
     sub_signature = test_info.sub_signature(argnames)
@@ -705,6 +706,81 @@ def test_test_info_check_fixture_unknown_scope() -> None:
     )
 
 
+def test_test_info_check_fixture_invalid_types() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def indirect_fixture() -> Literal[0]:
+            return 0
+
+        @pytest.fixture
+        def direct_fixture(indirect_fixture: Literal[1]) -> Literal[1]:
+            return indirect_fixture
+
+        def test_info(direct_fixture: Literal[2]) -> None:
+            ...
+        """,
+        errors=["fixture-arg-type"],
+    )
+
+
+def test_test_info_check_fixture_and_arg_both_supplied() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(arg: None) -> None:
+            return arg
+
+        @pytest.mark.parametrize(
+            "arg, fixture", [(None, None)]
+        )
+        def test_info(fixture: None, arg: None) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_check_fixture_and_arg_one_supplied() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(arg: None) -> None:
+            return arg
+
+        @pytest.mark.parametrize(
+            "arg", [None]
+        )
+        def test_info(fixture: None, arg: None) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_check_fixture_valid_argname_generic_types() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture[T](arg: T) -> T:
+            return arg
+
+        @pytest.mark.parametrize(
+            "arg", [1, 2, 3]
+        )
+        def test_info[U](fixture: U) -> None:
+            ...
+        """,
+    )
+
+
 def _test_info_prune_active_requests_and_fixtures_test_body(
     defs: str, arguments: list[str], expected_requests: list[str], expected_fixtures: list[str]
 ) -> None:
@@ -902,4 +978,48 @@ def test_info_prune_active_requests_and_fixtures_cycle() -> None:
             "cycle_2",
         ],
         ["cycle_1", "cycle_2"],
+    )
+
+
+def test_info_prune_active_requests_and_fixtures_partially_flattened() -> None:
+    _test_info_prune_active_requests_and_fixtures_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def deep_fixture(arg: None) -> None:
+            ...
+
+        @pytest.fixture
+        def shallow_fixture(deep_fixture: None) -> None:
+            ...
+
+        def test_info(shallow_fixture: None, deep_fixture: None, arg: None) -> None:
+            ...
+        """,
+        ["shallow_fixture"],
+        ["shallow_fixture", "arg", "deep_fixture"],
+        ["deep_fixture"],
+    )
+
+
+def test_info_prune_active_requests_and_fixtures_flattened() -> None:
+    _test_info_prune_active_requests_and_fixtures_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def deep_fixture(arg: None) -> None:
+            ...
+
+        @pytest.fixture
+        def shallow_fixture(deep_fixture: None) -> None:
+            ...
+
+        def test_info(shallow_fixture: None, deep_fixture: None, arg: None) -> None:
+            ...
+        """,
+        ["shallow_fixture", "deep_fixture", "arg"],
+        ["shallow_fixture", "deep_fixture", "arg"],
+        [],
     )
