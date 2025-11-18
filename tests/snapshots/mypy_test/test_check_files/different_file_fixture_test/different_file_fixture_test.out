@@ -1,0 +1,2 @@
+test_samples/conftest.py:10: error: 'indirect_int_fixture' requests 'base_int_fixture' with type "str", but expects type "int". This happens when executing 'test_invalid_indirect_int_fixture'.  [fixture-arg-type]
+Found 1 error in 1 file (checked 1 source file)

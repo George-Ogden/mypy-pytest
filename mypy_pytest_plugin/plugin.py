@@ -8,6 +8,7 @@ from mypy.nodes import (
     Expression,
     MypyFile,
 )
+from mypy.options import Options
 from mypy.plugin import FunctionContext, MethodContext, Plugin
 from mypy.types import CallableType, LiteralType, Type
 
@@ -25,6 +26,13 @@ from .utils import compose
 
 
 class PytestPlugin(Plugin):
+    def __init__(self, options: Options) -> None:
+        for module_pattern in "*.conftest", "conftest":
+            options.per_module_options.setdefault(module_pattern, {})["ignore_missing_imports"] = (
+                True
+            )
+        super().__init__(options)
+
     def get_additional_deps(self, file: MypyFile) -> list[tuple[int, str, int]]:
         deps = [
             self.module_to_dep("typing"),
