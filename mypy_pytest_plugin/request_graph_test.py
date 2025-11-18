@@ -1,5 +1,9 @@
+from unittest import mock
+
+from .fixture_manager import FixtureManager
 from .test_utils import (
     parse,
+    simple_module_lookup,
     test_info_from_defs,
 )
 
@@ -12,8 +16,12 @@ def _test_info_prune_active_requests_and_fixtures_test_body(
     for def_ in parse_result.raw_defs:
         def_.accept(test_info.checker)
 
+    with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
+        _ = test_info.request_graph
+
     for argument in arguments:
         test_info._available_requests[argument].used = True
+
     active_requests, active_fixtures = test_info.request_graph._prune_active_nodes_and_fixtures()
     assert active_requests.keys() == set(expected_requests)
     assert active_fixtures.keys() == set(expected_fixtures)

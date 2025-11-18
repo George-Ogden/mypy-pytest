@@ -29,7 +29,7 @@ class TestNameChecker:
     @functools.cache
     def _session(cls) -> Session:
         config = _pytest.config.get_config()
-        config.parse(["-s"])
+        config.parse(["-s", "--noconftest"])
         return Session.from_config(config)
 
     @classmethod

@@ -1,11 +1,10 @@
 from collections.abc import Sequence
 from dataclasses import KW_ONLY, dataclass, field
-from pathlib import Path
 from typing import Literal
 
+from mypy.nodes import Context
 from mypy.types import Type, TypeVarLikeType
 
-from .error_info import ExtendedContext
 from .test_argument import TestArgument
 
 
@@ -13,7 +12,7 @@ from .test_argument import TestArgument
 class Request:
     request: TestArgument
     _: KW_ONLY
-    path: Path
+    file: str
     source: Literal["argument", "fixture"]
     used: bool = field(default=False, init=False)
 
@@ -26,8 +25,8 @@ class Request:
         return self.request.type_
 
     @property
-    def context(self) -> ExtendedContext:
-        return ExtendedContext(context=self.request.context, path=self.path)
+    def context(self) -> Context:
+        return self.request.context
 
     @property
     def type_variables(self) -> Sequence[TypeVarLikeType]:

@@ -8,8 +8,6 @@ from mypy.nodes import ArgKind, CallExpr, Expression
 from mypy.types import CallableType, Instance, Type
 
 from .error_codes import VARIADIC_ARGNAMES_ARGVALUES
-from .error_info import ExtendedContext
-from .logger import Logger
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,9 +70,9 @@ class DecoratorWrapper:
             and self.call.arg_kinds[arg_names_idx] in self.accepted_arg_kinds
         ):
             return self.call.args[arg_names_idx], self.call.args[arg_values_idx]
-        Logger.error(
+        self.checker.fail(
             "Unable to read argnames and argvalues in a variadic argument.",
-            context=ExtendedContext.from_context(self.call, self.checker),
+            context=self.call,
             code=VARIADIC_ARGNAMES_ARGVALUES,
         )
         return None

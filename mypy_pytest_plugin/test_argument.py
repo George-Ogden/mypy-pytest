@@ -17,8 +17,6 @@ from .error_codes import (
     VARIADIC_KEYWORD_ARGUMENT,
     VARIADIC_POSITIONAL_ARGUMENT,
 )
-from .error_info import ExtendedContext
-from .logger import Logger
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -29,7 +27,7 @@ class TestArgument:
     context: Context
 
     @classmethod
-    def from_fn_def(cls, fn_def: FuncDef, *, checker: TypeChecker) -> Sequence[Self] | None:
+    def from_fn_def(cls, fn_def: FuncDef, *, checker: TypeChecker | None) -> Sequence[Self] | None:
         if not isinstance(fn_def.type, CallableType):
             return None
         return cls._validate_test_arguments(
@@ -42,7 +40,7 @@ class TestArgument:
         arguments: Sequence[Argument],
         types: Sequence[Type],
         type_variables: Sequence[TypeVarLikeType],
-        checker: TypeChecker,
+        checker: TypeChecker | None,
     ) -> Sequence[Self] | None:
         test_arguments: Sequence[Self | None] = [
             cls._validate_test_argument(argument, type_, type_variables, checker)
@@ -56,7 +54,7 @@ class TestArgument:
         argument: Argument,
         type_: Type,
         type_variables: Sequence[TypeVarLikeType],
-        checker: TypeChecker,
+        checker: TypeChecker | None,
     ) -> Self | None:
         if argument.initializer is not None:
             message = f"`{argument.variable.name}` has a default value and is therefore ignored."
@@ -81,5 +79,6 @@ class TestArgument:
                 context=argument,
                 type_variables=type_variables,
             )
-        Logger.error(message, context=ExtendedContext.from_context(argument, checker), code=code)
+        if checker is not None:
+            checker.fail(message, context=argument, code=code)
         return None

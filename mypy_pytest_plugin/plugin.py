@@ -1,5 +1,5 @@
 from collections.abc import Callable
-from typing import Final, cast
+from typing import cast
 
 from mypy.checker import TypeChecker
 from mypy.nodes import (
@@ -9,7 +9,7 @@ from mypy.nodes import (
     MypyFile,
 )
 from mypy.plugin import FunctionContext, MethodContext, Plugin
-from mypy.types import CallableType, Type
+from mypy.types import CallableType, LiteralType, Type
 
 from .defer import DeferralError
 from .excluded_test_checker import ExcludedTestChecker
@@ -20,22 +20,22 @@ from .iterable_sequence_checker import IterableSequenceChecker
 from .test_body_ranges import TestBodyRanges
 from .test_info import TestInfo
 from .test_name_checker import TestNameChecker
+from .types_module import TYPES_MODULE
 
 
 class PytestPlugin(Plugin):
-    TYPES_MODULE: Final[str] = "mypy_pytest_plugin_types"
-
     def get_additional_deps(self, file: MypyFile) -> list[tuple[int, str, int]]:
         deps = [
             self.module_to_dep("typing"),
-            self.module_to_dep(self.TYPES_MODULE),
+            self.module_to_dep(TYPES_MODULE),
+            self.module_to_dep("_pytest.fixtures"),
         ]
         if TestNameChecker.is_test_file_name(file.name) or file.name == "conftest":
             deps.extend(map(self.module_to_dep, FixtureManager.default_fixture_module_names()))
             deps.extend(
                 map(
                     self.module_to_dep,
-                    FixtureManager.conftest_names(Fullname.from_string(file.name)),
+                    FixtureManager.conftest_names(Fullname.from_string(file.fullname)),
                 )
             )
         return deps
@@ -47,6 +47,8 @@ class PytestPlugin(Plugin):
         return (10, module, -1)
 
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
+        if fullname == "_pytest.fixtures.fixture":
+            return self.check_pytest_structure
         return self.check_iterable_sequence
 
     def get_method_hook(self, fullname: str) -> Callable[[MethodContext], Type] | None:
@@ -73,7 +75,7 @@ class PytestPlugin(Plugin):
         return argument.line != -1 and argument.end_line is not None
 
     @classmethod
-    def check_pytest_structure(cls, ctx: MethodContext) -> Type:
+    def check_pytest_structure(cls, ctx: MethodContext | FunctionContext) -> Type:
         try:
             return cls._check_pytest_structure(ctx)
         except DeferralError:
@@ -82,12 +84,12 @@ class PytestPlugin(Plugin):
             return ctx.default_return_type
 
     @classmethod
-    def _check_pytest_structure(cls, ctx: MethodContext) -> Type:
+    def _check_pytest_structure(cls, ctx: MethodContext | FunctionContext) -> Type:
         if isinstance(ctx.context, Decorator) and isinstance(ctx.api, TypeChecker):
             cls._update_return_type(ctx.default_return_type, ctx.api)
-            if not Fixture.is_fixture_and_mark(
-                ctx.context, checker=ctx.api
-            ) and not Fixture.from_decorator(ctx.context, checker=ctx.api):
+            if not Fixture.is_fixture_and_mark(ctx.context, checker=ctx.api):
+                if fixture := Fixture.from_decorator(ctx.context, checker=ctx.api):
+                    return cls._fixture_type(fixture, decorator=ctx.context, checker=ctx.api)
                 ignored_testnames = ExcludedTestChecker.ignored_test_names(
                     ctx.api.tree.defs, ctx.api
                 )
@@ -104,12 +106,23 @@ class PytestPlugin(Plugin):
             test_info.check()
 
     @classmethod
+    def _fixture_type(cls, fixture: Fixture, *, decorator: Decorator, checker: TypeChecker) -> Type:
+        assert decorator.func.type is not None
+        return checker.named_generic_type(
+            f"{TYPES_MODULE}.FixtureType",
+            [
+                LiteralType(fixture.scope, fallback=checker.named_type("builtins.object")),
+                decorator.func.type,
+            ],
+        )
+
+    @classmethod
     def _update_return_type(cls, return_type: Type, checker: TypeChecker) -> None:
         if (
             isinstance(return_type, CallableType)
             and return_type.fallback.type.fullname == "builtins.function"
         ):
-            return_type.fallback = checker.named_type(f"{cls.TYPES_MODULE}.Testable")
+            return_type.fallback = checker.named_type(f"{TYPES_MODULE}.Testable")
 
 
 def plugin(version: str) -> type[PytestPlugin]:

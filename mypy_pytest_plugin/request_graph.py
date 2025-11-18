@@ -1,7 +1,7 @@
 from collections import deque
 from dataclasses import dataclass
-from pathlib import Path
 
+from mypy.checker import TypeChecker
 from mypy.messages import format_type
 from mypy.nodes import (
     Context,
@@ -16,23 +16,21 @@ from .error_codes import (
     MISSING_ARGNAME,
     REPEATED_FIXTURE_ARGNAME,
 )
-from .error_info import ExtendedContext
 from .fixture import Fixture, FixtureScope
-from .logger import Logger
 from .request import Request
 
 
 @dataclass(frozen=True, kw_only=True)
 class RequestGraph:
     name: str
-    path: Path
+    checker: TypeChecker
     available_requests: dict[str, Request]
     available_fixtures: dict[str, Fixture]
     options: Options
 
     @property
-    def dummy_context(self) -> ExtendedContext:
-        return ExtendedContext(context=Context(-1, -1), path=self.path)
+    def dummy_context(self) -> Context:
+        return Context(-1, -1)
 
     def check(self) -> None:
         active_requests, active_fixtures = self._prune_active_nodes_and_fixtures()
@@ -71,16 +69,17 @@ class RequestGraph:
     ) -> None:
         for request in active_requests.values():
             if not request.used and request.name not in active_fixtures:
-                Logger.error(
+                self.checker.msg.fail(
                     f"Argname {request.name!r} not included in parametrization.",
                     context=request.context,
+                    file=request.file,
                     code=MISSING_ARGNAME,
                 )
 
     def _check_unused(self, active_requests: dict[str, Request]) -> None:
         for request in self.available_requests.values():
             if request.used and request.name not in active_requests:
-                Logger.error(
+                self.checker.fail(
                     f"Argname {request.name!r} is invalid as the fixture is already provided.",
                     context=self.dummy_context,
                     code=REPEATED_FIXTURE_ARGNAME,
@@ -99,9 +98,10 @@ class RequestGraph:
                         fixture.scope,
                     ]
                 ):
-                    Logger.error(
+                    self.checker.msg.fail(
                         f"{fixture.name!r} (scope={fixture.scope.name!r}) requests {requested_fixture.name!r} (scope={requested_fixture.scope.name!r}).",
-                        context=fixture.extended_context,
+                        context=fixture.context,
+                        file=fixture.file,
                         code=INVERTED_FIXTURE_SCOPE,
                     )
 
@@ -119,10 +119,11 @@ class RequestGraph:
             if argument.name in requested_types.keys() and not is_subtype(
                 requested_types[argument.name], argument.type_
             ):
-                Logger.error(
+                self.checker.msg.fail(
                     f"{fixture.name!r} requests {argument.name!r} with type {format_type(requested_types[argument.name], self.options)}, but expects type {format_type(argument.type_, self.options)}. "
                     f"This happens when executing {self.name!r}.",
-                    context=fixture.extended_context,
+                    context=fixture.context,
+                    file=fixture.file,
                     code=FIXTURE_ARGUMENT_TYPE,
                 )
 
@@ -135,8 +136,9 @@ class RequestGraph:
                     received_type := active_fixtures[request.name].return_type, request.type_
                 )
             ):
-                Logger.error(
+                self.checker.msg.fail(
                     f"{self.name!r} requests {request.name!r} with type {format_type(received_type, self.options)}, but expects type {format_type(request.request.type_, self.options)}.",
                     context=request.context,
+                    file=request.file,
                     code=FIXTURE_ARGUMENT_TYPE,
                 )

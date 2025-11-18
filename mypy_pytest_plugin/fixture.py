@@ -1,7 +1,6 @@
 from collections.abc import Sequence
 from dataclasses import dataclass
 import enum
-from pathlib import Path
 from typing import Final, Self, cast
 
 from mypy.checker import TypeChecker
@@ -11,9 +10,7 @@ from mypy.types import CallableType, Instance, LiteralType, Overloaded, Type, Ty
 
 from .defer import DeferralError
 from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTURE
-from .error_info import ExtendedContext
 from .fullname import Fullname
-from .logger import Logger
 from .test_argument import TestArgument
 
 FixtureScope = enum.IntEnum(
@@ -25,7 +22,7 @@ DEFAULT_SCOPE: Final[FixtureScope] = FixtureScope.function
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Fixture:
     fullname: Fullname
-    file: Path
+    file: str
     return_type: Type
     arguments: Sequence[TestArgument]
     scope: FixtureScope
@@ -35,8 +32,10 @@ class Fixture:
     @classmethod
     def from_decorator(cls, decorator: Decorator, checker: TypeChecker) -> Self | None:
         fixture_decorator = cls.fixture_decorator(decorator.decorators, checker)
-        if fixture_decorator is None or cls._contains_mark_decorators(
-            decorator.decorators, checker
+        if (
+            fixture_decorator is None
+            or not isinstance(type_ := decorator.func.type, CallableType)
+            or cls._contains_mark_decorators(decorator.decorators, checker)
         ):
             return None
         arguments = TestArgument.from_fn_def(decorator.func, checker=checker)
@@ -44,14 +43,29 @@ class Fixture:
             return None
         return cls(
             fullname=Fullname.from_string(decorator.fullname),
-            file=ExtendedContext.checker_path(checker),
-            return_type=cast(CallableType, decorator.func.type).ret_type,
+            file=checker.path,
+            return_type=type_.ret_type,
             arguments=arguments,
             scope=cls._fixture_scope_from_decorator(fixture_decorator, checker),
             context=decorator.func,
-            type_variables=decorator.func.type.variables
-            if isinstance(decorator.func.type, CallableType)
-            else [],
+            type_variables=type_.variables,
+        )
+
+    @classmethod
+    def from_type(cls, type: CallableType, *, scope: FixtureScope, file: str) -> Self:
+        func = type.definition
+        assert isinstance(func, FuncDef)
+        assert isinstance(func.type, CallableType)
+        arguments = TestArgument.from_fn_def(func, checker=None)
+        assert arguments is not None
+        return cls(
+            fullname=Fullname.from_string(func.fullname),
+            file=file,
+            return_type=func.type.ret_type,
+            arguments=arguments,
+            scope=scope,
+            context=func,
+            type_variables=func.type.variables,
         )
 
     def as_argument(self) -> TestArgument:
@@ -77,9 +91,9 @@ class Fixture:
         if is_mark := is_subtype(
             checker.lookup_type(expression), checker.named_type("pytest.MarkDecorator")
         ):
-            Logger.error(
+            checker.fail(
                 "Marks cannot be applied to fixtures.",
-                context=ExtendedContext.from_context(expression, checker),
+                context=expression,
                 code=MARKED_FIXTURE,
             )
         return is_mark
@@ -106,9 +120,9 @@ class Fixture:
 
     @classmethod
     def _warn_extra_decorator(cls, decorator: Expression, checker: TypeChecker) -> None:
-        Logger.error(
+        checker.fail(
             "Extra `pytest.fixture` decorator. Only one is allowed.",
-            context=ExtendedContext.from_context(decorator, checker),
+            context=decorator,
             code=DUPLICATE_FIXTURE,
         )
 
@@ -155,9 +169,9 @@ class Fixture:
     ) -> FixtureScope:
         if isinstance(type_, LiteralType) and type_.value in FixtureScope._member_names_:
             return FixtureScope[cast(str, type_.value)]
-        Logger.error(
+        checker.fail(
             "Invalid type for fixture scope.",
-            context=ExtendedContext.from_context(context, checker),
+            context=context,
             code=INVALID_FIXTURE_SCOPE,
         )
 
@@ -170,7 +184,3 @@ class Fixture:
     @property
     def module_name(self) -> Fullname:
         return self.fullname.module_name
-
-    @property
-    def extended_context(self) -> ExtendedContext:
-        return ExtendedContext(context=self.context, path=self.file)

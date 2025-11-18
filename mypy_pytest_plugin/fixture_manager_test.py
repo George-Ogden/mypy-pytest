@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from unittest import mock
 
 from inline_snapshot import snapshot
 from mypy.nodes import FuncDef
@@ -6,7 +7,7 @@ from mypy.nodes import FuncDef
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .test_argument import TestArgument
-from .test_utils import parse_multiple
+from .test_utils import parse_multiple, simple_module_lookup
 
 
 def _fixture_manager_conftest_names_test_body(fullname: str, expected_fullnames: list[str]) -> None:
@@ -98,9 +99,11 @@ def _fixture_manager_resolve_requests_and_fixtures_test_body(
 
     start = TestArgument.from_fn_def(fixture_def, checker=checker)
     assert start is not None
-    requests, fixtures = FixtureManager(checker).resolve_requests_and_fixtures(
-        start, Fullname.from_string(last_module_name)
-    )
+
+    with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
+        requests, fixtures = FixtureManager(checker).resolve_requests_and_fixtures(
+            start, Fullname.from_string(last_module_name)
+        )
 
     assert not checker.errors.is_errors()
     assert sorted(requests.keys()) == sorted(expected_request_names)

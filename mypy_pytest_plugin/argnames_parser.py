@@ -18,8 +18,6 @@ from .error_codes import (
     UNREADABLE_ARGNAME,
     UNREADABLE_ARGNAMES,
 )
-from .error_info import ExtendedContext
-from .logger import Logger
 
 
 @dataclass(frozen=True)
@@ -33,9 +31,9 @@ class ArgnamesParser:
             case ListExpr() | TupleExpr():
                 argnames = self.parse_names_sequence(expression)
             case _:
-                Logger.error(
+                self.checker.fail(
                     "Unable to identify argnames. (Use a comma-separated string, list of strings or tuple of strings).",
-                    context=ExtendedContext.from_context(expression, self.checker),
+                    context=expression,
                     code=UNREADABLE_ARGNAMES,
                 )
                 return None
@@ -44,9 +42,9 @@ class ArgnamesParser:
 
     def _check_valid_identifier(self, name: str, context: StrExpr) -> bool:
         if not (valid_identifier := name.isidentifier()):
-            Logger.error(
+            self.checker.fail(
                 f"Invalid identifier {name!r}.",
-                context=ExtendedContext.from_context(context, self.checker),
+                context=context,
                 code=INVALID_ARGNAME,
             )
         return valid_identifier
@@ -67,9 +65,9 @@ class ArgnamesParser:
             if self._check_valid_identifier(name, expression):
                 return name
         else:
-            Logger.error(
+            self.checker.fail(
                 "Unable to read identifier. (Use a sequence of strings instead.)",
-                context=ExtendedContext.from_context(expression, self.checker),
+                context=expression,
                 code=UNREADABLE_ARGNAME,
             )
         return None
@@ -99,8 +97,8 @@ class ArgnamesParser:
 
     def _warn_duplicate_argnames(self, duplicates: Iterable[str], context: Context) -> None:
         for argname in duplicates:
-            Logger.error(
+            self.checker.fail(
                 f"Duplicated argname {argname!r}.",
-                context=ExtendedContext.from_context(context, self.checker),
+                context=context,
                 code=DUPLICATE_ARGNAME,
             )

@@ -2,20 +2,21 @@ from collections import deque
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 import functools
+from typing import cast
 
 import _pytest.config
 from _pytest.fixtures import FixtureManager as PytestFixtureManager
 from _pytest.main import Session
 from mypy.checker import TypeChecker
-from mypy.nodes import Decorator, MypyFile
+from mypy.nodes import FuncDef, MypyFile
+from mypy.types import CallableType, Instance, LiteralType
 from pytest import FixtureDef  # noqa: PT013
 
-from .defer import DeferralError
-from .error_info import ExtendedContext
-from .fixture import Fixture
+from .fixture import Fixture, FixtureScope
 from .fullname import Fullname
 from .request import Request
 from .test_argument import TestArgument
+from .types_module import TYPES_MODULE
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,9 +59,7 @@ class FixtureManager:
         self, start: Sequence[TestArgument], module: Fullname
     ) -> tuple[dict[str, Request], list[Fixture]]:
         unresolved_requests = {
-            argument.name: Request(
-                argument, source="argument", path=ExtendedContext.checker_path(self.checker)
-            )
+            argument.name: Request(argument, source="argument", file=self.checker.path)
             for argument in start
         }
         resolved_requests: dict[str, Request] = {}
@@ -106,7 +105,7 @@ class FixtureManager:
                         Request(
                             argument,
                             source="fixture",
-                            path=fixture.file,
+                            file=fixture.file,
                         )
                     )
 
@@ -117,12 +116,18 @@ class FixtureManager:
 
     def _module_lookup(self, module: MypyFile, request_name: str) -> Fixture | None:
         decorator = module.names.get(request_name)
-        if decorator is not None and isinstance(decorator.node, Decorator):
-            try:
-                return Fixture.from_decorator(decorator.node, self.checker)
-            except DeferralError as e:
-                self.checker.defer_node(decorator.node, None)
-                raise e from e
+        if (
+            decorator is not None
+            and isinstance(type_ := decorator.type, Instance)
+            and type_.type.fullname == f"{TYPES_MODULE}.fixture.FixtureType"
+        ):
+            [scope, signature] = type_.args
+            assert isinstance(scope, LiteralType)
+            assert isinstance(signature, CallableType)
+            assert isinstance(signature.definition, FuncDef)
+            return Fixture.from_type(
+                signature, scope=cast(FixtureScope, scope.value), file=module.path
+            )
         return None
 
     def _default_lookup(self, request_name: str) -> Fixture | None:

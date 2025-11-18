@@ -1,12 +1,12 @@
 from .excluded_test_checker import ExcludedTestChecker
-from .plugin import PytestPlugin
 from .test_utils import parse
+from .types_module import TYPES_MODULE
 
 
 def test_ignored_names() -> None:
     parse_result = parse(
         f"""
-        from {PytestPlugin.TYPES_MODULE} import Testable
+        from {TYPES_MODULE} import Testable
         from typing import Literal
 
         @Testable

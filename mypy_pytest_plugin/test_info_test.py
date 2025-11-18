@@ -1,12 +1,16 @@
+from unittest import mock
+
 from mypy.nodes import FuncDef
 from mypy.types import CallableType
 import pytest
 
-from .logger import Logger
+from .fixture_manager import FixtureManager
 from .test_info import TestInfo
 from .test_utils import (
-    check_error_codes,
+    check_error_messages,
+    get_error_messages,
     parse,
+    simple_module_lookup,
     test_info_from_defs,
     test_signature_from_fn_type,
 )
@@ -22,9 +26,10 @@ def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = 
     assert not checker.errors.is_errors()
     test_info = TestInfo.from_fn_def(test_node, checker=checker)
 
-    assert test_info is not None, Logger.messages()
+    messages = get_error_messages(checker)
+    assert test_info is not None, messages
 
-    check_error_codes(errors)
+    check_error_messages(messages, errors=errors)
 
 
 def test_test_info_from_fn_def_no_args() -> None:
@@ -123,9 +128,10 @@ def _test_info_sub_signature_test_body(
     assert not checker.errors.is_errors()
     sub_signature = test_info.sub_signature(argnames)
 
-    assert sub_signature == expected_signature, Logger.messages()
+    messages = get_error_messages(checker)
+    assert sub_signature == expected_signature, messages
 
-    check_error_codes(errors)
+    check_error_messages(messages, errors=errors)
 
 
 def test_test_info_sub_signature_no_args() -> None:
@@ -189,7 +195,8 @@ def _test_info_check_decorator_test_body(defs: str, *, errors: list[str] | None 
     assert not checker.errors.is_errors()
     test_info.check_decorator(decorator)
 
-    check_error_codes(errors)
+    messages = get_error_messages(checker)
+    check_error_messages(messages, errors=errors)
 
 
 def test_test_info_check_decorator_no_errors() -> None:
@@ -358,9 +365,12 @@ def _test_info_check_test_body(defs: str, *, errors: list[str] | None = None) ->
         def_.accept(checker)
 
     assert not checker.errors.is_errors()
-    test_info.check()
 
-    check_error_codes(errors)
+    with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
+        test_info.check()
+
+    messages = get_error_messages(checker)
+    check_error_messages(messages, errors=errors)
 
 
 def test_test_info_check_no_decorators_no_arguments() -> None:

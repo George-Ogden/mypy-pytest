@@ -19,11 +19,9 @@ from .error_codes import (
     REPEATED_ARGNAME,
     UNKNOWN_ARGNAME,
 )
-from .error_info import ExtendedContext
 from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
-from .logger import Logger
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
 from .request import Request
@@ -116,7 +114,7 @@ class TestInfo:
             available_requests=available_requests,
             options=self.checker.options,
             name=self.name,
-            path=ExtendedContext.checker_path(self.checker),
+            checker=self.checker,
         )
 
     @property
@@ -163,18 +161,18 @@ class TestInfo:
         if known_name := arg_name in self._available_requests:
             self._check_repeated_arg_name(arg_name, context)
         else:
-            Logger.error(
+            self.checker.fail(
                 f"Unknown argname {arg_name!r} used as test argument.",
-                context=ExtendedContext.from_context(context, self.checker),
+                context=context,
                 code=UNKNOWN_ARGNAME,
             )
         return known_name
 
     def _check_repeated_arg_name(self, arg_name: str, context: Context) -> None:
         if self._available_requests[arg_name].used:
-            Logger.error(
+            self.checker.fail(
                 f"Repeated argname {arg_name!r} in multiple parametrizations.",
-                context=ExtendedContext.from_context(context, self.checker),
+                context=context,
                 code=REPEATED_ARGNAME,
             )
         else:
