@@ -1,12 +1,21 @@
-from collections.abc import Sequence
+from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 import enum
-from typing import Final, Self, cast
+from typing import ClassVar, Final, Self, cast
 
 from mypy.checker import TypeChecker
 from mypy.nodes import CallExpr, Context, Decorator, Expression, FuncDef
 from mypy.subtypes import is_subtype
-from mypy.types import CallableType, Instance, LiteralType, Overloaded, Type, TypeVarLikeType
+from mypy.types import (
+    AnyType,
+    CallableType,
+    Instance,
+    LiteralType,
+    Overloaded,
+    Type,
+    TypeOfAny,
+    TypeVarLikeType,
+)
 
 from .defer import DeferralError
 from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTURE
@@ -44,7 +53,9 @@ class Fixture:
         return cls(
             fullname=Fullname.from_string(decorator.fullname),
             file=checker.path,
-            return_type=type_.ret_type,
+            return_type=cls.fixture_return_type(
+                type_.ret_type, is_generator=decorator.func.is_generator
+            ),
             arguments=arguments,
             scope=cls._fixture_scope_from_decorator(fixture_decorator, checker),
             context=decorator.func,
@@ -61,20 +72,29 @@ class Fixture:
         return cls(
             fullname=Fullname.from_string(func.fullname),
             file=file,
-            return_type=func.type.ret_type,
+            return_type=cls.fixture_return_type(func.type.ret_type, is_generator=func.is_generator),
             arguments=arguments,
             scope=scope,
             context=func,
             type_variables=func.type.variables,
         )
 
-    def as_argument(self) -> TestArgument:
-        return TestArgument(
-            name=self.fullname.name,
-            type_=self.return_type,
-            context=self.context,
-            type_variables=self.type_variables,
-        )
+    GENERATOR_TYPE_NAMES: ClassVar[Collection[str]] = (
+        "typing.Generator",
+        "typing.Iterable",
+        "typing.Iterator",
+    )
+
+    @classmethod
+    def fixture_return_type(cls, original_type: Type, *, is_generator: bool) -> Type:
+        if is_generator:
+            if (
+                isinstance(original_type, Instance)
+                and original_type.type.fullname in cls.GENERATOR_TYPE_NAMES
+            ):
+                return original_type.args[0]
+            return AnyType(TypeOfAny.from_error)
+        return original_type
 
     @classmethod
     def is_fixture_and_mark(cls, decorator: Decorator, *, checker: TypeChecker) -> bool:
@@ -176,6 +196,14 @@ class Fixture:
         )
 
         return FixtureScope.unknown
+
+    def as_argument(self) -> TestArgument:
+        return TestArgument(
+            name=self.name,
+            type_=self.return_type,
+            context=self.context,
+            type_variables=self.type_variables,
+        )
 
     @property
     def name(self) -> str:
