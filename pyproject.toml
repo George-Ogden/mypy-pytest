@@ -51,6 +51,6 @@ ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 python_files = "*_test.py"
-addopts = '--capture=sys'
+addopts = '--capture=sys --timeout 60 --timeout-method=thread'
 norecursedirs = ["test_samples"]
 pythonpath = ["."]
