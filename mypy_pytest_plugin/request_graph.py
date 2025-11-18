@@ -30,6 +30,19 @@ class RequestGraph:
 
     @property
     def dummy_context(self) -> Context:
+        earliest_context = min(
+            (
+                request.request.context
+                for request in self.available_requests.values()
+                if request.source == "argument"
+            ),
+            key=lambda context: (context.line, context.column),
+        )
+        if earliest_context:
+            context = Context(earliest_context.line, max(earliest_context.column - 1, 0))
+            context.end_line = context.line
+            context.end_column = context.column
+            return context
         return Context(-1, -1)
 
     def check(self) -> None:
@@ -80,7 +93,7 @@ class RequestGraph:
         for request in self.available_requests.values():
             if request.used and request.name not in active_requests:
                 self.checker.fail(
-                    f"Argname {request.name!r} is invalid as the fixture is already provided.",
+                    f"Argname {request.name!r} is invalid as the fixture is shadowed by another argument.",
                     context=self.dummy_context,
                     code=REPEATED_FIXTURE_ARGNAME,
                 )

@@ -34,3 +34,8 @@ def test_indirect_bool_fixture_invalid_shadowing(
     indirect_bool_fixture_invalid: bool, bool_fixture: Literal[True]
 ) -> None:
     return bool_fixture == indirect_bool_fixture_invalid
+
+
+@pytest.mark.parametrize("bool_fixture", [False])
+@pytest.mark.parametrize("indirect_bool_fixture_invalid", [True, False])
+def test_indirect_bool_fixture_invalid_extra_arg(indirect_bool_fixture_invalid: bool) -> None: ...
