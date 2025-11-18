@@ -119,7 +119,7 @@ class FixtureManager:
         if (
             decorator is not None
             and isinstance(type_ := decorator.type, Instance)
-            and type_.type.fullname == f"{TYPES_MODULE}.fixture.FixtureType"
+            and type_.type.fullname == f"{TYPES_MODULE}.fixture_type.FixtureType"
         ):
             [scope, signature] = type_.args
             assert isinstance(scope, LiteralType)
