@@ -21,6 +21,7 @@ from .test_body_ranges import TestBodyRanges
 from .test_info import TestInfo
 from .test_name_checker import TestNameChecker
 from .types_module import TYPES_MODULE
+from .utils import compose
 
 
 class PytestPlugin(Plugin):
@@ -48,15 +49,29 @@ class PytestPlugin(Plugin):
 
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
         if fullname == "_pytest.fixtures.fixture":
-            return self.check_pytest_structure
-        return self.check_iterable_sequence
+            hook_fn = self.check_pytest_structure
+        else:
+            hook_fn = self.check_iterable_sequence
+        return compose(hook_fn, self.enable_test_attribute)
+
+    @classmethod
+    def enable_test_attribute[T: MethodContext | FunctionContext](cls, ctx: T) -> T:
+        if (
+            isinstance(ctx.api, TypeChecker)
+            and hasattr(ctx.context, "fullname")
+            and TestNameChecker.is_test_fn_name(ctx.context.fullname)
+        ):
+            cls._update_return_type(ctx.default_return_type, checker=ctx.api)
+        return ctx
 
     def get_method_hook(self, fullname: str) -> Callable[[MethodContext], Type] | None:
         if (
             fullname.startswith("_pytest.mark.structures") and "Mark" in fullname
         ) or fullname.startswith("_pytest.fixtures.FixtureFunctionMarker"):
-            return self.check_pytest_structure
-        return self.check_iterable_sequence
+            hook_fn = self.check_pytest_structure
+        else:
+            hook_fn = self.check_iterable_sequence
+        return compose(hook_fn, self.enable_test_attribute)
 
     @classmethod
     def check_iterable_sequence(cls, ctx: MethodContext | FunctionContext) -> Type:
