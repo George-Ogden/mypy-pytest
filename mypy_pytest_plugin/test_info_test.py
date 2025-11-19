@@ -24,6 +24,7 @@ def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = 
     assert isinstance(test_node, FuncDef)
 
     assert not checker.errors.is_errors()
+
     test_info = TestInfo.from_fn_def(test_node, checker=checker)
 
     messages = get_error_messages(checker)
@@ -106,6 +107,40 @@ def test_test_info_from_fn_def_vararg_and_varkwarg() -> None:
             ...
         """,
         errors=["var-pos-arg", "var-kwarg"],
+    )
+
+
+def test_test_info_from_fn_def_request_arg_any_type() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        from typing import Any
+
+        def test_info(request: Any) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_from_fn_def_request_arg_wrong_type() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        from _pytest.fixtures import SubRequest
+
+        def test_info(request: SubRequest) -> None:
+            ...
+        """,
+        errors=["request-type"],
+    )
+
+
+def test_test_info_from_fn_def_request_arg_correct_type() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        from _pytest.fixtures import FixtureRequest
+
+        def test_info(request: FixtureRequest) -> None:
+            ...
+        """,
     )
 
 

@@ -47,7 +47,7 @@ class Fixture:
             or cls._contains_mark_decorators(decorator.decorators, checker)
         ):
             return None
-        arguments = TestArgument.from_fn_def(decorator.func, checker=checker)
+        arguments = TestArgument.from_fn_def(decorator.func, checker=checker, source="fixture")
         if arguments is None:
             return None
         return cls(
@@ -67,7 +67,7 @@ class Fixture:
         func = type.definition
         assert isinstance(func, FuncDef)
         assert isinstance(func.type, CallableType)
-        arguments = TestArgument.from_fn_def(func, checker=None)
+        arguments = TestArgument.from_fn_def(func, checker=None, source="fixture")
         assert arguments is not None
         return cls(
             fullname=Fullname.from_string(func.fullname),

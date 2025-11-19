@@ -7,6 +7,7 @@ from typing import Any, Literal, cast, overload
 
 from debug import pprint
 import mypy.build
+from mypy.build import State
 from mypy.checker import TypeChecker
 import mypy.modulefinder
 from mypy.nodes import (
@@ -53,6 +54,7 @@ class TypeLookup:
 
 @dataclass(frozen=True, kw_only=True)
 class MultiParseResult:
+    graph: dict[str, State]
     checkers: dict[str, TypeChecker] = field(default_factory=dict)
     types: dict[str, TypeLookup] = field(default_factory=dict)
     defs: dict[str, Expression | FuncDef | Decorator] = field(default_factory=dict)
@@ -61,6 +63,7 @@ class MultiParseResult:
 
 @dataclass(frozen=True, kw_only=True)
 class ParseResult:
+    graph: dict[str, State]
     checker: TypeChecker
     types: TypeLookup
     defs: Mapping[str, Expression | FuncDef | Decorator]
@@ -68,7 +71,10 @@ class ParseResult:
 
 
 def parse_multiple(modules: Sequence[tuple[str, str]]) -> MultiParseResult:
-    modules = [(module_name, textwrap.dedent(code).strip()) for module_name, code in modules]
+    modules = [
+        (module_name, f"import _pytest.fixtures\nimport typing\n{textwrap.dedent(code)}".strip())
+        for module_name, code in modules
+    ]
 
     options = mypy.options.Options()
     options.incremental = False
@@ -85,7 +91,7 @@ def parse_multiple(modules: Sequence[tuple[str, str]]) -> MultiParseResult:
 
     module_names = [module_name for module_name, _ in modules]
 
-    parse_result = MultiParseResult()
+    parse_result = MultiParseResult(graph=result.graph)
     for module_name in module_names:
         state = result.graph[module_name]
         tree = state.tree
@@ -126,6 +132,7 @@ def parse(code: str) -> ParseResult:
     module_name = "test_module"
     parse_result = parse_multiple([(module_name, code)])
     return ParseResult(
+        graph=parse_result.graph,
         checker=parse_result.checkers[module_name],
         types=parse_result.types[module_name],
         defs=parse_result.defs,
