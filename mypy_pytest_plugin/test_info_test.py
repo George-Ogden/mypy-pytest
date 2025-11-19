@@ -786,6 +786,7 @@ def test_test_info_check_fixture_valid_argname_generic_types() -> None:
     )
 
 
+@pytest.mark.local_only
 def test_test_info_check_fixture_valid_subtype() -> None:
     _test_info_check_test_body(
         """
@@ -802,6 +803,7 @@ def test_test_info_check_fixture_valid_subtype() -> None:
     )
 
 
+@pytest.mark.local_only
 def test_test_info_check_valid_argument_subtype() -> None:
     _test_info_check_test_body(
         """
