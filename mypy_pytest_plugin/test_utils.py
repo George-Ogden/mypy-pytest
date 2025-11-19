@@ -86,7 +86,6 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = False) 
     options.preserve_asts = True
     options.disallow_untyped_defs = False
     options.disallow_untyped_decorators = False
-    options.cache_fine_grained = True
     options.namespace_packages = False
     options.ignore_missing_imports = True
     options.no_site_packages = True

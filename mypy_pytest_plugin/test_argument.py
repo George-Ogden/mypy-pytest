@@ -138,7 +138,7 @@ class TestArgumentParser:
 
     def _is_request_argument(self, argument: TestArgument, expected_type: Type | None) -> bool:
         if (
-            is_request := (argument.name == "request")
+            (is_request := (argument.name == "request"))
             and expected_type is not None
             and not is_subtype(expected_type, argument.type_)
         ):

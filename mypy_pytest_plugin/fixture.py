@@ -92,7 +92,7 @@ class FixtureParser:
         fixture_decorator = self.fixture_decorator(decorator.decorators)
         if (
             fixture_decorator is None
-            or not isinstance(type_ := decorator.func.type, CallableType)
+            or (type_ := self.analyze_type(decorator.func)) is None
             or self._contains_mark_decorators(decorator.decorators)
             or self.is_request_name(decorator)
         ):
@@ -111,6 +111,20 @@ class FixtureParser:
             context=decorator.func,
             type_variables=type_.variables,
         )
+
+    def analyze_type(self, func: FuncDef) -> CallableType | None:
+        if func.type is None:
+            func.type = CallableType(
+                arg_names=func.arg_names,
+                arg_types=[AnyType(TypeOfAny.unannotated)] * len(func.arguments),
+                arg_kinds=func.arg_kinds,
+                ret_type=AnyType(TypeOfAny.unannotated),
+                fallback=self.checker.named_type("builtins.function"),
+                definition=func,
+            )
+        if isinstance(func.type, CallableType):
+            return func.type
+        return None
 
     GENERATOR_TYPE_NAMES: ClassVar[Collection[str]] = (
         "typing.Generator",

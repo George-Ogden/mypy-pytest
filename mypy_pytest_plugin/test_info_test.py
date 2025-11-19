@@ -919,3 +919,22 @@ def test_test_info_check_valid_shadowed_subtypes() -> None:
             ...
         """
     )
+
+
+def test_test_info_check_untyped_request() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Any
+
+        @pytest.fixture
+        def yield_fixture(request):
+            yield None
+
+        @pytest.mark.parametrize(
+            "number", [1.0, 2]
+        )
+        def test_info(yield_fixture: Any, number) -> None:
+            ...
+        """
+    )

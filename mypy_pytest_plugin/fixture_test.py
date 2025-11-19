@@ -222,6 +222,32 @@ def test_fixture_from_decorator_named_request() -> None:
     )
 
 
+def test_fixture_from_decorator_partially_typed() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(x, y: str):
+            ...
+        """,
+        is_fixture=True,
+    )
+
+
+def test_fixture_from_decorator_untyped() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(x, y):
+            ...
+        """,
+        is_fixture=True,
+    )
+
+
 def fixture_return_type_test_body(defs: str, is_generator: bool) -> None:
     parse_result = parse(defs)
     original_type = parse_result.types["original"]
