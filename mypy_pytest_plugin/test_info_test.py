@@ -841,6 +841,7 @@ def test_test_info_check_fixture_invalid_subtype() -> None:
     )
 
 
+@pytest.mark.local_only
 def test_test_info_check_invalid_argument_subtypes() -> None:
     _test_info_check_test_body(
         """

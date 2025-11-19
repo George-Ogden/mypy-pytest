@@ -31,6 +31,7 @@ class PytestPlugin(Plugin):
             options.per_module_options.setdefault(module_pattern, {})["ignore_missing_imports"] = (
                 True
             )
+        options.preserve_asts = True
         super().__init__(options)
 
     def get_additional_deps(self, file: MypyFile) -> list[tuple[int, str, int]]:
