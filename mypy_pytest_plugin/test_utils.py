@@ -1,5 +1,5 @@
-from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass, field
 import functools
 import re
 import textwrap
@@ -15,6 +15,7 @@ from mypy.nodes import (
     Expression,
     FuncDef,
     MemberExpr,
+    MypyFile,
     NameExpr,
     Statement,
 )
@@ -22,6 +23,9 @@ import mypy.options
 from mypy.subtypes import is_same_type
 from mypy.types import CallableType, Type
 
+from .argnames_parser import ArgnamesParser
+from .fixture import Fixture
+from .fixture_manager import FixtureManager
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
 from .test_info import TestInfo
@@ -48,6 +52,14 @@ class TypeLookup:
 
 
 @dataclass(frozen=True, kw_only=True)
+class MultiParseResult:
+    checkers: dict[str, TypeChecker] = field(default_factory=dict)
+    types: dict[str, TypeLookup] = field(default_factory=dict)
+    defs: dict[str, Expression | FuncDef | Decorator] = field(default_factory=dict)
+    raw_defs: list[Statement] = field(default_factory=list)
+
+
+@dataclass(frozen=True, kw_only=True)
 class ParseResult:
     checker: TypeChecker
     types: TypeLookup
@@ -55,9 +67,8 @@ class ParseResult:
     raw_defs: list[Statement]
 
 
-@functools.lru_cache(maxsize=1)
-def parse(code: str) -> ParseResult:
-    code = textwrap.dedent(code).strip()
+def parse_multiple(modules: Sequence[tuple[str, str]]) -> MultiParseResult:
+    modules = [(module_name, textwrap.dedent(code).strip()) for module_name, code in modules]
 
     options = mypy.options.Options()
     options.incremental = False
@@ -65,37 +76,60 @@ def parse(code: str) -> ParseResult:
     options.preserve_asts = True
 
     result = mypy.build.build(
-        sources=[mypy.modulefinder.BuildSource(path=None, module="test_module", text=code)],
+        sources=[
+            mypy.modulefinder.BuildSource(path=None, module=module_name, text=code)
+            for module_name, code in modules
+        ],
         options=options,
     )
 
-    state = result.graph["test_module"]
-    tree = state.tree
-    if tree is None:
-        raise ValueError(f"Unable to infer types. Errors: {state.early_errors}")
+    module_names = [module_name for module_name, _ in modules]
 
-    type_checker = state.type_checker()
-    errors = type_checker.errors
-    if errors.is_errors():
-        for info in errors.error_info_map.values():
-            for err in info:
-                print(f"{err.file}:{err.line}: {err.message}")
-        raise TypeError()
+    parse_result = MultiParseResult()
+    for module_name in module_names:
+        state = result.graph[module_name]
+        tree = state.tree
+        if tree is None:
+            raise ValueError(f"Unable to infer types. Errors: {state.early_errors}")
 
-    defs: dict[str, Expression | FuncDef | Decorator] = {}
-    for def_ in tree.defs:
-        if isinstance(def_, AssignmentStmt):
-            for lvalue in def_.lvalues:
-                if isinstance(lvalue, NameExpr):
-                    defs[lvalue.name] = def_.rvalue
-                elif isinstance(lvalue, MemberExpr) and isinstance(lvalue.expr, NameExpr):
-                    defs[f"{lvalue.expr.name}.{lvalue.name}"] = def_.rvalue
+        type_checker = state.type_checker()
+        errors = type_checker.errors
+        if errors.is_errors():
+            for info in errors.error_info_map.values():
+                for err in info:
+                    print(f"{err.file}:{err.line}: {err.message}")
+            raise TypeError()
 
-        elif isinstance(def_, FuncDef | Decorator):
-            defs[def_.name] = def_
+        defs: dict[str, Expression | FuncDef | Decorator] = {}
+        for def_ in tree.defs:
+            if isinstance(def_, AssignmentStmt):
+                for lvalue in def_.lvalues:
+                    if isinstance(lvalue, NameExpr):
+                        defs[lvalue.name] = def_.rvalue
+                    elif isinstance(lvalue, MemberExpr) and isinstance(lvalue.expr, NameExpr):
+                        defs[f"{lvalue.expr.name}.{lvalue.name}"] = def_.rvalue
 
+            elif isinstance(def_, FuncDef | Decorator):
+                defs[def_.name] = def_
+
+        parse_result.checkers[module_name] = type_checker
+        parse_result.raw_defs.extend(tree.defs)
+        parse_result.types[module_name] = TypeLookup(tree.names)
+        parse_result.defs.update({f"{module_name}.{name}": def_ for name, def_ in defs.items()})
+        if len(module_names) == 1:
+            parse_result.defs.update(defs)
+    return parse_result
+
+
+@functools.lru_cache(maxsize=1)
+def parse(code: str) -> ParseResult:
+    module_name = "test_module"
+    parse_result = parse_multiple([(module_name, code)])
     return ParseResult(
-        checker=type_checker, types=TypeLookup(tree.names), defs=defs, raw_defs=tree.defs
+        checker=parse_result.checkers[module_name],
+        types=parse_result.types[module_name],
+        defs=parse_result.defs,
+        raw_defs=parse_result.raw_defs,
     )
 
 
@@ -108,7 +142,7 @@ def check_error_messages(messages: str, *, errors: list[str] | None) -> None:
         error_codes = [match for match in re.findall(r"\[([a-z\-]*)\]$", messages, re.MULTILINE)]
         assert error_codes == errors, messages
     else:
-        assert not errors
+        assert not messages, messages
 
 
 def test_signature_from_fn_type(
@@ -210,11 +244,8 @@ def test_signature_custom_check_test_body[
 test_signature_custom_check_test_body.__test__ = False  # type: ignore
 
 
-def default_test_info(checker: TypeChecker) -> TestInfo:
-    test_info = TestInfo(
-        checker=checker, arguments={}, decorators=[], fn_name="test_info", type_variables=[]
-    )
-    return test_info
+def default_argnames_parser(checker: TypeChecker) -> ArgnamesParser:
+    return ArgnamesParser(checker)
 
 
 def test_info_from_defs(defs: str, *, name: str) -> TestInfo:
@@ -227,3 +258,12 @@ def test_info_from_defs(defs: str, *, name: str) -> TestInfo:
 
 
 test_info_from_defs.__test__ = False  # type: ignore
+
+
+def simple_module_lookup(
+    self: FixtureManager, module: MypyFile, request_name: str
+) -> Fixture | None:
+    decorator = module.names.get(request_name)
+    if decorator is not None and isinstance(decorator.node, Decorator):
+        return Fixture.from_decorator(decorator.node, self.checker)
+    return None

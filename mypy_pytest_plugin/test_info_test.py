@@ -1,176 +1,19 @@
-from collections.abc import Callable
-from typing import cast
+from unittest import mock
 
-from mypy.nodes import Expression, FuncDef
+from mypy.nodes import FuncDef
 from mypy.types import CallableType
 import pytest
 
+from .fixture_manager import FixtureManager
 from .test_info import TestInfo
 from .test_utils import (
     check_error_messages,
-    default_test_info,
     get_error_messages,
     parse,
+    simple_module_lookup,
     test_info_from_defs,
     test_signature_from_fn_type,
 )
-
-
-def _test_info_parse_names_custom_test_body[T: Expression](
-    source: str,
-    names: str | list[str] | None,
-    errors: list[str] | None,
-    parse_names: Callable[[TestInfo, T], str | list[str] | None],
-) -> None:
-    source = f"names = {source}"
-    parse_result = parse(source)
-    checker = parse_result.checker
-
-    names_node = cast(T, parse_result.defs["names"])
-
-    test_info = default_test_info(checker)
-
-    assert not checker.errors.is_errors()
-    assert parse_names(test_info, names_node) == names
-    messages = get_error_messages(checker)
-    check_error_messages(messages, errors=errors)
-
-
-def _test_info_parse_names_string_test_body(
-    source: str, names: str | list[str] | None, *, errors: list[str] | None = None
-) -> None:
-    _test_info_parse_names_custom_test_body(source, names, errors, TestInfo.parse_names_string)
-
-
-def test_test_info_parse_names_string_empty() -> None:
-    _test_info_parse_names_string_test_body("''", [])
-
-
-def test_test_info_parse_names_string_noise_only() -> None:
-    _test_info_parse_names_string_test_body("',, , , ,  '", [])
-
-
-def test_test_info_parse_names_string_one_item() -> None:
-    _test_info_parse_names_string_test_body("'bar'", "bar")
-
-
-def test_test_info_parse_names_string_one_item_extra_noise() -> None:
-    _test_info_parse_names_string_test_body("', foo_8,,, , '", "foo_8")
-
-
-def test_test_info_parse_names_string_three_items() -> None:
-    _test_info_parse_names_string_test_body("'a, b_, __c'", ["a", "b_", "__c"])
-
-
-def test_test_info_parse_names_string_two_items_extra_noise() -> None:
-    _test_info_parse_names_string_test_body("',  aa ,b,b,    ,,,,,,,,d  '", ["aa", "b", "b", "d"])
-
-
-def test_info_parse_names_string_starting_with_number() -> None:
-    _test_info_parse_names_string_test_body("'8ac'", None, errors=["invalid-argname"])
-
-
-def test_test_info_parse_names_string_with_space() -> None:
-    _test_info_parse_names_string_test_body("'aa b'", None, errors=["invalid-argname"])
-
-
-def test_test_info_parse_names_string_with_invalid_name() -> None:
-    _test_info_parse_names_string_test_body("'aaa, b b, c'", None, errors=["invalid-argname"])
-
-
-def test_test_info_parse_names_string_with_multiple_invalid_names() -> None:
-    _test_info_parse_names_string_test_body(
-        "'aaa, b b, c-d'", None, errors=["invalid-argname", "invalid-argname"]
-    )
-
-
-def _test_info_parse_names_sequence_test_body(
-    source: str,
-    names: list[str] | None,
-    *,
-    errors: list[str] | None = None,
-) -> None:
-    _test_info_parse_names_custom_test_body(source, names, errors, TestInfo.parse_names_sequence)
-
-
-def test_test_info_parse_names_sequence_empty() -> None:
-    _test_info_parse_names_sequence_test_body("()", [])
-
-
-def test_test_info_parse_names_sequence_integer_name() -> None:
-    _test_info_parse_names_sequence_test_body("[5]", None, errors=["unreadable-argname"])
-
-
-def test_test_info_parse_names_sequence_one_item() -> None:
-    _test_info_parse_names_sequence_test_body("['bar']", ["bar"])
-
-
-def test_test_info_parse_names_sequence_one_item_extra_space() -> None:
-    _test_info_parse_names_sequence_test_body("['foo ']", None, errors=["invalid-argname"])
-
-
-def test_test_info_parse_names_sequence_three_items() -> None:
-    _test_info_parse_names_sequence_test_body("('a', 'b_', '__c_')", ["a", "b_", "__c_"])
-
-
-def test_test_info_parse_names_sequence_one_starting_with_number() -> None:
-    _test_info_parse_names_sequence_test_body("['8ac']", None, errors=["invalid-argname"])
-
-
-def test_test_info_parse_names_sequence_multiple_errors() -> None:
-    _test_info_parse_names_sequence_test_body(
-        "('a', 10, '28', f'{5}')",
-        None,
-        # unreadable argname message not repeated
-        errors=["unreadable-argname", "invalid-argname"],
-    )
-
-
-def test_test_info_parse_names_sequence_one_int() -> None:
-    _test_info_parse_names_sequence_test_body("('a', 10, 'c')", None, errors=["unreadable-argname"])
-
-
-def test_test_info_parse_names_sequence_one_invalid() -> None:
-    _test_info_parse_names_sequence_test_body("('a', '8ab', 'c')", None, errors=["invalid-argname"])
-
-
-def test_test_info_parse_names_sequence_one_undeterminable() -> None:
-    _test_info_parse_names_sequence_test_body(
-        "('a', 'ab'.upper(), 'c')", None, errors=["unreadable-argname"]
-    )
-
-
-def _test_info_parse_names_test_body(
-    source: str,
-    names: list[str] | str | None,
-    *,
-    errors: list[str] | None = None,
-) -> None:
-    _test_info_parse_names_custom_test_body(source, names, errors, TestInfo._parse_names)
-
-
-def test_test_info_parse_names_one_as_string() -> None:
-    _test_info_parse_names_test_body("'abc'", "abc")
-
-
-def test_test_info_parse_names_multiple_as_string() -> None:
-    _test_info_parse_names_test_body("'a,b,c'", ["a", "b", "c"])
-
-
-def test_test_info_parse_names_one_as_sequence() -> None:
-    _test_info_parse_names_test_body("['foo']", ["foo"])
-
-
-def test_test_info_parse_names_many_as_sequence() -> None:
-    _test_info_parse_names_test_body("('foo', 'bar')", ["foo", "bar"])
-
-
-def test_test_info_parse_names_duplicate_name() -> None:
-    _test_info_parse_names_test_body("'a, b, a'", None, errors=["duplicate-argname"])
-
-
-def test_test_info_parse_names_invalid_type() -> None:
-    _test_info_parse_names_test_body("{'a', 'b'}", None, errors=["unreadable-argnames"])
 
 
 def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = None) -> None:
@@ -184,10 +27,8 @@ def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = 
     test_info = TestInfo.from_fn_def(test_node, checker=checker)
 
     messages = get_error_messages(checker)
-    if errors is None:
-        assert test_info is not None, messages
-    else:
-        assert test_info is None
+    assert test_info is not None, messages
+
     check_error_messages(messages, errors=errors)
 
 
@@ -223,7 +64,8 @@ def test_test_info_from_fn_def_many_args() -> None:
         """
         def test_info[T: int](x: T, y: T, z: int = 4) -> None:
             ...
-        """
+        """,
+        errors=["opt-arg"],
     )
 
 
@@ -253,7 +95,7 @@ def test_test_info_from_fn_def_varkwarg() -> None:
         def test_info(arg: object, **kwargs: object) -> None:
             ...
         """,
-        errors=["var-keyword-arg"],
+        errors=["var-kwarg"],
     )
 
 
@@ -263,7 +105,7 @@ def test_test_info_from_fn_def_vararg_and_varkwarg() -> None:
         def test_info(*args: object, **kwargs: object) -> None:
             ...
         """,
-        errors=["var-pos-arg", "var-keyword-arg"],
+        errors=["var-pos-arg", "var-kwarg"],
     )
 
 
@@ -518,8 +360,14 @@ def _test_info_check_test_body(defs: str, *, errors: list[str] | None = None) ->
     assert test_info is not None
     checker = test_info.checker
 
+    parse_result = parse(defs)
+    for def_ in parse_result.raw_defs:
+        def_.accept(checker)
+
     assert not checker.errors.is_errors()
-    test_info.check()
+
+    with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
+        test_info.check()
 
     messages = get_error_messages(checker)
     check_error_messages(messages, errors=errors)
@@ -552,9 +400,9 @@ def test_test_info_check_single_decorator_valid_argnames() -> None:
         @pytest.mark.parametrize(
             ("foo",),
             [
-                "bar",
-                10,
-                False
+                ("bar",),
+                (10,),
+                (False,),
             ]
         )
         def test_info(foo) -> None:
@@ -624,7 +472,7 @@ def test_test_info_check_multiple_decorators_missing_optional_argname() -> None:
             "y",
             "abcdefg"
         )
-        def test_info(x: int, y: str, missing: bool, z: float = 2.0, not_missing: int = 3) -> None:
+        def test_info(x: int, y: str, missing: bool, z: float) -> None:
             ...
         """,
         errors=["missing-argname"],
@@ -701,4 +549,340 @@ def test_test_info_check_multiple_decorators_multiple_type_errors() -> None:
             ...
         """,
         errors=["arg-type"] * 4,
+    )
+
+
+def test_test_info_check_used_fixture_argument() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(arg: int) -> str:
+            return str(arg)
+
+        @pytest.mark.parametrize(
+            "arg",
+            range(3)
+        )
+        def test_info(fixture: str) -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_check_unused_fixture_argument() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(arg: int) -> str:
+            return str(arg)
+
+        def test_info(fixture: str) -> None:
+            ...
+        """,
+        errors=["missing-argname"],
+    )
+
+
+def test_test_info_check_double_used_fixture_argument() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(arg: int) -> str:
+            return str(arg)
+
+        @pytest.mark.parametrize(
+            "arg", [1, 2, 3]
+        )
+        @pytest.mark.parametrize(
+            "fixture", "bar"
+        )
+        def test_info(fixture: str) -> None:
+            ...
+        """,
+        errors=["repeated-fixture-argname"],
+    )
+
+
+def test_test_info_check_cyclic_fixture() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def cycle_2(cycle_1: int) -> int:
+            return cycle_1 + 1
+
+        @pytest.fixture
+        def cycle_1(cycle_2: int) -> int:
+            return cycle_2 + 1
+
+        def test_info(cycle_1: int) -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_check_fixture_valid_scopes() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture(scope="class")
+        def class_fixture() -> None:
+            ...
+
+        @pytest.fixture(scope="function")
+        def function_fixture(class_fixture: None) -> None:
+            ...
+
+        def test_info(function_fixture: None) -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_check_fixture_invalid_scopes() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture(scope="class")
+        def class_fixture(function_fixture: None) -> None:
+            ...
+
+        @pytest.fixture(scope="function")
+        def function_fixture() -> None:
+            ...
+
+        def test_info(class_fixture: None) -> None:
+            ...
+        """,
+        errors=["inverted-fixture-scope"],
+    )
+
+
+def test_test_info_check_fixture_shadowed_scope() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture(scope="class")
+        def class_fixture(function_fixture: None) -> None:
+            ...
+
+        @pytest.fixture(scope="function")
+        def function_fixture() -> None:
+            ...
+
+        @pytest.mark.parametrize("function_fixture", [None])
+        def test_info(class_fixture: None) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_check_fixture_unknown_scope() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        scope: Literal["module", "class"] = "module"
+
+        @pytest.fixture(scope=scope)
+        def unknown_fixture(function_fixture: None) -> None:
+            ...
+
+        @pytest.fixture(scope="function")
+        def function_fixture(unknown_fixture: None) -> None:
+            ...
+
+        def test_info(unknown_fixture: None) -> None:
+            ...
+        """,
+        errors=["invalid-fixture-scope"],
+    )
+
+
+def test_test_info_check_fixture_invalid_types() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def indirect_fixture() -> Literal[0]:
+            return 0
+
+        @pytest.fixture
+        def direct_fixture(indirect_fixture: Literal[1]) -> Literal[1]:
+            return indirect_fixture
+
+        def test_info(direct_fixture: Literal[2]) -> None:
+            ...
+        """,
+        errors=["fixture-arg-type"] * 2,
+    )
+
+
+def test_test_info_check_fixture_and_arg_both_supplied() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(arg: None) -> None:
+            return arg
+
+        @pytest.mark.parametrize(
+            "arg, fixture", [(None, None)]
+        )
+        def test_info(fixture: None, arg: None) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_check_fixture_and_arg_one_supplied() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(arg: None) -> None:
+            return arg
+
+        @pytest.mark.parametrize(
+            "arg", [None]
+        )
+        def test_info(fixture: None, arg: None) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_check_fixture_valid_argname_generic_types() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Any
+
+        @pytest.fixture
+        def fixture[T](arg: T) -> T:
+            return arg
+
+        @pytest.mark.parametrize(
+            "arg", [1, 2, 3]
+        )
+        def test_info(fixture: Any) -> None:
+            ...
+        """,
+    )
+
+
+@pytest.mark.local_only
+def test_test_info_check_fixture_valid_subtype() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def true_fixture() -> Literal[True]:
+            return True
+
+        def test_info(true_fixture: bool) -> None:
+            ...
+        """,
+    )
+
+
+@pytest.mark.local_only
+def test_test_info_check_valid_argument_subtype() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def true_fixture() -> Literal[True]:
+            return True
+
+        @pytest.fixture
+        def fixture(true_fixture: bool) -> None:
+            ...
+
+        def test_info(fixture: None) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_check_fixture_invalid_subtype() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def bool_fixture() -> bool:
+            return True
+
+        def test_info(bool_fixture: Literal[True]) -> None:
+            ...
+        """,
+        errors=["fixture-arg-type"],
+    )
+
+
+def test_test_info_check_invalid_argument_subtypes() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def bool_fixture() -> bool:
+            return True
+
+        @pytest.fixture
+        def fixture(bool_fixture: Literal[True]) -> None:
+            ...
+
+        def test_info(fixture: None) -> None:
+            ...
+        """,
+        errors=["fixture-arg-type"],
+    )
+
+
+def test_test_info_check_valid_shadowed_subtypes() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        @pytest.fixture
+        def bool_fixture() -> bool:
+            return True
+
+        @pytest.fixture
+        def int_fixture(bool_fixture: int) -> int:
+            return bool_fixture
+
+        @pytest.mark.parametrize(
+            "int_fixture", [1]
+        )
+        @pytest.mark.parametrize(
+            "bool_fixture", [0]
+        )
+        def test_info(int_fixture: int, bool_fixture: int) -> None:
+            ...
+        """
     )

@@ -38,6 +38,6 @@ repos:
       - id: dbg-check
       - id: todo-check
       - id: mypy
-        args: [-r, requirements-dev.txt]
+        args: [-r, requirements-dev.txt, --show-traceback]
         exclude: ^test_samples/
       - id: spell-check-commit-msgs

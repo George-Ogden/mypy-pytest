@@ -1,7 +1,10 @@
 -r requirements.txt
 dbg
-debug @ git+https://github.com/George-Ogden/dbg@v2.3.0
+debug @ git+https://github.com/George-Ogden/dbg@v2.3.1
+inline-snapshot
+pip
 pre-commit
-pytest-dbg @ git+https://github.com/George-Ogden/pytest-dbg@v2.3.0
+pytest-dbg @ git+https://github.com/George-Ogden/pytest-dbg@v2.3.1
 pytest-snapshot
+pytest-timeout
 pytest-xdist

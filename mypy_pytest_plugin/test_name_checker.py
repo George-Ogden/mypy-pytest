@@ -3,7 +3,7 @@ import fnmatch
 import functools
 from pathlib import Path
 
-from _pytest.config import get_config
+import _pytest.config
 from _pytest.main import Session
 from _pytest.pathlib import fnmatch_ex
 
@@ -28,8 +28,8 @@ class TestNameChecker:
     @classmethod
     @functools.cache
     def _session(cls) -> Session:
-        config = get_config()
-        config.parse(["-s"])
+        config = _pytest.config.get_config()
+        config.parse(["-s", "--noconftest"])
         return Session.from_config(config)
 
     @classmethod

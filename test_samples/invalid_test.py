@@ -1,4 +1,4 @@
-from typing import Iterable, Sequence
+from typing import Callable, Iterable, Sequence
 import pytest
 
 
@@ -51,3 +51,11 @@ def test_iterable_sequence() -> None:
 def no_test_iterable_sequence() -> None:
     iterable_sequence([5], [6])
     IterableSequenceTester().iterable_sequence([7], [8])
+
+
+def wrap(x: Callable) -> None: ...
+
+
+@wrap
+@pytest.mark.parametrize("x", [])
+def test_x(x): ...

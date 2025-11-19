@@ -12,16 +12,18 @@ from mypy.nodes import (
 from mypy.subtypes import is_same_type
 from mypy.types import LiteralType
 
+from .defer import DeferralError
+
 
 class ExcludedTestChecker:
     @classmethod
-    def ignored_test_names(cls, defs: Sequence[Statement], checker: TypeChecker) -> set[str] | None:
+    def ignored_test_names(cls, defs: Sequence[Statement], checker: TypeChecker) -> set[str]:
         return cls._ignored_test_names_from_statements(defs, checker)
 
     @classmethod
     def _ignored_test_names_from_statements(
         cls, statements: Sequence[Statement], checker: TypeChecker
-    ) -> set[str] | None:
+    ) -> set[str]:
         return cls._ignored_test_names_from_assignments(
             [statement for statement in statements if isinstance(statement, AssignmentStmt)],
             checker=checker,
@@ -30,9 +32,7 @@ class ExcludedTestChecker:
     @classmethod
     def _ignored_test_names_from_assignments(
         cls, assignments: Sequence[AssignmentStmt], checker: TypeChecker
-    ) -> set[str] | None:
-        if cls._any_unresolved_types((assignment.rvalue for assignment in assignments), checker):
-            return None
+    ) -> set[str]:
         return set(
             itertools.chain.from_iterable(
                 cls._identify_non_test_assignment_names(assignment, checker)
@@ -44,7 +44,9 @@ class ExcludedTestChecker:
     def _identify_non_test_assignment_names(
         cls, assignment: AssignmentStmt, checker: TypeChecker
     ) -> Iterable[str]:
-        rvalue_type = checker.lookup_type(assignment.rvalue)
+        rvalue_type = checker.lookup_type_or_none(assignment.rvalue)
+        if rvalue_type is None:
+            raise DeferralError()
         if is_same_type(rvalue_type, LiteralType(False, checker.named_type("builtins.bool"))):
             for lvalue in assignment.lvalues:
                 assignment_target = cls._test_assignment_target(lvalue)
@@ -60,7 +62,3 @@ class ExcludedTestChecker:
         ):
             return expression.expr.name
         return None
-
-    @classmethod
-    def _any_unresolved_types(cls, expressions: Iterable[Expression], checker: TypeChecker) -> bool:
-        return any(checker.lookup_type_or_none(expression) is None for expression in expressions)

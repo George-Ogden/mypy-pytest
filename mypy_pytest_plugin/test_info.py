@@ -1,74 +1,56 @@
-from collections import Counter
-from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass, field
-from typing import Self, cast
+from collections.abc import Iterable, Sequence
+from dataclasses import dataclass
+import functools
+import itertools
+from typing import Self
 
 from mypy.checker import TypeChecker
 from mypy.nodes import (
-    ArgKind,
-    Argument,
+    Context,
     Decorator,
     Expression,
     FuncDef,
-    ListExpr,
-    StrExpr,
-    TupleExpr,
 )
-from mypy.types import CallableType, Type, TypeVarLikeType
 
+from .argnames_parser import ArgnamesParser
 from .argvalues import Argvalues
 from .decorator_wrapper import DecoratorWrapper
 from .error_codes import (
-    DUPLICATE_ARGNAME,
-    INVALID_ARGNAME,
-    MISSING_ARGNAME,
-    POSITIONAL_ONLY_ARGUMENT,
     REPEATED_ARGNAME,
     UNKNOWN_ARGNAME,
-    UNREADABLE_ARGNAME,
-    UNREADABLE_ARGNAMES,
-    VARIADIC_KEYWORD_ARGUMENT,
-    VARIADIC_POSITIONAL_ARGUMENT,
 )
+from .fixture import Fixture
+from .fixture_manager import FixtureManager
+from .fullname import Fullname
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
+from .request import Request
+from .request_graph import RequestGraph
+from .test_argument import TestArgument
 from .test_signature import TestSignature
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
-class TestArgument:
-    name: str
-    type_: Type
-    initialized: bool
-    context: Argument
-
-
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclass(frozen=True, kw_only=True)
 class TestInfo:
+    fullname: Fullname
     fn_name: str
-    arguments: Mapping[str, TestArgument]
+    arguments: Sequence[TestArgument]
     decorators: Sequence[DecoratorWrapper]
-    type_variables: Sequence[TypeVarLikeType]
     checker: TypeChecker
-    seen_arg_names: set[str] = field(default_factory=set)
 
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
         fn_def, decorators = cls._get_fn_and_decorators(fn_def)
-        if not isinstance(fn_def.type, CallableType):
-            return None
-        test_arguments = cls._validate_test_arguments(
-            fn_def.arguments, fn_def.type.arg_types, checker=checker
-        )
+        test_arguments = TestArgument.from_fn_def(fn_def, checker=checker)
         if test_arguments is None:
             return None
         test_decorators = DecoratorWrapper.decorators_from_nodes(decorators, checker=checker)
         return cls(
+            fullname=Fullname.from_string(fn_def.fullname),
             fn_name=fn_def.name,
             checker=checker,
-            arguments={test_argument.name: test_argument for test_argument in test_arguments},
+            arguments=test_arguments,
             decorators=test_decorators,
-            type_variables=fn_def.type.variables,
         )
 
     @classmethod
@@ -83,124 +65,6 @@ class TestInfo:
             case _:
                 raise TypeError()
 
-    @classmethod
-    def _validate_test_arguments(
-        cls, arguments: Sequence[Argument], types: Sequence[Type], *, checker: TypeChecker
-    ) -> Sequence[TestArgument] | None:
-        test_arguments: Sequence[TestArgument | None] = [
-            cls._validate_test_argument(argument, type_, checker=checker)
-            for argument, type_ in zip(arguments, types, strict=True)
-        ]
-        if any(argument is None for argument in test_arguments):
-            return None
-        return cast(list[TestArgument], test_arguments)
-
-    @classmethod
-    def _validate_test_argument(
-        cls, argument: Argument, type_: Type, *, checker: TypeChecker
-    ) -> TestArgument | None:
-        if argument.pos_only:
-            checker.fail(
-                f"`{argument.variable.name}` must not be positional only.",
-                context=argument,
-                code=POSITIONAL_ONLY_ARGUMENT,
-            )
-            return None
-        if argument.kind == ArgKind.ARG_STAR:
-            checker.fail(
-                f"`*{argument.variable.name}` must not be variadic positional.",
-                context=argument,
-                code=VARIADIC_POSITIONAL_ARGUMENT,
-            )
-            return None
-        if argument.kind == ArgKind.ARG_STAR2:
-            checker.fail(
-                f"`**{argument.variable.name}` must not be variadic keyword-only.",
-                context=argument,
-                code=VARIADIC_KEYWORD_ARGUMENT,
-            )
-            return None
-        return TestArgument(
-            name=argument.variable.name,
-            type_=type_,
-            initialized=argument.initializer is not None,
-            context=argument,
-        )
-
-    def _check_duplicate_argnames(
-        self, argnames: str | list[str] | None, context: Expression
-    ) -> str | list[str] | None:
-        if isinstance(argnames, list):
-            return self._check_duplicate_argnames_sequence(argnames, context)
-        return argnames
-
-    def _check_duplicate_argnames_sequence(
-        self, argnames: list[str], context: Expression
-    ) -> None | list[str]:
-        argname_counts = Counter(argnames)
-        duplicates = [argname for argname, count in argname_counts.items() if count > 1]
-        if duplicates:
-            self._warn_duplicate_argnames(duplicates, context)
-            return None
-        return argnames
-
-    def _warn_duplicate_argnames(self, duplicates: Iterable[str], context: Expression) -> None:
-        for argname in duplicates:
-            self.checker.fail(
-                f"Duplicated argname {argname!r}.", context=context, code=DUPLICATE_ARGNAME
-            )
-
-    def _parse_names(self, node: Expression) -> str | list[str] | None:
-        match node:
-            case StrExpr():
-                argnames = self.parse_names_string(node)
-            case ListExpr() | TupleExpr():
-                argnames = self.parse_names_sequence(node)
-            case _:
-                self.checker.fail(
-                    "Unable to identify argnames. (Use a comma-separated string, list of strings or tuple of strings).",
-                    context=node,
-                    code=UNREADABLE_ARGNAMES,
-                )
-                return None
-        argnames = self._check_duplicate_argnames(argnames, node)
-        return argnames
-
-    def _check_valid_identifier(self, name: str, context: StrExpr) -> bool:
-        if name.isidentifier():
-            return True
-        self.checker.fail(f"Invalid identifier {name!r}.", context=context, code=INVALID_ARGNAME)
-        return False
-
-    def parse_names_string(self, node: StrExpr) -> str | list[str] | None:
-        individual_names = [name.strip() for name in node.value.split(",")]
-        filtered_names = [name for name in individual_names if name]
-        if any([not self._check_valid_identifier(name, node) for name in filtered_names]):
-            return None
-        if len(filtered_names) == 1:
-            [name] = filtered_names
-            return name
-        return filtered_names
-
-    def _parse_name(self, node: Expression) -> str | None:
-        if isinstance(node, StrExpr):
-            name = node.value
-            if self._check_valid_identifier(name, node):
-                return name
-        else:
-            self.checker.fail(
-                "Unable to read identifier. (Use a sequence of strings instead.)",
-                context=node,
-                code=UNREADABLE_ARGNAME,
-            )
-        return None
-
-    def parse_names_sequence(self, node: TupleExpr | ListExpr) -> list[str] | None:
-        names = [self._parse_name(item) for item in node.items]
-        if all([isinstance(name, str) for name in names]):
-            return cast(list[str], names)
-        return None
-
     def sub_signature(self, arg_names: str | list[str]) -> TestSignature:
         if isinstance(arg_names, str):
             return self.one_item_sub_signature(arg_names)
@@ -211,8 +75,8 @@ class TestInfo:
             checker=self.checker,
             fn_name=self.fn_name,
             arg_name=arg_name,
-            arg_type=self.arguments[arg_name].type_,
-            type_variables=self.type_variables,
+            arg_type=self._available_requests[arg_name].type_,
+            type_variables=self._available_requests[arg_name].type_variables,
         )
 
     def many_items_sub_signature(self, arg_names: list[str]) -> TestSignature:
@@ -220,24 +84,50 @@ class TestInfo:
             checker=self.checker,
             fn_name=self.fn_name,
             arg_names=arg_names,
-            arg_types=[self.arguments[arg_name].type_ for arg_name in arg_names],
-            type_variables=self.type_variables,
+            arg_types=[self._available_requests[arg_name].type_ for arg_name in arg_names],
+            type_variables=list(
+                itertools.chain.from_iterable(
+                    self._available_requests[arg_name].type_variables for arg_name in arg_names
+                )
+            ),
         )
+
+    @property
+    def name(self) -> str:
+        return self.fullname.name
+
+    @property
+    def module_name(self) -> Fullname:
+        return self.fullname.module_name
+
+    @property
+    def fixture_manager(self) -> FixtureManager:
+        return FixtureManager(self.checker)
+
+    @functools.cached_property
+    def request_graph(self) -> RequestGraph:
+        available_requests, available_fixtures = self.fixture_manager.resolve_requests_and_fixtures(
+            self.arguments, self.module_name
+        )
+        return RequestGraph(
+            available_fixtures={fixture.name: fixture for fixture in available_fixtures},
+            available_requests=available_requests,
+            options=self.checker.options,
+            name=self.name,
+            checker=self.checker,
+        )
+
+    @property
+    def _available_requests(self) -> dict[str, Request]:
+        return self.request_graph.available_requests
+
+    @property
+    def _available_fixtures(self) -> dict[str, Fixture]:
+        return self.request_graph.available_fixtures
 
     def check(self) -> None:
         self.check_decorators(self.decorators)
-        self._check_missing_argnames()
-
-    def _check_missing_argnames(self) -> None:
-        missing_arg_names = {
-            arg_name for arg_name, argument in self.arguments.items() if not argument.initialized
-        }.difference(self.seen_arg_names)
-        for arg_name in missing_arg_names:
-            self.checker.fail(
-                f"Argname {arg_name!r} not included in parametrization.",
-                context=self.arguments[arg_name].context,
-                code=MISSING_ARGNAME,
-            )
+        self.request_graph.check()
 
     def check_decorators(self, decorators: Iterable[DecoratorWrapper]) -> None:
         for decorator in decorators:
@@ -248,38 +138,42 @@ class TestInfo:
         if arg_names_and_arg_values is not None:
             self._check_argnames_and_argvalues(*arg_names_and_arg_values)
 
+    @property
+    def _argnames_parser(self) -> ArgnamesParser:
+        return ArgnamesParser(self.checker)
+
     def _check_argnames_and_argvalues(
         self, arg_names_node: Expression, arg_values_node: Expression
     ) -> None:
-        arg_names = self._parse_names(arg_names_node)
+        arg_names = self._argnames_parser.parse_names(arg_names_node)
         if arg_names is not None and self._check_arg_names(arg_names, context=arg_names_node):
             sub_signature = self.sub_signature(arg_names)
             if sub_signature is not None:
                 arg_values = Argvalues(arg_values_node)
                 arg_values.check_against(sub_signature)
 
-    def _check_arg_names(self, arg_names: str | list[str], *, context: Expression) -> bool:
+    def _check_arg_names(self, arg_names: str | list[str], *, context: Context) -> bool:
         if isinstance(arg_names, str):
             arg_names = [arg_names]
         return all([self._check_arg_name(arg_name, context) for arg_name in arg_names])
 
-    def _check_arg_name(self, arg_name: str, context: Expression) -> bool:
-        if arg_name in self.arguments:
+    def _check_arg_name(self, arg_name: str, context: Context) -> bool:
+        if known_name := arg_name in self._available_requests:
             self._check_repeated_arg_name(arg_name, context)
-            return True
-        self.checker.fail(
-            f"Unknown argname {arg_name!r} used as test argument.",
-            context=context,
-            code=UNKNOWN_ARGNAME,
-        )
-        return False
+        else:
+            self.checker.fail(
+                f"Unknown argname {arg_name!r} used as test argument.",
+                context=context,
+                code=UNKNOWN_ARGNAME,
+            )
+        return known_name
 
-    def _check_repeated_arg_name(self, arg_name: str, context: Expression) -> None:
-        if arg_name in self.seen_arg_names:
+    def _check_repeated_arg_name(self, arg_name: str, context: Context) -> None:
+        if self._available_requests[arg_name].used:
             self.checker.fail(
                 f"Repeated argname {arg_name!r} in multiple parametrizations.",
                 context=context,
                 code=REPEATED_ARGNAME,
             )
         else:
-            self.seen_arg_names.add(arg_name)
+            self._available_requests[arg_name].used = True
