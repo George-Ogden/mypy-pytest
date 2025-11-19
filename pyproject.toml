@@ -54,4 +54,4 @@ python_files = "*_test.py"
 addopts = '--capture=sys --timeout 60 --timeout-method=thread'
 norecursedirs = ["test_samples"]
 pythonpath = ["."]
-markers = ["local_only: skip on remote server"]
+markers = ["serial: run in serial on remote server"]

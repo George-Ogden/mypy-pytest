@@ -13,8 +13,15 @@ jobs:
     uses: George-Ogden/actions/.github/workflows/python-test.yaml@v3.1.3
     with:
       python-versions: "['3.13']"
-      timeout-minutes: 15
-      pytest-flags: -vv -n auto mypy_pytest_plugin -m "not local_only"
+      timeout-minutes: 10
+      pytest-flags: -vv -n auto mypy_pytest_plugin -m "not serial"
+
+  serial_unit_tests:
+    uses: George-Ogden/actions/.github/workflows/python-test.yaml@v3.1.3
+    with:
+      python-versions: "['3.13']"
+      timeout-minutes: 10
+      pytest-flags: -vv -n0 mypy_pytest_plugin -m "serial"
 
   integration_tests:
     uses: George-Ogden/actions/.github/workflows/python-test.yaml@v3.1.3

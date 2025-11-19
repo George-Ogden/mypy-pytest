@@ -18,6 +18,7 @@ def remove_mypy_cache() -> None:
 
 
 @pytest.mark.parametrize("filepath", TEST_FILES, ids=map(operator.attrgetter("stem"), TEST_FILES))
+@pytest.mark.serial
 def test_check_files(
     filepath: Path,
     snapshot: Snapshot,  # type: ignore
