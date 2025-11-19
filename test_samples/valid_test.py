@@ -27,3 +27,8 @@ def test_call_edge_cases() -> None:
     f_string = f"x{3}"
     list_addition = [1, 2, 3]
     list_addition += [4, 5, 6]
+
+
+def test_iterable_sequence_builtin() -> None:
+    l = [1, 2, 3, 4]
+    t = tuple(l)
