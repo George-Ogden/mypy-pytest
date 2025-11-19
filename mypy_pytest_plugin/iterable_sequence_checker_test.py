@@ -169,3 +169,21 @@ def test_check_iterable_sequence_class_method() -> None:
         """,
         errors=["iterable-sequence"],
     )
+
+
+def test_check_iterable_sequence_builtin() -> None:
+    _check_iterable_sequence_call_test_body(
+        """
+        call = tuple([1, 2, 3])
+        """
+    )
+
+
+def test_check_iterable_sequence_stdlib() -> None:
+    _check_iterable_sequence_call_test_body(
+        """
+        import itertools
+
+        call = itertools.pairwise([1, 2, 3])
+        """
+    )
