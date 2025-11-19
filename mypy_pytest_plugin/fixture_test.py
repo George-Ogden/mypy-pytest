@@ -2,15 +2,15 @@ from mypy.nodes import Decorator
 from mypy.subtypes import is_same_type
 import pytest
 
-from .fixture import Fixture
+from .fixture import Fixture, FixtureParser
 from .test_utils import check_error_messages, get_error_messages, parse
 
 
 def _fixture_from_decorator_test_body(
-    defs: str, is_fixture: bool, *, errors: list[str] | None = None
+    defs: str, is_fixture: bool, *, errors: list[str] | None = None, name: str = "fixture"
 ) -> None:
     parse_result = parse(defs)
-    fixture_node = parse_result.defs["fixture"]
+    fixture_node = parse_result.defs[name]
     assert isinstance(fixture_node, Decorator)
 
     checker = parse_result.checker
@@ -207,6 +207,21 @@ def test_fixture_from_decorator_request_arg_correct_type() -> None:
     )
 
 
+def test_fixture_from_decorator_named_request() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def request(request: None) -> None:
+            ...
+        """,
+        is_fixture=False,
+        errors=["request-keyword"],
+        name="request",
+    )
+
+
 def fixture_return_type_test_body(defs: str, is_generator: bool) -> None:
     parse_result = parse(defs)
     original_type = parse_result.types["original"]
@@ -215,7 +230,7 @@ def fixture_return_type_test_body(defs: str, is_generator: bool) -> None:
     assert expected_type is not None
 
     assert is_same_type(
-        Fixture.fixture_return_type(original_type, is_generator=is_generator),
+        FixtureParser.fixture_return_type(original_type, is_generator=is_generator),
         expected_type,
     )
 

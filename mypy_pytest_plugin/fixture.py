@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 import enum
@@ -18,7 +20,7 @@ from mypy.types import (
 )
 
 from .defer import DeferralError
-from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTURE
+from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTURE, REQUEST_KEYWORD
 from .fullname import Fullname
 from .test_argument import TestArgument
 
@@ -39,28 +41,8 @@ class Fixture:
     context: FuncDef
 
     @classmethod
-    def from_decorator(cls, decorator: Decorator, checker: TypeChecker) -> Self | None:
-        fixture_decorator = cls.fixture_decorator(decorator.decorators, checker)
-        if (
-            fixture_decorator is None
-            or not isinstance(type_ := decorator.func.type, CallableType)
-            or cls._contains_mark_decorators(decorator.decorators, checker)
-        ):
-            return None
-        arguments = TestArgument.from_fn_def(decorator.func, checker=checker, source="fixture")
-        if arguments is None:
-            return None
-        return cls(
-            fullname=Fullname.from_string(decorator.fullname),
-            file=checker.path,
-            return_type=cls.fixture_return_type(
-                type_.ret_type, is_generator=decorator.func.is_generator
-            ),
-            arguments=arguments,
-            scope=cls._fixture_scope_from_decorator(fixture_decorator, checker),
-            context=decorator.func,
-            type_variables=type_.variables,
-        )
+    def from_decorator(cls, decorator: Decorator, checker: TypeChecker) -> Fixture | None:
+        return FixtureParser(checker).from_decorator(decorator)
 
     @classmethod
     def from_type(cls, type: CallableType, *, scope: FixtureScope, file: str) -> Self:
@@ -72,11 +54,62 @@ class Fixture:
         return cls(
             fullname=Fullname.from_string(func.fullname),
             file=file,
-            return_type=cls.fixture_return_type(func.type.ret_type, is_generator=func.is_generator),
+            return_type=FixtureParser.fixture_return_type(
+                func.type.ret_type, is_generator=func.is_generator
+            ),
             arguments=arguments,
             scope=scope,
             context=func,
             type_variables=func.type.variables,
+        )
+
+    @classmethod
+    def is_fixture_and_mark(cls, decorator: Decorator, *, checker: TypeChecker) -> bool:
+        return FixtureParser(checker).is_fixture_and_mark(decorator)
+
+    def as_argument(self) -> TestArgument:
+        return TestArgument(
+            name=self.name,
+            type_=self.return_type,
+            context=self.context,
+            type_variables=self.type_variables,
+        )
+
+    @property
+    def name(self) -> str:
+        return self.fullname.name
+
+    @property
+    def module_name(self) -> Fullname:
+        return self.fullname.module_name
+
+
+@dataclass(frozen=True, slots=True)
+class FixtureParser:
+    checker: TypeChecker
+
+    def from_decorator(self, decorator: Decorator) -> Fixture | None:
+        fixture_decorator = self.fixture_decorator(decorator.decorators)
+        if (
+            fixture_decorator is None
+            or not isinstance(type_ := decorator.func.type, CallableType)
+            or self._contains_mark_decorators(decorator.decorators)
+            or self.is_request_name(decorator)
+        ):
+            return None
+        arguments = TestArgument.from_fn_def(decorator.func, checker=self.checker, source="fixture")
+        if arguments is None:
+            return None
+        return Fixture(
+            fullname=Fullname.from_string(decorator.fullname),
+            file=self.checker.path,
+            return_type=self.fixture_return_type(
+                type_.ret_type, is_generator=decorator.func.is_generator
+            ),
+            arguments=arguments,
+            scope=self._fixture_scope_from_decorator(fixture_decorator),
+            context=decorator.func,
+            type_variables=type_.variables,
         )
 
     GENERATOR_TYPE_NAMES: ClassVar[Collection[str]] = (
@@ -96,64 +129,51 @@ class Fixture:
             return AnyType(TypeOfAny.from_error)
         return original_type
 
-    @classmethod
-    def is_fixture_and_mark(cls, decorator: Decorator, *, checker: TypeChecker) -> bool:
+    def is_fixture_and_mark(self, decorator: Decorator) -> bool:
         return bool(
-            cls.fixture_decorators(decorator.decorators, checker)
-        ) and cls._contains_mark_decorators(decorator.decorators, checker)
+            self.fixture_decorators(decorator.decorators)
+        ) and self._contains_mark_decorators(decorator.decorators)
 
-    @classmethod
-    def _contains_mark_decorators(cls, decorators: list[Expression], checker: TypeChecker) -> bool:
-        return any([cls._is_mark(decorator, checker) for decorator in decorators])
+    def _contains_mark_decorators(self, decorators: list[Expression]) -> bool:
+        return any([self._is_mark(decorator) for decorator in decorators])
 
-    @classmethod
-    def _is_mark(cls, expression: Expression, checker: TypeChecker) -> bool:
+    def _is_mark(self, expression: Expression) -> bool:
         if is_mark := is_subtype(
-            checker.lookup_type(expression), checker.named_type("pytest.MarkDecorator")
+            self.checker.lookup_type(expression), self.checker.named_type("pytest.MarkDecorator")
         ):
-            checker.fail(
+            self.checker.fail(
                 "Marks cannot be applied to fixtures.",
                 context=expression,
                 code=MARKED_FIXTURE,
             )
         return is_mark
 
-    @classmethod
-    def fixture_decorator(
-        cls, decorators: Sequence[Expression], checker: TypeChecker
-    ) -> Expression | None:
-        fixture_decorators = cls.fixture_decorators(decorators, checker)
+    def fixture_decorator(self, decorators: Sequence[Expression]) -> Expression | None:
+        fixture_decorators = self.fixture_decorators(decorators)
         if len(fixture_decorators) == 1:
             [fixture_decorator] = fixture_decorators
             return fixture_decorator
         for decorator in fixture_decorators[1:]:
-            cls._warn_extra_decorator(decorator, checker)
+            self._warn_extra_decorator(decorator)
         return None
 
-    @classmethod
-    def fixture_decorators(
-        cls, decorators: Sequence[Expression], checker: TypeChecker
-    ) -> list[Expression]:
-        return [
-            decorator for decorator in decorators if cls._is_fixture_decorator(decorator, checker)
-        ]
+    def fixture_decorators(self, decorators: Sequence[Expression]) -> list[Expression]:
+        return [decorator for decorator in decorators if self._is_fixture_decorator(decorator)]
 
-    @classmethod
-    def _warn_extra_decorator(cls, decorator: Expression, checker: TypeChecker) -> None:
-        checker.fail(
+    def _warn_extra_decorator(self, decorator: Expression) -> None:
+        self.checker.fail(
             "Extra `pytest.fixture` decorator. Only one is allowed.",
             context=decorator,
             code=DUPLICATE_FIXTURE,
         )
 
-    @classmethod
-    def _is_fixture_decorator(cls, decorator: Expression, checker: TypeChecker) -> bool:
-        decorator_type = checker.lookup_type_or_none(decorator)
+    def _is_fixture_decorator(self, decorator: Expression) -> bool:
+        decorator_type = self.checker.lookup_type_or_none(decorator)
         if decorator_type is None:
             raise DeferralError()
-        return cls._is_fixture_type(decorator_type) or (
+        return self._is_fixture_type(decorator_type) or (
             isinstance(decorator_type, Overloaded)
-            and any(cls._is_fixture_type(overload.ret_type) for overload in decorator_type.items)
+            and any(self._is_fixture_type(overload.ret_type) for overload in decorator_type.items)
         )
 
     @classmethod
@@ -163,33 +183,26 @@ class Fixture:
             and type_.type.fullname == "_pytest.fixtures.FixtureFunctionMarker"
         )
 
-    @classmethod
-    def _fixture_scope_from_decorator(
-        cls, decorator: Expression, checker: TypeChecker
-    ) -> FixtureScope:
+    def _fixture_scope_from_decorator(self, decorator: Expression) -> FixtureScope:
         if isinstance(decorator, CallExpr):
-            return cls._fixture_scope_from_call(decorator, checker)
+            return self._fixture_scope_from_call(decorator)
         return DEFAULT_SCOPE
 
-    @classmethod
-    def _fixture_scope_from_call(cls, call: CallExpr, checker: TypeChecker) -> FixtureScope:
+    def _fixture_scope_from_call(self, call: CallExpr) -> FixtureScope:
         scope_expressions = [
             arg for name, arg in zip(call.arg_names, call.args, strict=True) if name == "scope"
         ]
         if not scope_expressions:
             return DEFAULT_SCOPE
         [scope_expression] = scope_expressions
-        return cls._fixture_scope_from_type(
-            checker.lookup_type(scope_expression), checker=checker, context=scope_expression
+        return self._fixture_scope_from_type(
+            self.checker.lookup_type(scope_expression), context=scope_expression
         )
 
-    @classmethod
-    def _fixture_scope_from_type(
-        cls, type_: Type, context: Context, checker: TypeChecker
-    ) -> FixtureScope:
+    def _fixture_scope_from_type(self, type_: Type, context: Context) -> FixtureScope:
         if isinstance(type_, LiteralType) and type_.value in FixtureScope._member_names_:
             return FixtureScope[cast(str, type_.value)]
-        checker.fail(
+        self.checker.fail(
             "Invalid type for fixture scope.",
             context=context,
             code=INVALID_FIXTURE_SCOPE,
@@ -197,18 +210,11 @@ class Fixture:
 
         return FixtureScope.unknown
 
-    def as_argument(self) -> TestArgument:
-        return TestArgument(
-            name=self.name,
-            type_=self.return_type,
-            context=self.context,
-            type_variables=self.type_variables,
-        )
-
-    @property
-    def name(self) -> str:
-        return self.fullname.name
-
-    @property
-    def module_name(self) -> Fullname:
-        return self.fullname.module_name
+    def is_request_name(self, decorator: Decorator) -> bool:
+        if is_request_name := decorator.name == "request":
+            self.checker.fail(
+                """"request" is a reserved name in Pytest. Use another name for this fixture.""",
+                context=decorator.func,
+                code=REQUEST_KEYWORD,
+            )
+        return is_request_name
