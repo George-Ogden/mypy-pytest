@@ -43,7 +43,7 @@ class IterableSequenceChecker:
         self, expected_type: Type, argument_type: Type, context: Context
     ) -> None:
         self.checker.fail(
-            f"Expected {format_type(expected_type, self.checker.options)}, got {format_type(argument_type, self.checker.options)}.",
+            f"Argument has type {format_type(argument_type, self.checker.options)}; expected {format_type(expected_type, self.checker.options)}.",
             context,
             code=ITERABLE_SEQUENCE,
         )
