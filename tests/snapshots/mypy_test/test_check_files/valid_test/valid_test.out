@@ -1,4 +1,4 @@
-test_samples/valid_test.py:12: error: Incompatible return value type (got "tuple[Literal[0], Literal[2]]", expected "tuple[Literal[1], Literal[2]]")  [return-value]
-test_samples/valid_test.py:17: error: No return value expected  [return-value]
-test_samples/valid_test.py:23: error: No return value expected  [return-value]
+test_samples/valid_test.py:14: error: Incompatible return value type (got "tuple[Literal[0], Literal[2]]", expected "tuple[Literal[1], Literal[2]]")  [return-value]
+test_samples/valid_test.py:19: error: No return value expected  [return-value]
+test_samples/valid_test.py:25: error: No return value expected  [return-value]
 Found 3 errors in 1 file (checked 1 source file)
