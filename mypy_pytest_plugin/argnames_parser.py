@@ -15,6 +15,7 @@ from mypy.nodes import (
 from .error_codes import (
     DUPLICATE_ARGNAME,
     INVALID_ARGNAME,
+    REQUEST_KEYWORD,
     UNREADABLE_ARGNAME,
     UNREADABLE_ARGNAMES,
 )
@@ -46,6 +47,12 @@ class ArgnamesParser:
                 f"Invalid identifier {name!r}.",
                 context=context,
                 code=INVALID_ARGNAME,
+            )
+        elif not (valid_identifier := (name != "request")):
+            self.checker.fail(
+                f"{name!r} is not allowed as an argname; it is a reserved word in Pytest.",
+                context=context,
+                code=REQUEST_KEYWORD,
             )
         return valid_identifier
 
