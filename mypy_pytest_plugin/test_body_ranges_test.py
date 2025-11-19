@@ -3,7 +3,7 @@ from .test_utils import parse
 
 
 def _test_body_ranges_test_body(defs: str, ranges: list[tuple[int, int]]) -> None:
-    parse_result = parse(defs)
+    parse_result = parse(defs, header=False)
 
     test_body_ranges = TestBodyRanges.from_defs(parse_result.raw_defs)
 

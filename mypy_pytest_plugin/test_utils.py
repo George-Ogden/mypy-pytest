@@ -70,9 +70,12 @@ class ParseResult:
     raw_defs: list[Statement]
 
 
-def parse_multiple(modules: Sequence[tuple[str, str]]) -> MultiParseResult:
+def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = True) -> MultiParseResult:
     modules = [
-        (module_name, f"import _pytest.fixtures\nimport typing\n{textwrap.dedent(code)}".strip())
+        (
+            module_name,
+            f"{'import _pytest.fixtures\nimport typing\n' if header else ''}{textwrap.dedent(code)}".strip(),
+        )
         for module_name, code in modules
     ]
 
@@ -128,9 +131,9 @@ def parse_multiple(modules: Sequence[tuple[str, str]]) -> MultiParseResult:
 
 
 @functools.lru_cache(maxsize=1)
-def parse(code: str) -> ParseResult:
+def parse(code: str, *, header: bool = True) -> ParseResult:
     module_name = "test_module"
-    parse_result = parse_multiple([(module_name, code)])
+    parse_result = parse_multiple([(module_name, code)], header=header)
     return ParseResult(
         graph=parse_result.graph,
         checker=parse_result.checkers[module_name],
