@@ -1,6 +1,7 @@
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 import functools
+import os
 import re
 import textwrap
 from typing import Any, Literal, cast, overload
@@ -70,7 +71,7 @@ class ParseResult:
     raw_defs: list[Statement]
 
 
-def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = True) -> MultiParseResult:
+def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = False) -> MultiParseResult:
     modules = [
         (
             module_name,
@@ -83,6 +84,14 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = True) -
     options.incremental = False
     options.show_traceback = True
     options.preserve_asts = True
+    options.disallow_untyped_defs = False
+    options.disallow_untyped_decorators = False
+    options.cache_fine_grained = True
+    options.namespace_packages = False
+    options.ignore_missing_imports = True
+    options.no_site_packages = True
+    options.mypy_path = []
+    options.cache_dir = os.devnull
 
     result = mypy.build.build(
         sources=[

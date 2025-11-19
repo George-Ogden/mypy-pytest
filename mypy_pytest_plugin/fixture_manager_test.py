@@ -86,7 +86,7 @@ def _fixture_manager_resolve_requests_and_fixtures_test_body(
     expected_request_names: Sequence[str],
     expected_fixture_fullnames: Sequence[str],
 ) -> None:
-    parse_result = parse_multiple(modules)
+    parse_result = parse_multiple(modules, header=True)
 
     last_module_name, _ = modules[-1]
     fullname = f"{last_module_name}.test_request"
