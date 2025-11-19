@@ -1,4 +1,5 @@
 from mypy.nodes import Decorator
+from mypy.subtypes import is_same_type
 import pytest
 
 from .fixture import Fixture
@@ -174,4 +175,89 @@ def test_fixture_from_fn_defs_mark() -> None:
         """,
         is_fixture=False,
         errors=["marked-fixture", "marked-fixture"],
+    )
+
+
+def fixture_return_type_test_body(defs: str, is_generator: bool) -> None:
+    parse_result = parse(defs)
+    original_type = parse_result.types["original"]
+    expected_type = parse_result.types["expected"]
+    assert original_type is not None
+    assert expected_type is not None
+
+    assert is_same_type(
+        Fixture.fixture_return_type(original_type, is_generator=is_generator),
+        expected_type,
+    )
+
+
+def test_fixture_return_type_not_generator() -> None:
+    fixture_return_type_test_body(
+        """
+        from typing import Generator
+
+        original: Generator[int]
+        expected: Generator[int]
+        """,
+        is_generator=False,
+    )
+
+
+def test_fixture_return_type_generator_one_arg() -> None:
+    fixture_return_type_test_body(
+        """
+        from typing import Generator
+
+        original: Generator[str]
+        expected: str
+        """,
+        is_generator=True,
+    )
+
+
+def test_fixture_return_type_generator_multi_arg() -> None:
+    fixture_return_type_test_body(
+        """
+        from typing import Generator, Literal
+
+        original: Generator[Literal[0, 1], bool, int]
+        expected: Literal[0, 1]
+        """,
+        is_generator=True,
+    )
+
+
+def test_fixture_return_type_iterable() -> None:
+    fixture_return_type_test_body(
+        """
+        from typing import Iterable
+
+        original: Iterable[str]
+        expected: str
+        """,
+        is_generator=True,
+    )
+
+
+def test_fixture_return_type_iterator() -> None:
+    fixture_return_type_test_body(
+        """
+        from typing import Iterator
+
+        original: Iterator[None]
+        expected: None
+        """,
+        is_generator=True,
+    )
+
+
+def test_fixture_return_type_sequence() -> None:
+    fixture_return_type_test_body(
+        """
+        from typing import Sequence, Any
+
+        original: Sequence[None]
+        expected: Any
+        """,
+        is_generator=True,
     )
