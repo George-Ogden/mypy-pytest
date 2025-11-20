@@ -1,4 +1,6 @@
 from typing import Literal
+from pytest import CaptureFixture
+
 import pytest
 
 
@@ -32,3 +34,6 @@ def test_call_edge_cases() -> None:
 def test_iterable_sequence_builtin() -> None:
     l = [1, 2, 3, 4]
     t = tuple(l)
+
+
+def test_use_builtin_fixture(capsys: CaptureFixture[str]) -> None: ...

@@ -2,15 +2,15 @@ from mypy.nodes import Decorator
 from mypy.subtypes import is_same_type
 import pytest
 
-from .fixture import Fixture
+from .fixture import Fixture, FixtureParser
 from .test_utils import check_error_messages, get_error_messages, parse
 
 
-def _fixture_from_defs_test_body(
-    defs: str, is_fixture: bool, *, errors: list[str] | None = None
+def _fixture_from_decorator_test_body(
+    defs: str, is_fixture: bool, *, errors: list[str] | None = None, name: str = "fixture"
 ) -> None:
     parse_result = parse(defs)
-    fixture_node = parse_result.defs["fixture"]
+    fixture_node = parse_result.defs[name]
     assert isinstance(fixture_node, Decorator)
 
     checker = parse_result.checker
@@ -27,8 +27,8 @@ def _fixture_from_defs_test_body(
     check_error_messages(messages, errors=errors)
 
 
-def test_fixture_from_fn_defs_no_decorator() -> None:
-    _fixture_from_defs_test_body(
+def test_fixture_from_decorator_no_decorator() -> None:
+    _fixture_from_decorator_test_body(
         """
         from typing import Callable
 
@@ -43,8 +43,8 @@ def test_fixture_from_fn_defs_no_decorator() -> None:
     )
 
 
-def test_fixture_from_fn_defs_correct_decorator_no_args() -> None:
-    _fixture_from_defs_test_body(
+def test_fixture_from_decorator_correct_decorator_no_args() -> None:
+    _fixture_from_decorator_test_body(
         """
         import pytest
 
@@ -56,8 +56,8 @@ def test_fixture_from_fn_defs_correct_decorator_no_args() -> None:
     )
 
 
-def test_fixture_from_fn_defs_correct_decorator_multiple_args() -> None:
-    _fixture_from_defs_test_body(
+def test_fixture_from_decorator_correct_decorator_multiple_args() -> None:
+    _fixture_from_decorator_test_body(
         """
         from pytest import fixture as fix
 
@@ -69,8 +69,8 @@ def test_fixture_from_fn_defs_correct_decorator_multiple_args() -> None:
     )
 
 
-def test_fixture_from_fn_defs_correct_decorator_multiple_args_some_issues() -> None:
-    _fixture_from_defs_test_body(
+def test_fixture_from_decorator_correct_decorator_multiple_args_some_issues() -> None:
+    _fixture_from_decorator_test_body(
         """
         import pytest
 
@@ -83,8 +83,8 @@ def test_fixture_from_fn_defs_correct_decorator_multiple_args_some_issues() -> N
     )
 
 
-def test_fixture_from_fn_defs_multiple_fixtures() -> None:
-    _fixture_from_defs_test_body(
+def test_fixture_from_decorator_multiple_fixtures() -> None:
+    _fixture_from_decorator_test_body(
         """
         import pytest
 
@@ -99,8 +99,8 @@ def test_fixture_from_fn_defs_multiple_fixtures() -> None:
     )
 
 
-def test_fixture_from_fn_defs_session_scope() -> None:
-    _fixture_from_defs_test_body(
+def test_fixture_from_decorator_session_scope() -> None:
+    _fixture_from_decorator_test_body(
         """
         import pytest
 
@@ -112,9 +112,9 @@ def test_fixture_from_fn_defs_session_scope() -> None:
     )
 
 
-def test_fixture_from_fn_defs_invalid_scope() -> None:
+def test_fixture_from_decorator_invalid_scope() -> None:
     with pytest.raises(TypeError):
-        _fixture_from_defs_test_body(
+        _fixture_from_decorator_test_body(
             """
             import pytest
 
@@ -127,8 +127,8 @@ def test_fixture_from_fn_defs_invalid_scope() -> None:
         )
 
 
-def test_fixture_from_fn_defs_indirect_scope() -> None:
-    _fixture_from_defs_test_body(
+def test_fixture_from_decorator_indirect_scope() -> None:
+    _fixture_from_decorator_test_body(
         """
         import pytest
         from typing import Literal
@@ -143,8 +143,8 @@ def test_fixture_from_fn_defs_indirect_scope() -> None:
     )
 
 
-def test_fixture_from_fn_defs_wrong_type_scope() -> None:
-    _fixture_from_defs_test_body(
+def test_fixture_from_decorator_wrong_type_scope() -> None:
+    _fixture_from_decorator_test_body(
         """
         import pytest
         from typing import Literal
@@ -160,8 +160,8 @@ def test_fixture_from_fn_defs_wrong_type_scope() -> None:
     )
 
 
-def test_fixture_from_fn_defs_mark() -> None:
-    _fixture_from_defs_test_body(
+def test_fixture_from_decorator_mark() -> None:
+    _fixture_from_decorator_test_body(
         """
         import pytest
 
@@ -178,6 +178,76 @@ def test_fixture_from_fn_defs_mark() -> None:
     )
 
 
+def test_fixture_from_decorator_request_arg_wrong_type() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+        from _pytest.fixtures import TopRequest
+
+        @pytest.fixture
+        def fixture(request: TopRequest) -> None:
+            ...
+        """,
+        is_fixture=True,
+        errors=["request-type"],
+    )
+
+
+def test_fixture_from_decorator_request_arg_correct_type() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+        from _pytest.fixtures import SubRequest
+
+        @pytest.fixture
+        def fixture(request: SubRequest) -> None:
+            ...
+        """,
+        is_fixture=True,
+    )
+
+
+def test_fixture_from_decorator_named_request() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def request(request: None) -> None:
+            ...
+        """,
+        is_fixture=False,
+        errors=["request-keyword"],
+        name="request",
+    )
+
+
+def test_fixture_from_decorator_partially_typed() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(x, y: str):
+            ...
+        """,
+        is_fixture=True,
+    )
+
+
+def test_fixture_from_decorator_untyped() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(x, y):
+            ...
+        """,
+        is_fixture=True,
+    )
+
+
 def fixture_return_type_test_body(defs: str, is_generator: bool) -> None:
     parse_result = parse(defs)
     original_type = parse_result.types["original"]
@@ -186,7 +256,7 @@ def fixture_return_type_test_body(defs: str, is_generator: bool) -> None:
     assert expected_type is not None
 
     assert is_same_type(
-        Fixture.fixture_return_type(original_type, is_generator=is_generator),
+        FixtureParser.fixture_return_type(original_type, is_generator=is_generator),
         expected_type,
     )
 

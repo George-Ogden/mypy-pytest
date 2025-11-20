@@ -1,0 +1,5 @@
+test_samples/request_test.py:6: error: "request" passed to test should have type "SubRequest", but has type "TopRequest".  [request-type]
+test_samples/request_test.py:10: error: 'request' is not allowed as an argname; it is a reserved word in Pytest.  [request-keyword]
+test_samples/request_test.py:12: error: "request" passed to test should have type "TopRequest", but has type "SubRequest".  [request-type]
+test_samples/request_test.py:16: error: "request" is a reserved name in Pytest. Use another name for this fixture.  [request-keyword]
+Found 4 errors in 1 file (checked 1 source file)

@@ -41,7 +41,7 @@ class TestInfo:
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
         fn_def, decorators = cls._get_fn_and_decorators(fn_def)
-        test_arguments = TestArgument.from_fn_def(fn_def, checker=checker)
+        test_arguments = TestArgument.from_fn_def(fn_def, checker=checker, source="test")
         if test_arguments is None:
             return None
         test_decorators = DecoratorWrapper.decorators_from_nodes(decorators, checker=checker)

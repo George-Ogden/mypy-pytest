@@ -1,12 +1,14 @@
 from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 import functools
+import os
 import re
 import textwrap
 from typing import Any, Literal, cast, overload
 
 from debug import pprint
 import mypy.build
+from mypy.build import State
 from mypy.checker import TypeChecker
 import mypy.modulefinder
 from mypy.nodes import (
@@ -53,6 +55,7 @@ class TypeLookup:
 
 @dataclass(frozen=True, kw_only=True)
 class MultiParseResult:
+    graph: dict[str, State]
     checkers: dict[str, TypeChecker] = field(default_factory=dict)
     types: dict[str, TypeLookup] = field(default_factory=dict)
     defs: dict[str, Expression | FuncDef | Decorator] = field(default_factory=dict)
@@ -61,19 +64,33 @@ class MultiParseResult:
 
 @dataclass(frozen=True, kw_only=True)
 class ParseResult:
+    graph: dict[str, State]
     checker: TypeChecker
     types: TypeLookup
     defs: Mapping[str, Expression | FuncDef | Decorator]
     raw_defs: list[Statement]
 
 
-def parse_multiple(modules: Sequence[tuple[str, str]]) -> MultiParseResult:
-    modules = [(module_name, textwrap.dedent(code).strip()) for module_name, code in modules]
+def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = False) -> MultiParseResult:
+    modules = [
+        (
+            module_name,
+            f"{'import _pytest.fixtures\nimport typing\n' if header else ''}{textwrap.dedent(code)}".strip(),
+        )
+        for module_name, code in modules
+    ]
 
     options = mypy.options.Options()
     options.incremental = False
     options.show_traceback = True
     options.preserve_asts = True
+    options.disallow_untyped_defs = False
+    options.disallow_untyped_decorators = False
+    options.namespace_packages = False
+    options.ignore_missing_imports = True
+    options.no_site_packages = True
+    options.mypy_path = []
+    options.cache_dir = os.devnull
 
     result = mypy.build.build(
         sources=[
@@ -85,7 +102,7 @@ def parse_multiple(modules: Sequence[tuple[str, str]]) -> MultiParseResult:
 
     module_names = [module_name for module_name, _ in modules]
 
-    parse_result = MultiParseResult()
+    parse_result = MultiParseResult(graph=result.graph)
     for module_name in module_names:
         state = result.graph[module_name]
         tree = state.tree
@@ -122,10 +139,11 @@ def parse_multiple(modules: Sequence[tuple[str, str]]) -> MultiParseResult:
 
 
 @functools.lru_cache(maxsize=1)
-def parse(code: str) -> ParseResult:
+def parse(code: str, *, header: bool = True) -> ParseResult:
     module_name = "test_module"
-    parse_result = parse_multiple([(module_name, code)])
+    parse_result = parse_multiple([(module_name, code)], header=header)
     return ParseResult(
+        graph=parse_result.graph,
         checker=parse_result.checkers[module_name],
         types=parse_result.types[module_name],
         defs=parse_result.defs,

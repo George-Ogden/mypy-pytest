@@ -5,6 +5,7 @@ inline-snapshot
 pip
 pre-commit
 pytest-dbg @ git+https://github.com/George-Ogden/pytest-dbg@v2.3.1
+pytest-shard
 pytest-snapshot
 pytest-timeout
 pytest-xdist

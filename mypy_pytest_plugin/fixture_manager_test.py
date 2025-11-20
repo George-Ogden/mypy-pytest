@@ -86,7 +86,7 @@ def _fixture_manager_resolve_requests_and_fixtures_test_body(
     expected_request_names: Sequence[str],
     expected_fixture_fullnames: Sequence[str],
 ) -> None:
-    parse_result = parse_multiple(modules)
+    parse_result = parse_multiple(modules, header=True)
 
     last_module_name, _ = modules[-1]
     fullname = f"{last_module_name}.test_request"
@@ -97,7 +97,7 @@ def _fixture_manager_resolve_requests_and_fixtures_test_body(
     for def_ in parse_result.raw_defs:
         def_.accept(checker)
 
-    start = TestArgument.from_fn_def(fixture_def, checker=checker)
+    start = TestArgument.from_fn_def(fixture_def, checker=checker, source="test")
     assert start is not None
 
     with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):

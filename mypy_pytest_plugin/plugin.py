@@ -32,6 +32,7 @@ class PytestPlugin(Plugin):
                 True
             )
         options.preserve_asts = True
+        options.follow_untyped_imports = True
         super().__init__(options)
 
     def get_additional_deps(self, file: MypyFile) -> list[tuple[int, str, int]]:

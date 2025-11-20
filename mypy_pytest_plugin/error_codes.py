@@ -108,6 +108,18 @@ FIXTURE_ARGUMENT_TYPE: Final[ErrorCode] = ErrorCode(
     category="Pytest",
 )
 
+REQUEST_TYPE: Final[ErrorCode] = ErrorCode(
+    "request-type",
+    """"request" argument always has a fixed type to fixtures and test and the provided annotation does not match that.""",
+    category="Pytest",
+)
+
+REQUEST_KEYWORD: Final[ErrorCode] = ErrorCode(
+    "request-keyword",
+    """"request" is a reserved word in Pytest.""",
+    category="Pytest",
+)
+
 ITERABLE_SEQUENCE: Final[ErrorCode] = ErrorCode(
     "iterable-sequence",
     """"Sequence" passed into a function expecting "Iterable" in a test.""",

@@ -87,6 +87,12 @@ def test_argnames_parser_parse_names_string_with_multiple_invalid_names() -> Non
     )
 
 
+def test_argnames_parser_parse_names_string_with_reserved_name() -> None:
+    _argnames_parser_parse_names_string_test_body(
+        "'request, foo'", None, errors=["request-keyword"]
+    )
+
+
 def _argnames_parser_parse_names_sequence_test_body(
     source: str,
     names: list[str] | None,
@@ -146,6 +152,12 @@ def test_argnames_parser_parse_names_sequence_one_invalid() -> None:
 def test_argnames_parser_parse_names_sequence_one_undeterminable() -> None:
     _argnames_parser_parse_names_sequence_test_body(
         "('a', 'ab'.upper(), 'c')", None, errors=["unreadable-argname"]
+    )
+
+
+def test_argnames_parser_parse_names_sequence_with_reserved_name() -> None:
+    _argnames_parser_parse_names_sequence_test_body(
+        "['request', 'foo']", None, errors=["request-keyword"]
     )
 
 

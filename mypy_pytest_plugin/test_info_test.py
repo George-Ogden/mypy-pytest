@@ -24,6 +24,7 @@ def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = 
     assert isinstance(test_node, FuncDef)
 
     assert not checker.errors.is_errors()
+
     test_info = TestInfo.from_fn_def(test_node, checker=checker)
 
     messages = get_error_messages(checker)
@@ -106,6 +107,40 @@ def test_test_info_from_fn_def_vararg_and_varkwarg() -> None:
             ...
         """,
         errors=["var-pos-arg", "var-kwarg"],
+    )
+
+
+def test_test_info_from_fn_def_request_arg_any_type() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        from typing import Any
+
+        def test_info(request: Any) -> None:
+            ...
+        """,
+    )
+
+
+def test_test_info_from_fn_def_request_arg_wrong_type() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        from _pytest.fixtures import SubRequest
+
+        def test_info(request: SubRequest) -> None:
+            ...
+        """,
+        errors=["request-type"],
+    )
+
+
+def test_test_info_from_fn_def_request_arg_correct_type() -> None:
+    _test_info_from_fn_def_test_body(
+        """
+        from _pytest.fixtures import FixtureRequest
+
+        def test_info(request: FixtureRequest) -> None:
+            ...
+        """,
     )
 
 
@@ -199,7 +234,6 @@ def _test_info_check_decorator_test_body(defs: str, *, errors: list[str] | None 
     check_error_messages(messages, errors=errors)
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_no_errors() -> None:
     _test_info_check_decorator_test_body("""
         import pytest
@@ -212,7 +246,6 @@ def test_test_info_check_decorator_no_errors() -> None:
         """)
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_no_errors_flipped_args() -> None:
     _test_info_check_decorator_test_body("""
         import pytest
@@ -227,7 +260,6 @@ def test_test_info_check_decorator_no_errors_flipped_args() -> None:
         """)
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_shared_argnames() -> None:
     _test_info_check_decorator_test_body(
         """
@@ -243,7 +275,6 @@ def test_test_info_check_decorator_shared_argnames() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_shared_argnames_beyond_limit() -> None:
     with pytest.raises(TypeError):
         _test_info_check_decorator_test_body(
@@ -260,7 +291,6 @@ def test_test_info_check_decorator_shared_argnames_beyond_limit() -> None:
         )
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_shared_argnames_as_dict() -> None:
     with pytest.raises(TypeError):
         _test_info_check_decorator_test_body(
@@ -278,7 +308,6 @@ def test_test_info_check_decorator_shared_argnames_as_dict() -> None:
         )
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_wrapped_argvalues() -> None:
     _test_info_check_decorator_test_body(
         """
@@ -294,7 +323,6 @@ def test_test_info_check_decorator_wrapped_argvalues() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_no_errors_unusual_types() -> None:
     _test_info_check_decorator_test_body("""
         import pytest
@@ -307,7 +335,6 @@ def test_test_info_check_decorator_no_errors_unusual_types() -> None:
     """)
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_no_errors_generic_type() -> None:
     _test_info_check_decorator_test_body("""
         import pytest
@@ -320,7 +347,6 @@ def test_test_info_check_decorator_no_errors_generic_type() -> None:
     """)
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_no_errors_extra_generic_types() -> None:
     _test_info_check_decorator_test_body("""
         import pytest
@@ -334,7 +360,6 @@ def test_test_info_check_decorator_no_errors_extra_generic_types() -> None:
     """)
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_invalid_argname() -> None:
     _test_info_check_decorator_test_body(
         """
@@ -350,7 +375,6 @@ def test_test_info_check_decorator_invalid_argname() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_decorator_invalid_type() -> None:
     _test_info_check_decorator_test_body(
         """
@@ -384,7 +408,6 @@ def _test_info_check_test_body(defs: str, *, errors: list[str] | None = None) ->
     check_error_messages(messages, errors=errors)
 
 
-@pytest.mark.serial
 def test_test_info_check_no_decorators_no_arguments() -> None:
     _test_info_check_test_body(
         """
@@ -394,7 +417,6 @@ def test_test_info_check_no_decorators_no_arguments() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_no_decorators_missing_argnames() -> None:
     _test_info_check_test_body(
         """
@@ -405,7 +427,6 @@ def test_test_info_check_no_decorators_missing_argnames() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_single_decorator_valid_argnames() -> None:
     _test_info_check_test_body(
         """
@@ -425,7 +446,6 @@ def test_test_info_check_single_decorator_valid_argnames() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_multiple_decorators_valid_split_argnames() -> None:
     _test_info_check_test_body(
         """
@@ -448,7 +468,6 @@ def test_test_info_check_multiple_decorators_valid_split_argnames() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_multiple_decorators_missing_argnames() -> None:
     _test_info_check_test_body(
         """
@@ -472,7 +491,6 @@ def test_test_info_check_multiple_decorators_missing_argnames() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_multiple_decorators_missing_optional_argname() -> None:
     _test_info_check_test_body(
         """
@@ -496,7 +514,6 @@ def test_test_info_check_multiple_decorators_missing_optional_argname() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_multiple_decorators_repeated_argnames() -> None:
     _test_info_check_test_body(
         """
@@ -523,7 +540,6 @@ def test_test_info_check_multiple_decorators_repeated_argnames() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_multiple_decorators_single_type_error() -> None:
     _test_info_check_test_body(
         """
@@ -547,7 +563,6 @@ def test_test_info_check_multiple_decorators_single_type_error() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_multiple_decorators_multiple_type_errors() -> None:
     _test_info_check_test_body(
         """
@@ -572,7 +587,6 @@ def test_test_info_check_multiple_decorators_multiple_type_errors() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_used_fixture_argument() -> None:
     _test_info_check_test_body(
         """
@@ -592,7 +606,6 @@ def test_test_info_check_used_fixture_argument() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_unused_fixture_argument() -> None:
     _test_info_check_test_body(
         """
@@ -609,7 +622,6 @@ def test_test_info_check_unused_fixture_argument() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_double_used_fixture_argument() -> None:
     _test_info_check_test_body(
         """
@@ -632,7 +644,6 @@ def test_test_info_check_double_used_fixture_argument() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_cyclic_fixture() -> None:
     _test_info_check_test_body(
         """
@@ -652,7 +663,6 @@ def test_test_info_check_cyclic_fixture() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_fixture_valid_scopes() -> None:
     _test_info_check_test_body(
         """
@@ -672,7 +682,6 @@ def test_test_info_check_fixture_valid_scopes() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_fixture_invalid_scopes() -> None:
     _test_info_check_test_body(
         """
@@ -693,7 +702,6 @@ def test_test_info_check_fixture_invalid_scopes() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_fixture_shadowed_scope() -> None:
     _test_info_check_test_body(
         """
@@ -714,7 +722,6 @@ def test_test_info_check_fixture_shadowed_scope() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_fixture_unknown_scope() -> None:
     _test_info_check_test_body(
         """
@@ -738,7 +745,6 @@ def test_test_info_check_fixture_unknown_scope() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_fixture_invalid_types() -> None:
     _test_info_check_test_body(
         """
@@ -760,7 +766,6 @@ def test_test_info_check_fixture_invalid_types() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_fixture_and_arg_both_supplied() -> None:
     _test_info_check_test_body(
         """
@@ -779,7 +784,6 @@ def test_test_info_check_fixture_and_arg_both_supplied() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_fixture_and_arg_one_supplied() -> None:
     _test_info_check_test_body(
         """
@@ -798,7 +802,6 @@ def test_test_info_check_fixture_and_arg_one_supplied() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_fixture_valid_argname_generic_types() -> None:
     _test_info_check_test_body(
         """
@@ -818,7 +821,6 @@ def test_test_info_check_fixture_valid_argname_generic_types() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_fixture_valid_subtype() -> None:
     _test_info_check_test_body(
         """
@@ -835,7 +837,6 @@ def test_test_info_check_fixture_valid_subtype() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_valid_argument_subtype() -> None:
     _test_info_check_test_body(
         """
@@ -856,7 +857,6 @@ def test_test_info_check_valid_argument_subtype() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_fixture_invalid_subtype() -> None:
     _test_info_check_test_body(
         """
@@ -874,7 +874,6 @@ def test_test_info_check_fixture_invalid_subtype() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_invalid_argument_subtypes() -> None:
     _test_info_check_test_body(
         """
@@ -896,7 +895,6 @@ def test_test_info_check_invalid_argument_subtypes() -> None:
     )
 
 
-@pytest.mark.serial
 def test_test_info_check_valid_shadowed_subtypes() -> None:
     _test_info_check_test_body(
         """
@@ -918,6 +916,25 @@ def test_test_info_check_valid_shadowed_subtypes() -> None:
             "bool_fixture", [0]
         )
         def test_info(int_fixture: int, bool_fixture: int) -> None:
+            ...
+        """
+    )
+
+
+def test_test_info_check_untyped_request() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from typing import Any
+
+        @pytest.fixture
+        def yield_fixture(request):
+            yield None
+
+        @pytest.mark.parametrize(
+            "number", [1.0, 2]
+        )
+        def test_info(yield_fixture: Any, number) -> None:
             ...
         """
     )
