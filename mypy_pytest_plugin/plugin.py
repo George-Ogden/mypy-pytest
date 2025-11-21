@@ -31,6 +31,9 @@ class PytestPlugin(Plugin):
             options.per_module_options.setdefault(module_pattern, {})["ignore_missing_imports"] = (
                 True
             )
+        options.per_module_options.setdefault("mypy_pytest_plugin_types.*", {})[
+            "disallow_subclassing_any"
+        ] = False
         options.preserve_asts = True
         options.follow_untyped_imports = True
         super().__init__(options)
