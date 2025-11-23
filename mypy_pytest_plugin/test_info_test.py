@@ -396,10 +396,7 @@ def _test_info_check_test_body(defs: str, *, errors: list[str] | None = None) ->
     checker = test_info.checker
 
     parse_result = parse(defs)
-    for def_ in parse_result.raw_defs:
-        def_.accept(checker)
-
-    assert not checker.errors.is_errors()
+    parse_result.accept_all()
 
     with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
         test_info.check()

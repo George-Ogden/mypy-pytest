@@ -94,8 +94,7 @@ def _fixture_manager_resolve_requests_and_fixtures_test_body(
     checker = parse_result.checkers[last_module_name]
     fixture_def = parse_result.defs[fullname]
     assert isinstance(fixture_def, FuncDef)
-    for def_ in parse_result.raw_defs:
-        def_.accept(checker)
+    parse_result.checker_accept_all(checker)
 
     start = TestArgument.from_fn_def(fixture_def, checker=checker, source="test")
     assert start is not None

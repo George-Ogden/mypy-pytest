@@ -10,10 +10,7 @@ def _check_iterable_sequence_call_test_body(defs: str, *, errors: list[str] | No
     assert isinstance(call, CallExpr)
 
     checker = parse_result.checker
-    for def_ in parse_result.raw_defs:
-        def_.accept(checker)
-
-    assert not checker.errors.is_errors()
+    parse_result.accept_all()
 
     IterableSequenceChecker(checker).check_iterable_sequence_call(call)
 

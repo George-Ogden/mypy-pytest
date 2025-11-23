@@ -15,6 +15,7 @@ from mypy.types import (
     Type,
 )
 
+from .patch_call_checker import PatchCallChecker
 from .types_module import TYPES_MODULE
 
 
@@ -25,14 +26,20 @@ class MockCallChecker[T: MethodContext | FunctionContext](abc.ABC):
     @classmethod
     def check_mock_calls(cls, ctx: T, *, fullname: str) -> Type:
         if isinstance(ctx.api, TypeChecker) and isinstance(ctx.context, CallExpr):
-            updated_call_type = cls(ctx.api).update_call_type(ctx.context, fullname)
-            if updated_call_type is not None:
-                return updated_call_type
+            mock_call_checker = cls(ctx.api)
+            updated_callee_type = mock_call_checker.update_callee_type(ctx.context, fullname)
+            if updated_callee_type is not None:
+                return mock_call_checker.check_call(ctx.context, updated_callee_type)
         return ctx.default_return_type
 
-    def update_call_type(self, call: CallExpr, fullname: str) -> Type | None:
-        if (callee_type := self.inject_mock_stub(call.callee, fullname)) is None:
+    def update_callee_type(self, call: CallExpr, fullname: str) -> Type | None:
+        if fullname == "unittest.mock._patcher.__call__":
+            return PatchCallChecker(self.checker).add_patch_generics(call)
+        if fullname.startswith("unittest.mock._patcher."):
             return None
+        return self.inject_mock_stub(call.callee, fullname)
+
+    def check_call(self, call: CallExpr, callee_type: Type) -> Type:
         result_type, _inferred_type = self.checker.expr_checker.check_call(
             callee=callee_type,
             args=call.args,
@@ -48,7 +55,11 @@ class MockCallChecker[T: MethodContext | FunctionContext](abc.ABC):
         fullname: str,
     ) -> Type | None:
         fullname = re.sub(r"^unittest", TYPES_MODULE, fullname, count=1)
-        callee_type = self._get_type_from_symbol_table(self._lookup_symbol_table_node(fullname))
+        if (
+            symbol_table_node := self._lookup_symbol_table_node(fullname)
+        ) is None or symbol_table_node.fullname != fullname:
+            return None
+        callee_type = self._get_type_from_symbol_table(symbol_table_node)
 
         original_callee_type = self.checker.lookup_type(callee)
         if isinstance(original_callee_type, Instance) and isinstance(callee_type, FunctionLike):
@@ -63,19 +74,25 @@ class MockCallChecker[T: MethodContext | FunctionContext](abc.ABC):
         return node.type
 
     @abc.abstractmethod
-    def _lookup_symbol_table_node(self, fullname: str) -> SymbolTableNode: ...
+    def _lookup_symbol_table_node(self, fullname: str) -> SymbolTableNode | None: ...
 
 
 @dataclass(frozen=True, slots=True)
 class FunctionMockCallChecker(MockCallChecker[FunctionContext]):
-    def _lookup_symbol_table_node(self, fullname: str) -> SymbolTableNode:
-        return self.checker.lookup_qualified(fullname)
+    def _lookup_symbol_table_node(self, fullname: str) -> SymbolTableNode | None:
+        try:
+            return self.checker.lookup_qualified(fullname)
+        except KeyError:
+            return None
 
 
 @dataclass(frozen=True, slots=True)
 class MethodMockCallChecker(MockCallChecker[MethodContext]):
-    def _lookup_symbol_table_node(self, fullname: str) -> SymbolTableNode:
+    def _lookup_symbol_table_node(self, fullname: str) -> SymbolTableNode | None:
         class_fullname, name = fullname.rsplit(".", maxsplit=1)
-        class_symbol_table_node = self.checker.lookup_qualified(class_fullname)
-        assert isinstance(class_symbol_table_node.node, TypeInfo)
-        return class_symbol_table_node.node.names[name]
+        try:
+            class_symbol_table_node = self.checker.lookup_qualified(class_fullname)
+            assert isinstance(class_symbol_table_node.node, TypeInfo)
+            return class_symbol_table_node.node.names[name]
+        except KeyError:
+            return None

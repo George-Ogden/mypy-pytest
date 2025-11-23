@@ -41,8 +41,7 @@ def test_ignored_names() -> None:
         """
     )
 
-    for statement in parse_result.raw_defs:
-        statement.accept(parse_result.checker)
+    parse_result.accept_all()
     ignored_tests = ExcludedTestChecker.ignored_test_names(
         parse_result.raw_defs, parse_result.checker
     )
