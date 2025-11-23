@@ -300,3 +300,16 @@ def simple_module_lookup(
     if decorator is not None and isinstance(decorator.node, Decorator):
         return Fixture.from_decorator(decorator.node, self.checker)
     return None
+
+
+@overload
+def dump_expr(expr: Expression) -> tuple[type[Expression], dict[str, Any]]: ...
+@overload
+def dump_expr(expr: None) -> tuple[type[None], None]: ...
+
+
+def dump_expr(expr: Expression | None) -> tuple[type, dict[str, Any] | None]:
+    return (
+        type(expr),
+        None if expr is None else {attr: getattr(expr, attr) for attr in expr.__match_args__},  # type: ignore [attr-defined]
+    )

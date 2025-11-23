@@ -4,7 +4,7 @@ from inline_snapshot import snapshot
 from mypy.nodes import CallExpr, Expression
 
 from .patch_call_checker import PatchCallChecker
-from .test_utils import parse
+from .test_utils import dump_expr, parse
 
 
 def _target_arg_test_body(defs: str) -> None:
@@ -16,13 +16,12 @@ def _target_arg_test_body(defs: str) -> None:
     assert isinstance(call, CallExpr)
     target_arg = patch_call_checker._target_arg(call)
     expected = parse_result.defs.get("arg", None)
+    assert isinstance(expected, Expression | None)
 
     if expected is None:
         assert target_arg is None
     else:
-        assert type(target_arg) is type(expected)
-        for attr in expected.__match_args__:  # type: ignore
-            assert getattr(target_arg, attr) == getattr(expected, attr)
+        assert dump_expr(target_arg) == dump_expr(expected)
 
 
 def test_target_arg_no_args() -> None:

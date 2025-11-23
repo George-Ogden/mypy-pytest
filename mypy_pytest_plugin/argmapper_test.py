@@ -3,7 +3,7 @@ from typing import Any, cast
 from mypy.nodes import CallExpr, Expression
 
 from .argmapper import ArgMapper
-from .test_utils import parse
+from .test_utils import dump_expr, parse
 
 
 def _named_arg_mapping_test_body(defs: str, expected_keys: list[str]) -> None:
@@ -17,14 +17,8 @@ def _named_arg_mapping_test_body(defs: str, expected_keys: list[str]) -> None:
 
     def dump_arg_map(
         arg_map: dict[str, Expression],
-    ) -> dict[str, tuple[type[Expression], dict[str, Any]]]:
-        return {
-            key: (
-                type(expr),
-                {attr: getattr(expr, attr) for attr in expr.__match_args__},  # type: ignore
-            )
-            for key, expr in arg_map.items()
-        }
+    ) -> dict[str, tuple[type, dict[str, Any]]]:
+        return {key: (dump_expr(expr)) for key, expr in arg_map.items()}
 
     assert dump_arg_map(raw_arg_map) == dump_arg_map(
         {key: cast(Expression, parse_result.defs[key]) for key in expected_keys}
