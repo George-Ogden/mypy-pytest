@@ -9,6 +9,7 @@ from .test_utils import parse
 
 def _target_arg_test_body(defs: str) -> None:
     parse_result = parse(defs)
+    parse_result.accept_all()
     patch_call_checker = PatchCallChecker(parse_result.checker)
 
     call = parse_result.defs["call"]
@@ -27,18 +28,10 @@ def _target_arg_test_body(defs: str) -> None:
 def test_target_arg_no_args() -> None:
     _target_arg_test_body(
         """
-        foo = lambda: ...
+        def foo() -> int:
+            return 0
+
         call = foo()
-        """
-    )
-
-
-def test_target_arg_one_arg_pos_only() -> None:
-    _target_arg_test_body(
-        """
-        foo = lambda _: ...
-        call = foo("blah")
-        arg = "blah"
         """
     )
 
@@ -46,29 +39,13 @@ def test_target_arg_one_arg_pos_only() -> None:
 def test_target_arg_multi_arg_pos_only() -> None:
     _target_arg_test_body(
         """
-        bar = lambda *_: ...
+        from typing import Any
+
+        def bar(target: int, *args: Any) -> int:
+            return 0
+
         call = bar(10, "w", (), [])
         arg = 10
-        """
-    )
-
-
-def test_target_arg_multi_arg_named() -> None:
-    _target_arg_test_body(
-        """
-        bar = lambda *_, **__: ...
-        call = bar(target=None, not_target="None")
-        arg = None
-        """
-    )
-
-
-def test_target_arg_multi_arg_named_out_of_order() -> None:
-    _target_arg_test_body(
-        """
-        bar = lambda *_, **__: ...
-        call = bar(not_target="None", target=None)
-        arg = None
         """
     )
 
@@ -76,17 +53,12 @@ def test_target_arg_multi_arg_named_out_of_order() -> None:
 def test_target_arg_multi_arg_variadic() -> None:
     _target_arg_test_body(
         """
-        bar = lambda *_, **__: ...
-        call = bar(*("a", "b"))
-        """
-    )
+        from typing import Any
 
+        def baz(target: str, *args: Any) -> int:
+            return 0
 
-def test_target_arg_multi_arg_keyword_variadic() -> None:
-    _target_arg_test_body(
-        """
-        bar = lambda *_, **__: ...
-        call = bar(**dict(a=0, b=1))
+        call = baz(*("a", "b"))
         """
     )
 

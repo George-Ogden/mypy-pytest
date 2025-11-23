@@ -3,7 +3,6 @@ from typing import Any
 
 from mypy.checker import TypeChecker
 from mypy.nodes import (
-    ArgKind,
     CallExpr,
     Expression,
     MypyFile,
@@ -19,6 +18,7 @@ from mypy.types import (
     UnionType,
 )
 
+from .argmapper import ArgMapper
 from .fullname import Fullname
 from .types_module import TYPES_MODULE
 
@@ -36,19 +36,8 @@ class PatchCallChecker:
             return self._specialized_patcher_type(original_type)
         return None
 
-    @classmethod
-    def _target_arg(cls, call: CallExpr) -> Expression | None:
-        if len(call.args) > 0:
-            if call.arg_names[0] is None and call.arg_kinds[0] == ArgKind.ARG_POS:
-                return call.args[0]
-            try:
-                index = call.arg_names.index("target")
-            except ValueError:
-                ...
-            else:
-                if call.arg_kinds[1] == ArgKind.ARG_NAMED:
-                    return call.args[index]
-        return None
+    def _target_arg(self, call: CallExpr) -> Expression | None:
+        return ArgMapper.named_arg_mapping(call, self.checker).get("target")
 
     def _string_value(self, expression: Expression) -> str | None:
         if isinstance(expression, StrExpr):

@@ -1,13 +1,12 @@
-from collections.abc import Collection, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Self, TypeGuard
 
-from mypy.argmap import map_actuals_to_formals
 from mypy.checker import TypeChecker
-from mypy.nodes import ArgKind, CallExpr, Expression
-from mypy.types import CallableType, Instance, Type
+from mypy.nodes import CallExpr, Expression
+from mypy.types import Instance
 
-from .error_codes import VARIADIC_ARGNAMES_ARGVALUES
+from .argmapper import ArgMapper
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,54 +36,10 @@ class DecoratorWrapper:
             )
         return False
 
-    def _get_arg_type(self, i: int) -> Type:
-        # subtract one for self
-        i -= 1
-        return self.call.args[i].accept(self.checker.expr_checker)
-
     @property
     def arg_names_and_arg_values(self) -> tuple[Expression, Expression] | None:
-        mapping = map_actuals_to_formals(
-            actual_kinds=[ArgKind.ARG_POS, *self.call.arg_kinds],
-            actual_names=[None, *self.call.arg_names],
-            formal_kinds=self.fn_type.arg_kinds,
-            formal_names=self.fn_type.arg_names,
-            actual_arg_type=self._get_arg_type,
-        )
-        return self._check_actuals_formals_mapping(mapping)
-
-    @property
-    def fn_type(self) -> CallableType:
-        callee_type = self.call.callee.accept(self.checker.expr_checker)
-        assert isinstance(callee_type, Instance)
-        fn_type = callee_type.type.names["__call__"].type
-        assert isinstance(fn_type, CallableType)
-        return fn_type
-
-    def _check_actuals_formals_mapping(
-        self, mapping: list[list[int]]
-    ) -> tuple[Expression, Expression] | None:
-        arg_names_idx, arg_values_idx, *_ = self._clean_up_actuals_formals_mapping(mapping)
-        if (
-            self.call.arg_kinds[arg_values_idx] in self.accepted_arg_kinds
-            and self.call.arg_kinds[arg_names_idx] in self.accepted_arg_kinds
-        ):
-            return self.call.args[arg_names_idx], self.call.args[arg_values_idx]
-        self.checker.fail(
-            "Unable to read argnames and argvalues in a variadic argument.",
-            context=self.call,
-            code=VARIADIC_ARGNAMES_ARGVALUES,
-        )
-        return None
-
-    def _clean_up_actuals_formals_mapping(
-        self, mapping: list[list[int]]
-    ) -> tuple[int, int, list[list[int]]]:
-        [_, [arg_names_idx], [arg_values_idx], *extras] = mapping
-        arg_values_idx -= 1
-        arg_names_idx -= 1
-        return arg_names_idx, arg_values_idx, extras
-
-    @property
-    def accepted_arg_kinds(self) -> Collection[ArgKind]:
-        return (ArgKind.ARG_POS, ArgKind.ARG_NAMED)
+        name_mapping = ArgMapper.named_arg_mapping(self.call, self.checker)
+        try:
+            return name_mapping["arg_names"], name_mapping["arg_values"]
+        except KeyError:
+            return None

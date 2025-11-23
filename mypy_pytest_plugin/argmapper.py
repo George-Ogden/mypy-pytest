@@ -5,7 +5,8 @@ from typing import Final
 from mypy.argmap import map_formals_to_actuals
 from mypy.checker import TypeChecker
 from mypy.nodes import ArgKind, CallExpr, Expression
-from mypy.types import CallableType, Overloaded
+from mypy.typeops import bind_self
+from mypy.types import CallableType, FunctionLike, Instance, Overloaded, Type
 
 type ArgMap = dict[str, Expression]
 
@@ -16,14 +17,29 @@ class ArgMapper:
     @classmethod
     def named_arg_mapping(cls, call: CallExpr, checker: TypeChecker) -> ArgMap:
         callee_type = checker.lookup_type(call.callee)
+        return cls._named_arg_type_mapping(call, callee_type, checker)
+
+    @classmethod
+    def _named_arg_type_mapping(
+        cls, call: CallExpr, callee_type: Type, checker: TypeChecker
+    ) -> ArgMap:
         if isinstance(callee_type, CallableType):
-            return cls.named_arg_direct_mapping(call, callee_type, checker)
+            return cls._named_arg_callable_mapping(call, callee_type, checker)
         if isinstance(callee_type, Overloaded):
-            return cls.named_arg_overloaded_mapping(call, callee_type, checker)
+            return cls._named_arg_overloaded_mapping(call, callee_type, checker)
+        if (
+            isinstance(callee_type, Instance)
+            and (call_node := callee_type.type.names.get("__call__")) is not None
+            and call_node.type is not None
+        ):
+            type_ = call_node.type
+            if isinstance(type_, FunctionLike):
+                type_ = bind_self(type_, callee_type)
+                return cls._named_arg_type_mapping(call, type_, checker)
         return {}
 
     @classmethod
-    def named_arg_direct_mapping(
+    def _named_arg_callable_mapping(
         cls, call: CallExpr, callee_type: CallableType, checker: TypeChecker
     ) -> ArgMap:
         mapping = map_formals_to_actuals(
@@ -44,17 +60,17 @@ class ArgMapper:
         }
 
     @classmethod
-    def named_arg_overloaded_mapping(
+    def _named_arg_overloaded_mapping(
         cls, call: CallExpr, callee_type: Overloaded, checker: TypeChecker
     ) -> ArgMap:
         return functools.reduce(
-            cls.merge_mappings,
+            cls._merge_mappings,
             (
-                cls.named_arg_direct_mapping(call, callable_type, checker)
+                cls._named_arg_callable_mapping(call, callable_type, checker)
                 for callable_type in callee_type.items
             ),
         )
 
     @classmethod
-    def merge_mappings(cls, this: ArgMap, that: ArgMap) -> ArgMap:
+    def _merge_mappings(cls, this: ArgMap, that: ArgMap) -> ArgMap:
         return {key: expr for key, expr in this.items() if that.get(key, None) is expr}

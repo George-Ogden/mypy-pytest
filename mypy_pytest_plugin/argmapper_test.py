@@ -153,3 +153,39 @@ def test_named_arg_mapping_varargs_varkwargs_overload() -> None:
         """,
         [],
     )
+
+
+def test_named_arg_mapping_instance_method() -> None:
+    _named_arg_mapping_test_body(
+        """
+        from typing import overload
+
+        class Foo:
+            def bar(self, x: str, y: str, *args: str) -> str:
+                return x + y
+
+        foo = Foo()
+        call = foo.bar("a", "b", "c")
+        x = "a"
+        y = "b"
+        """,
+        ["x", "y"],
+    )
+
+
+def test_named_arg_mapping_call_method() -> None:
+    _named_arg_mapping_test_body(
+        """
+        from typing import overload
+
+        class Foo:
+            def __call__(self, x: str, y: str, *args: str) -> str:
+                return x + y
+
+        foo = Foo()
+        call = foo("a", "b", "c")
+        x = "a"
+        y = "b"
+        """,
+        ["x", "y"],
+    )
