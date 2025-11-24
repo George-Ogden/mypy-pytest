@@ -39,9 +39,9 @@ MISSING_ARGNAME: Final[ErrorCode] = ErrorCode(
     "missing-argname", "Argument not included in Pytest parametrization.", category="Pytest"
 )
 
-VARIADIC_ARGNAMES_ARGVALUES: Final[ErrorCode] = ErrorCode(
-    "variadic-argnames-argvalues",
-    "Unable to parse variadic argnames or argvalues.",
+UNREADABLE_ARGNAMES_ARGVALUES: Final[ErrorCode] = ErrorCode(
+    "unreadable-argnames-argvalues",
+    "Unable to read argnames or argvalues.",
     category="Pytest",
 )
 

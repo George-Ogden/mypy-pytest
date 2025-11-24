@@ -7,6 +7,7 @@ from mypy.nodes import CallExpr, Expression
 from mypy.types import Instance
 
 from .argmapper import ArgMapper
+from .error_codes import UNREADABLE_ARGNAMES_ARGVALUES
 
 
 @dataclass(frozen=True, slots=True)
@@ -40,6 +41,11 @@ class DecoratorWrapper:
     def arg_names_and_arg_values(self) -> tuple[Expression, Expression] | None:
         name_mapping = ArgMapper.named_arg_mapping(self.call, self.checker)
         try:
-            return name_mapping["arg_names"], name_mapping["arg_values"]
+            return name_mapping["argnames"], name_mapping["argvalues"]
         except KeyError:
+            self.checker.fail(
+                "Unable to read argnames and argvalues. Use positional or keyword arguments.",
+                context=self.call,
+                code=UNREADABLE_ARGNAMES_ARGVALUES,
+            )
             return None

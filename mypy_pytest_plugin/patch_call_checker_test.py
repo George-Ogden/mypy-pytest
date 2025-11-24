@@ -113,13 +113,17 @@ def test_string_value_unreadable() -> None:
     )
 
 
-def _specialized_patcher_type_test_body(defs: str, expected_type: str | None) -> None:
+def _specialized_patcher_type_test_body(
+    defs: str, expected_type: str | None, *, attribute: str | None = None
+) -> None:
     defs = f"import mypy_pytest_plugin_types\n{textwrap.dedent(defs)}"
     parse_result = parse(defs)
     original_type = parse_result.types["original"]
     assert original_type is not None
 
-    patcher_type = PatchCallChecker(parse_result.checker)._specialized_patcher_type(original_type)
+    patcher_type = PatchCallChecker(parse_result.checker)._specialized_patcher_type(
+        original_type, attribute=attribute
+    )
     if expected_type is None:
         assert patcher_type is None
     else:
@@ -193,5 +197,16 @@ def test_specialized_patcher_type_original_overloaded() -> None:
         """,
         snapshot(
             "mypy_pytest_plugin_types.mock._patcher[Overload(def (*, x: builtins.int) -> builtins.int, def (*, y: builtins.str) -> builtins.str)]"
+        ),
+    )
+
+
+def test_specialized_patcher_type_object_type() -> None:
+    _specialized_patcher_type_test_body(
+        """
+        original: int
+        """,
+        snapshot(
+            "mypy_pytest_plugin_types.mock._patcher[mypy_pytest_plugin_types.mock.MagicMock[Any, Any] | builtins.int]"
         ),
     )

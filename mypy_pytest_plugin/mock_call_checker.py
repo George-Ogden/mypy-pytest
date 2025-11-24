@@ -15,6 +15,7 @@ from mypy.types import (
     Type,
 )
 
+from .object_patch_call_checker import ObjectPatchCallChecker
 from .patch_call_checker import PatchCallChecker
 from .types_module import TYPES_MODULE
 
@@ -35,8 +36,8 @@ class MockCallChecker[T: MethodContext | FunctionContext](abc.ABC):
     def update_callee_type(self, call: CallExpr, fullname: str) -> Type | None:
         if fullname == "unittest.mock._patcher.__call__":
             return PatchCallChecker(self.checker).add_patch_generics(call)
-        if fullname.startswith("unittest.mock._patcher."):
-            return None
+        if fullname == "unittest.mock._patcher.object":
+            return ObjectPatchCallChecker(self.checker).add_patch_generics(call)
         return self.inject_mock_stub(call.callee, fullname)
 
     def check_call(self, call: CallExpr, callee_type: Type) -> Type:

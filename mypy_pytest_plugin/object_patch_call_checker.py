@@ -19,7 +19,7 @@ class ObjectPatchCallChecker(PatchCallChecker):
             and (attribute_value := self._string_value(attribute_arg)) is not None
             and (original_type := self._attribute_type(target_arg, attribute_value)) is not None
         ):
-            return self._specialized_patcher_type(original_type)
+            return self._specialized_patcher_type(original_type, attribute="object")
         return None
 
     def _attribute_arg(self, call: CallExpr) -> Expression | None:

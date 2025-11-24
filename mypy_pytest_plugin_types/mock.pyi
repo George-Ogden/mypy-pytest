@@ -1,5 +1,4 @@
 from collections.abc import AsyncIterator, Callable, Iterable, Iterator, Sequence
-import sys
 from typing import (
     Any,
     Literal,

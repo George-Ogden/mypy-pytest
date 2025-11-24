@@ -271,7 +271,7 @@ def test_test_info_check_decorator_shared_argnames() -> None:
         def test_info(x: float) -> None:
             ...
         """,
-        errors=["variadic-argnames-argvalues"],
+        errors=["unreadable-argnames-argvalues"],
     )
 
 
@@ -287,7 +287,7 @@ def test_test_info_check_decorator_shared_argnames_beyond_limit() -> None:
             def test_info(x: float) -> None:
                 ...
             """,
-            errors=["variadic-argnames-argvalues"],
+            errors=["unreadable-argnames-argvalues"],
         )
 
 
@@ -304,7 +304,7 @@ def test_test_info_check_decorator_shared_argnames_as_dict() -> None:
             def test_info(x: bool) -> None:
                 ...
             """,
-            errors=["variadic-argnames-argvalues"],
+            errors=["unreadable-argnames-argvalues"],
         )
 
 
@@ -319,7 +319,7 @@ def test_test_info_check_decorator_wrapped_argvalues() -> None:
         def test_info(x: bool) -> None:
             ...
         """,
-        errors=["variadic-argnames-argvalues"],
+        errors=["unreadable-argnames-argvalues"],
     )
 
 
