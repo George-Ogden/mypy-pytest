@@ -75,3 +75,18 @@ def foo(z: Any, /) -> Any: ...
 
 mock.patch("patch_test.foo", lambda x: x)
 mock.patch("patch_test.foo", mock.Mock(lambda: None))
+
+
+class PropertyClass:
+    x: int
+
+    @property
+    def y(self) -> int:
+        return 0
+
+
+mock.patch("patch_test.PropertyClass.x", 3)
+mock.patch("patch_test.PropertyClass.x", "3")
+mock.patch("patch_test.PropertyClass.y", 3)
+mock.patch("patch_test.PropertyClass.y", mock.PropertyMock(return_value=3))
+mock.patch("patch_test.PropertyClass.y", mock.PropertyMock(return_value=None))

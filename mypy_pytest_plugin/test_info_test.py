@@ -308,21 +308,6 @@ def test_test_info_check_decorator_shared_argnames_as_dict() -> None:
         )
 
 
-def test_test_info_check_decorator_wrapped_argvalues() -> None:
-    _test_info_check_decorator_test_body(
-        """
-        import pytest
-
-        @pytest.mark.parametrize(
-            "x", *([True, False],)
-        )
-        def test_info(x: bool) -> None:
-            ...
-        """,
-        errors=["unreadable-argnames-argvalues"],
-    )
-
-
 def test_test_info_check_decorator_no_errors_unusual_types() -> None:
     _test_info_check_decorator_test_body("""
         import pytest

@@ -21,3 +21,23 @@ class Y:
 mock.patch.object(Y(), "x", X())
 mock.patch.object(Y(), "x", mock.MagicMock())
 mock.patch.object(Y(), "x", Y())
+
+
+class PropertyClass:
+    attr: int
+
+    @property
+    def prop(self) -> bool:
+        return False
+
+
+mock.patch.object(PropertyClass, "attr", 3)
+mock.patch.object(PropertyClass, "attr", None)
+mock.patch.object(PropertyClass, "prop", lambda: False)
+mock.patch.object(PropertyClass, "prop", mock.PropertyMock(return_value="False"))
+mock.patch.object(PropertyClass, "prop", mock.PropertyMock(return_value=True))
+mock.patch.object(PropertyClass, "prop", mock.PropertyMock(lambda: False))
+mock.patch.object(PropertyClass(), "prop", None)
+mock.patch.object(PropertyClass(), "prop", False)
+mock.patch.object(PropertyClass(), "prop", mock.PropertyMock(2.0))
+mock.patch.object(PropertyClass(), "prop", mock.PropertyMock(False))
