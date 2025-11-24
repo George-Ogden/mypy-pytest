@@ -39,7 +39,7 @@ disallow_untyped_defs = true
 warn_unused_ignores = true
 strict_equality = true
 exclude = "test_samples"
-plugins = ["plugin.py"]
+plugins = ["plugin.py", "mypy.plugins.proper_plugin"]
 
 [[tool.mypy.overrides]]
 module = "pytest_snapshot.*"

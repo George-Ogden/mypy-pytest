@@ -1,5 +1,5 @@
 import math
-from typing import Any, cast, overload
+from typing import Any, Callable, cast, overload
 from unittest import mock
 
 mock.patch()
@@ -28,7 +28,7 @@ mock.patch(
 )
 mock.patch("math.fabs", mock.NonCallableMagicMock())
 
-# mock.patch("unknown.unknown", lambda: None)
+mock.patch("unknown.unknown", lambda: None)
 
 
 class Foo:
@@ -90,3 +90,13 @@ mock.patch("patch_test.PropertyClass.x", "3")
 mock.patch("patch_test.PropertyClass.y", 3)
 mock.patch("patch_test.PropertyClass.y", mock.PropertyMock(return_value=3))
 mock.patch("patch_test.PropertyClass.y", mock.PropertyMock(return_value=None))
+
+type C = Callable[[int], int]
+
+
+class TypeAliasTest:
+    f: C = lambda x: x
+
+
+mock.patch.object(TypeAliasTest, "f", lambda: None)
+mock.patch.object(TypeAliasTest, "f", lambda n: n)
