@@ -54,21 +54,41 @@ class TypeLookup:
 
 
 @dataclass(frozen=True, kw_only=True)
-class MultiParseResult:
+class _ParseResultBase:
     graph: dict[str, State]
+    defs: Mapping[str, Expression | FuncDef | Decorator]
+    raw_defs: list[Statement]
+
+    def checker_accept_all(self, checker: TypeChecker) -> None:
+        for def_ in self.raw_defs:
+            checker.accept(def_)
+        assert not checker.errors.is_errors(), get_error_messages(checker)
+
+
+@dataclass(frozen=True, kw_only=True)
+class ParseResult(_ParseResultBase):
+    types: TypeLookup
+    checker: TypeChecker
+
+    def accept_all(self) -> None:
+        self.checker_accept_all(self.checker)
+
+
+@dataclass(frozen=True, kw_only=True)
+class MultiParseResult(_ParseResultBase):
     checkers: dict[str, TypeChecker] = field(default_factory=dict)
     types: dict[str, TypeLookup] = field(default_factory=dict)
     defs: dict[str, Expression | FuncDef | Decorator] = field(default_factory=dict)
     raw_defs: list[Statement] = field(default_factory=list)
 
-
-@dataclass(frozen=True, kw_only=True)
-class ParseResult:
-    graph: dict[str, State]
-    checker: TypeChecker
-    types: TypeLookup
-    defs: Mapping[str, Expression | FuncDef | Decorator]
-    raw_defs: list[Statement]
+    def single(self, module_name: str) -> ParseResult:
+        return ParseResult(
+            graph=self.graph,
+            checker=self.checkers[module_name],
+            types=self.types[module_name],
+            defs=self.defs,
+            raw_defs=self.raw_defs,
+        )
 
 
 def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = False) -> MultiParseResult:
@@ -142,13 +162,7 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = False) 
 def parse(code: str, *, header: bool = True) -> ParseResult:
     module_name = "test_module"
     parse_result = parse_multiple([(module_name, code)], header=header)
-    return ParseResult(
-        graph=parse_result.graph,
-        checker=parse_result.checkers[module_name],
-        types=parse_result.types[module_name],
-        defs=parse_result.defs,
-        raw_defs=parse_result.raw_defs,
-    )
+    return parse_result.single(module_name)
 
 
 def get_error_messages(checker: TypeChecker) -> str:
@@ -268,6 +282,7 @@ def default_argnames_parser(checker: TypeChecker) -> ArgnamesParser:
 
 def test_info_from_defs(defs: str, *, name: str) -> TestInfo:
     parse_result = parse(defs)
+    parse_result.accept_all()
     test_node = parse_result.defs[name]
     assert isinstance(test_node, FuncDef | Decorator)
     test_info = TestInfo.from_fn_def(test_node, checker=parse_result.checker)
@@ -285,3 +300,16 @@ def simple_module_lookup(
     if decorator is not None and isinstance(decorator.node, Decorator):
         return Fixture.from_decorator(decorator.node, self.checker)
     return None
+
+
+@overload
+def dump_expr(expr: Expression) -> tuple[type[Expression], dict[str, Any]]: ...
+@overload
+def dump_expr(expr: None) -> tuple[type[None], None]: ...
+
+
+def dump_expr(expr: Expression | None) -> tuple[type, dict[str, Any] | None]:
+    return (
+        type(expr),
+        None if expr is None else {attr: getattr(expr, attr) for attr in expr.__match_args__},  # type: ignore [attr-defined]
+    )

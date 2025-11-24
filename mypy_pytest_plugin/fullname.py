@@ -1,3 +1,4 @@
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Self
 
@@ -18,7 +19,10 @@ class Fullname:
     def __bool__(self) -> bool:
         return bool(self._parts)
 
-    def push_back(self, extra: str) -> Self:
+    def push_front(self, extra: str, /) -> Self:
+        return type(self)((extra, *self._parts))
+
+    def push_back(self, extra: str, /) -> Self:
         return type(self)((*self._parts, extra))
 
     @property
@@ -33,3 +37,14 @@ class Fullname:
         if isinstance(other, type(self)):
             return self._parts < other._parts
         return NotImplemented
+
+    @property
+    def head(self) -> str:
+        return self._parts[0]
+
+    @property
+    def tail(self) -> Self:
+        return type(self)(self._parts[1:])
+
+    def __iter__(self) -> Iterator[str]:
+        return iter(self._parts)

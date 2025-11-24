@@ -1,0 +1,7 @@
+test_samples/mock_test.py:12: error: Incompatible types in assignment (expression has type "int", variable has type "str")  [assignment]
+test_samples/mock_test.py:28: error: Incompatible types in assignment (expression has type "Callable[[float], float]", variable has type "Callable[[int], int]")  [assignment]
+test_samples/mock_test.py:33: error: Incompatible types in assignment (expression has type "str", variable has type "None")  [assignment]
+test_samples/mock_test.py:36: error: Incompatible types in assignment (expression has type "Callable[[float], float]", variable has type "Callable[[int], int]")  [assignment]
+test_samples/mock_test.py:40: error: Incompatible types in assignment (expression has type "None", variable has type "int")  [assignment]
+test_samples/mock_test.py:42: error: Unsupported left operand type for + ("Mock[Never, Never]")  [operator]
+Found 6 errors in 1 file (checked 1 source file)

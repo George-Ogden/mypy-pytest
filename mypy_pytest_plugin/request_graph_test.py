@@ -13,8 +13,7 @@ def _test_info_prune_active_requests_and_fixtures_test_body(
 ) -> None:
     test_info = test_info_from_defs(defs, name="test_info")
     parse_result = parse(defs)
-    for def_ in parse_result.raw_defs:
-        def_.accept(test_info.checker)
+    parse_result.accept_all()
 
     with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
         _ = test_info.request_graph

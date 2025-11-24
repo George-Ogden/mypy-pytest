@@ -14,8 +14,7 @@ def _fixture_from_decorator_test_body(
     assert isinstance(fixture_node, Decorator)
 
     checker = parse_result.checker
-    for def_ in parse_result.raw_defs:
-        def_.accept(checker)
+    parse_result.accept_all()
 
     fixture = Fixture.from_decorator(fixture_node, checker=checker)
     if is_fixture:

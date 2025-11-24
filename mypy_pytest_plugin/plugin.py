@@ -1,16 +1,20 @@
 from collections.abc import Callable
+import functools
 from typing import cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import (
-    CallExpr,
-    Decorator,
-    Expression,
-    MypyFile,
-)
+from mypy.nodes import CallExpr, Decorator, Expression, MypyFile
 from mypy.options import Options
-from mypy.plugin import FunctionContext, MethodContext, Plugin
-from mypy.types import CallableType, LiteralType, Type
+from mypy.plugin import (
+    FunctionContext,
+    MethodContext,
+    Plugin,
+)
+from mypy.types import (
+    CallableType,
+    LiteralType,
+    Type,
+)
 
 from .defer import DeferralError
 from .excluded_test_checker import ExcludedTestChecker
@@ -18,6 +22,7 @@ from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .iterable_sequence_checker import IterableSequenceChecker
+from .mock_call_checker import FunctionMockCallChecker, MethodMockCallChecker
 from .test_body_ranges import TestBodyRanges
 from .test_info import TestInfo
 from .test_name_checker import TestNameChecker
@@ -31,6 +36,9 @@ class PytestPlugin(Plugin):
             options.per_module_options.setdefault(module_pattern, {})["ignore_missing_imports"] = (
                 True
             )
+        options.per_module_options.setdefault("mypy_pytest_plugin_types.*", {})[
+            "disallow_subclassing_any"
+        ] = False
         options.preserve_asts = True
         options.follow_untyped_imports = True
         super().__init__(options)
@@ -58,6 +66,8 @@ class PytestPlugin(Plugin):
         return (10, module, -1)
 
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
+        if fullname.startswith("unittest.mock"):
+            return functools.partial(FunctionMockCallChecker.check_mock_calls, fullname=fullname)
         if fullname == "_pytest.fixtures.fixture":
             hook_fn = self.check_pytest_structure
         else:
@@ -75,6 +85,8 @@ class PytestPlugin(Plugin):
         return ctx
 
     def get_method_hook(self, fullname: str) -> Callable[[MethodContext], Type] | None:
+        if fullname.startswith("unittest.mock"):
+            return functools.partial(MethodMockCallChecker.check_mock_calls, fullname=fullname)
         if (
             fullname.startswith("_pytest.mark.structures") and "Mark" in fullname
         ) or fullname.startswith("_pytest.fixtures.FixtureFunctionMarker"):

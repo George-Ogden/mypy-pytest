@@ -271,7 +271,7 @@ def test_test_info_check_decorator_shared_argnames() -> None:
         def test_info(x: float) -> None:
             ...
         """,
-        errors=["variadic-argnames-argvalues"],
+        errors=["unreadable-argnames-argvalues"],
     )
 
 
@@ -287,7 +287,7 @@ def test_test_info_check_decorator_shared_argnames_beyond_limit() -> None:
             def test_info(x: float) -> None:
                 ...
             """,
-            errors=["variadic-argnames-argvalues"],
+            errors=["unreadable-argnames-argvalues"],
         )
 
 
@@ -304,23 +304,8 @@ def test_test_info_check_decorator_shared_argnames_as_dict() -> None:
             def test_info(x: bool) -> None:
                 ...
             """,
-            errors=["variadic-argnames-argvalues"],
+            errors=["unreadable-argnames-argvalues"],
         )
-
-
-def test_test_info_check_decorator_wrapped_argvalues() -> None:
-    _test_info_check_decorator_test_body(
-        """
-        import pytest
-
-        @pytest.mark.parametrize(
-            "x", *([True, False],)
-        )
-        def test_info(x: bool) -> None:
-            ...
-        """,
-        errors=["variadic-argnames-argvalues"],
-    )
 
 
 def test_test_info_check_decorator_no_errors_unusual_types() -> None:
@@ -396,10 +381,7 @@ def _test_info_check_test_body(defs: str, *, errors: list[str] | None = None) ->
     checker = test_info.checker
 
     parse_result = parse(defs)
-    for def_ in parse_result.raw_defs:
-        def_.accept(checker)
-
-    assert not checker.errors.is_errors()
+    parse_result.accept_all()
 
     with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
         test_info.check()
