@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from typing import TYPE_CHECKING, Any
-from unittest.mock import DEFAULT, MagicMock, Mock, NonCallableMock, PropertyMock, ThreadingMock
+from unittest.mock import MagicMock, Mock, NonCallableMock, PropertyMock, ThreadingMock
 
 if TYPE_CHECKING:
     from mypy_pytest_plugin_types.mock import Mock as _Mock
