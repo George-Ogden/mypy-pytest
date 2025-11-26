@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Literal, Self
 
 from mypy.checker import TypeChecker
 from mypy.errorcodes import ErrorCode
@@ -15,7 +15,15 @@ from mypy.nodes import (
     TypeInfo,
 )
 from mypy.subtypes import is_subtype
-from mypy.types import AnyType, CallableType, Instance, Type, TypeOfAny, TypeVarLikeType
+from mypy.types import (
+    AnyType,
+    CallableType,
+    FormalArgument,
+    Instance,
+    Type,
+    TypeOfAny,
+    TypeVarLikeType,
+)
 
 from .error_codes import (
     OPTIONAL_ARGUMENT,
@@ -38,6 +46,29 @@ class TestArgument:
         cls, fn_def: FuncDef, *, checker: TypeChecker | None, source: Literal["test", "fixture"]
     ) -> Sequence[TestArgument] | None:
         return TestArgumentParser(checker).parse_fn_def(fn_def, source=source)
+
+    @classmethod
+    def from_type(cls, type: CallableType) -> Sequence[TestArgument]:
+        return [
+            argument
+            for formal_argument in type.formal_arguments()
+            if (
+                argument := TestArgument.from_formal_argument(
+                    formal_argument, type_variables=type.variables
+                )
+            )
+            is not None
+        ]
+
+    @classmethod
+    def from_formal_argument(
+        cls, argument: FormalArgument, type_variables: Sequence[TypeVarLikeType]
+    ) -> Self | None:
+        if argument.name is None or argument.name == "request":
+            return None
+        return cls(
+            name=argument.name, type_=argument.typ, type_variables=type_variables, context=Context()
+        )
 
 
 @dataclass(frozen=True, slots=True)

@@ -8,7 +8,7 @@ import _pytest.config
 from _pytest.fixtures import FixtureManager as PytestFixtureManager
 from _pytest.main import Session
 from mypy.checker import TypeChecker
-from mypy.nodes import FuncDef, MypyFile
+from mypy.nodes import MypyFile
 from mypy.types import CallableType, Instance, LiteralType
 from pytest import FixtureDef  # noqa: PT013
 
@@ -121,12 +121,17 @@ class FixtureManager:
             and isinstance(type_ := decorator.type, Instance)
             and type_.type.fullname == f"{TYPES_MODULE}.fixture_type.FixtureType"
         ):
-            [scope, signature] = type_.args
+            [scope, signature, is_generator, fullname] = type_.args
             assert isinstance(scope, LiteralType)
             assert isinstance(signature, CallableType)
-            assert isinstance(signature.definition, FuncDef)
+            assert isinstance(is_generator, LiteralType)
+            assert isinstance(fullname, LiteralType)
             return Fixture.from_type(
-                signature, scope=cast(FixtureScope, scope.value), file=module.path
+                signature,
+                scope=cast(FixtureScope, scope.value),
+                file=module.path,
+                is_generator=cast(bool, is_generator.value),
+                fullname=cast(str, fullname.value),
             )
         return None
 
