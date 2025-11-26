@@ -150,6 +150,10 @@ class PytestPlugin(Plugin):
             [
                 LiteralType(fixture.scope, fallback=checker.named_type("builtins.object")),
                 decorator.func.type,
+                LiteralType(
+                    decorator.func.is_generator, fallback=checker.named_type("builtins.object")
+                ),
+                LiteralType(decorator.fullname, fallback=checker.named_type("builtins.object")),
             ],
         )
 

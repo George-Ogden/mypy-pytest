@@ -38,29 +38,39 @@ class Fixture:
     arguments: Sequence[TestArgument]
     scope: FixtureScope
     type_variables: Sequence[TypeVarLikeType]
-    context: FuncDef
+    context: Context
 
     @classmethod
     def from_decorator(cls, decorator: Decorator, checker: TypeChecker) -> Fixture | None:
         return FixtureParser(checker).from_decorator(decorator)
 
     @classmethod
-    def from_type(cls, type: CallableType, *, scope: FixtureScope, file: str) -> Self:
+    def from_type(
+        cls,
+        type: CallableType,
+        *,
+        scope: FixtureScope,
+        file: str,
+        is_generator: bool,
+        fullname: str,
+    ) -> Self:
         func = type.definition
-        assert isinstance(func, FuncDef)
-        assert isinstance(func.type, CallableType)
-        arguments = TestArgument.from_fn_def(func, checker=None, source="fixture")
-        assert arguments is not None
+        assert isinstance(func, FuncDef | None)
+        if isinstance(func, FuncDef):
+            arguments = TestArgument.from_fn_def(func, checker=None, source="fixture")
+            assert arguments is not None
+            context: Context = func
+        else:
+            arguments = TestArgument.from_type(type)
+            context = Context()
         return cls(
-            fullname=Fullname.from_string(func.fullname),
+            fullname=Fullname.from_string(fullname),
             file=file,
-            return_type=FixtureParser.fixture_return_type(
-                func.type.ret_type, is_generator=func.is_generator
-            ),
+            return_type=FixtureParser.fixture_return_type(type.ret_type, is_generator=is_generator),
             arguments=arguments,
             scope=scope,
-            context=func,
-            type_variables=func.type.variables,
+            context=context,
+            type_variables=type.variables,
         )
 
     @classmethod

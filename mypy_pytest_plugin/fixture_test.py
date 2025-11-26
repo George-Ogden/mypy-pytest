@@ -1,8 +1,9 @@
 from mypy.nodes import Decorator
 from mypy.subtypes import is_same_type
+from mypy.types import CallableType
 import pytest
 
-from .fixture import Fixture, FixtureParser
+from .fixture import Fixture, FixtureParser, FixtureScope
 from .test_utils import check_error_messages, get_error_messages, parse
 
 
@@ -244,6 +245,55 @@ def test_fixture_from_decorator_untyped() -> None:
             ...
         """,
         is_fixture=True,
+    )
+
+
+def _fixture_from_type_test_body(defs: str) -> None:
+    parse_result = parse(defs)
+    fixture_node = parse_result.defs["fixture"]
+    assert isinstance(fixture_node, Decorator)
+
+    checker = parse_result.checker
+    parse_result.accept_all()
+
+    fixture_type = fixture_node.func.type
+    assert isinstance(fixture_type, CallableType)
+    fixture_type.definition = None
+
+    fixture = Fixture.from_type(
+        fixture_type,
+        scope=FixtureScope.module,
+        file="",
+        is_generator=False,
+        fullname="test_module.fullname",
+    )
+    assert fixture is not None
+
+    messages = get_error_messages(checker)
+    assert not checker.errors.is_errors(), messages
+
+
+def test_fixture_from_types_no_args() -> None:
+    _fixture_from_type_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture() -> None:
+            ...
+        """
+    )
+
+
+def test_fixture_from_type_some_args() -> None:
+    _fixture_from_type_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def fixture(x: int, y: bool) -> None:
+            ...
+        """
     )
 
 
