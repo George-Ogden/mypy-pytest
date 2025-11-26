@@ -1,5 +1,6 @@
 from collections import deque
 from dataclasses import dataclass
+import functools
 
 from mypy.checker import TypeChecker
 from mypy.messages import format_type
@@ -28,7 +29,7 @@ class RequestGraph:
     available_fixtures: dict[str, Fixture]
     options: Options
 
-    @property
+    @functools.cached_property
     def dummy_context(self) -> Context:
         earliest_context = min(
             (
@@ -84,7 +85,7 @@ class RequestGraph:
             if not request.used and request.name not in active_fixtures:
                 self.checker.msg.fail(
                     f"Argname {request.name!r} not included in parametrization.",
-                    context=request.context,
+                    context=request.context if request.source == "argument" else self.dummy_context,
                     file=request.file,
                     code=MISSING_ARGNAME,
                 )
