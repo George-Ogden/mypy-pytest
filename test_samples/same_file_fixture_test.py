@@ -39,3 +39,11 @@ def test_indirect_bool_fixture_invalid_shadowing(
 @pytest.mark.parametrize("bool_fixture", [False])
 @pytest.mark.parametrize("indirect_bool_fixture_invalid", [True, False])
 def test_indirect_bool_fixture_invalid_extra_arg(indirect_bool_fixture_invalid: bool) -> None: ...
+
+
+@pytest.fixture
+def missing_fixture(missing_arg: str) -> None: ...
+
+
+@pytest.mark.parametrize("", [])
+def test_missing_fixture(missing_fixture: None) -> None: ...
