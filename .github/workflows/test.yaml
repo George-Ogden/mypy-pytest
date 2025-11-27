@@ -25,4 +25,4 @@ jobs:
     with:
       python-versions: "['3.13']"
       timeout-minutes: 10
-      pytest-flags: -vv tests
+      pytest-flags: -vv tests -n auto
