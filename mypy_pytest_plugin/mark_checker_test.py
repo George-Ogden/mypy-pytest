@@ -1,4 +1,4 @@
-from .mark_attributes import MarkChecker
+from .mark_checker import MarkChecker
 from .test_utils import parse
 
 

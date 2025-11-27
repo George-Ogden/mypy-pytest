@@ -1,3 +1,7 @@
+test_samples/fixture_defs.py:5: error: Invalid mark name 'fixture'.  [unknown-mark]
+test_samples/fixture_defs.py:5: note: Expected a predefined mark (one of ['skip', 'skipif', 'xfail', 'parametrize', 'usefixtures', 'filterwarnings']) or a user defined mark (one of ['used_for_testing']).
+test_samples/fixture_defs.py:6: error: Invalid mark name 'fixture'.  [unknown-mark]
+test_samples/fixture_defs.py:6: note: Expected a predefined mark (one of ['skip', 'skipif', 'xfail', 'parametrize', 'usefixtures', 'filterwarnings']) or a user defined mark (one of ['used_for_testing']).
 test_samples/fixture_defs.py:15: error: Missing return statement  [empty-body]
 test_samples/fixture_defs.py:19: error: Extra `pytest.fixture` decorator. Only one is allowed.  [duplicate-fixture]
 test_samples/fixture_defs.py:24: error: No overload variant of "fixture" matches argument type "str"  [call-overload]
@@ -6,4 +10,4 @@ test_samples/fixture_defs.py:24: note:     def fixture(fixture_function: Callabl
 test_samples/fixture_defs.py:24: note:     def fixture(fixture_function: None = ..., *, scope: Literal['session', 'package', 'module', 'class', 'function'] | Callable[[str, Config], Literal['session', 'package', 'module', 'class', 'function']] = ..., params: Iterable[object] | None = ..., autouse: bool = ..., ids: Sequence[object | None] | Callable[[Any], object | None] | None = ..., name: str | None = ...) -> FixtureFunctionMarker
 test_samples/fixture_defs.py:29: error: Invalid type for fixture scope.  [invalid-fixture-scope]
 test_samples/fixture_defs.py:34: error: Marks cannot be applied to fixtures.  [marked-fixture]
-Found 5 errors in 1 file (checked 1 source file)
+Found 7 errors in 1 file (checked 1 source file)

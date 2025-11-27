@@ -1,0 +1,10 @@
+test_samples/mark_test.py:8: error: Invalid mark name 'not_a_mark'.  [unknown-mark]
+test_samples/mark_test.py:8: note: Expected a predefined mark (one of ['skip', 'skipif', 'xfail', 'parametrize', 'usefixtures', 'filterwarnings']) or a user defined mark (one of ['used_for_testing']).
+test_samples/mark_test.py:10: error: Invalid mark name 'slow'.  [unknown-mark]
+test_samples/mark_test.py:10: note: Expected a predefined mark (one of ['skip', 'skipif', 'xfail', 'parametrize', 'usefixtures', 'filterwarnings']) or a user defined mark (one of ['used_for_testing']).
+test_samples/mark_test.py:15: error: Argname 'missed_arg' not included in parametrization.  [missing-argname]
+test_samples/mark_test.py:18: error: Invalid mark name '_bad_mark'.  [unknown-mark]
+test_samples/mark_test.py:18: note: Expected a predefined mark (one of ['skip', 'skipif', 'xfail', 'parametrize', 'usefixtures', 'filterwarnings']) or a user defined mark (one of ['used_for_testing']).
+test_samples/mark_test.py:19: error: Function is missing a return type annotation  [no-untyped-def]
+test_samples/mark_test.py:19: note: Use "-> None" if function does not return a value
+Found 5 errors in 1 file (checked 1 source file)

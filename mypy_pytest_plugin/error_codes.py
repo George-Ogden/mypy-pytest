@@ -120,6 +120,12 @@ REQUEST_KEYWORD: Final[ErrorCode] = ErrorCode(
     category="Pytest",
 )
 
+UNKNOWN_MARK: Final[ErrorCode] = ErrorCode(
+    "unknown-mark",
+    "Mark name is not recognized as a pre-defined or user-defined mark.",
+    category="Pytest",
+)
+
 ITERABLE_SEQUENCE: Final[ErrorCode] = ErrorCode(
     "iterable-sequence",
     """"Sequence" passed into a function expecting "Iterable" in a test.""",

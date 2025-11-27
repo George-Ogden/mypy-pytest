@@ -3,18 +3,10 @@ import functools
 from typing import cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import CallExpr, Decorator, Expression, MypyFile
+from mypy.nodes import CallExpr, Decorator, Expression, MemberExpr, MypyFile
 from mypy.options import Options
-from mypy.plugin import (
-    FunctionContext,
-    MethodContext,
-    Plugin,
-)
-from mypy.types import (
-    CallableType,
-    LiteralType,
-    Type,
-)
+from mypy.plugin import AttributeContext, FunctionContext, MethodContext, Plugin
+from mypy.types import CallableType, Type
 
 from .defer import DeferralError
 from .excluded_test_checker import ExcludedTestChecker
@@ -22,6 +14,7 @@ from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .iterable_sequence_checker import IterableSequenceChecker
+from .mark_checker import MarkChecker
 from .mock_call_checker import FunctionMockCallChecker, MethodMockCallChecker
 from .test_body_ranges import TestBodyRanges
 from .test_info import TestInfo
@@ -64,6 +57,23 @@ class PytestPlugin(Plugin):
         if not isinstance(module, str):
             module = str(module)
         return (10, module, -1)
+
+    def get_attribute_hook(self, fullname: str) -> Callable[[AttributeContext], Type] | None:
+        if fullname.startswith("_pytest.mark.structures.MarkGenerator"):
+            return self.check_mark
+        return None
+
+    @classmethod
+    def check_mark(cls, ctx: AttributeContext) -> Type:
+        if ctx.api.path == "test_samples/mark_test.py":
+            ...
+        if (
+            not ctx.is_lvalue
+            and isinstance(checker := ctx.api, TypeChecker)
+            and isinstance(expr := ctx.context, MemberExpr)
+        ):
+            MarkChecker(checker).check_attribute(expr)
+        return ctx.default_attr_type
 
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
         if fullname.startswith("unittest.mock"):
@@ -126,7 +136,7 @@ class PytestPlugin(Plugin):
             cls._update_return_type(ctx.default_return_type, ctx.api)
             if not Fixture.is_fixture_and_mark(ctx.context, checker=ctx.api):
                 if fixture := Fixture.from_decorator(ctx.context, checker=ctx.api):
-                    return cls._fixture_type(fixture, decorator=ctx.context, checker=ctx.api)
+                    return fixture.as_fixture_type(decorator=ctx.context, checker=ctx.api)
                 ignored_testnames = ExcludedTestChecker.ignored_test_names(
                     ctx.api.tree.defs, ctx.api
                 )
@@ -137,33 +147,18 @@ class PytestPlugin(Plugin):
         return ctx.default_return_type
 
     @classmethod
-    def _check_decorators(cls, node: Decorator, checker: TypeChecker) -> None:
-        test_info = TestInfo.from_fn_def(node, checker=checker)
-        if test_info is not None:
-            test_info.check()
-
-    @classmethod
-    def _fixture_type(cls, fixture: Fixture, *, decorator: Decorator, checker: TypeChecker) -> Type:
-        assert decorator.func.type is not None
-        return checker.named_generic_type(
-            f"{TYPES_MODULE}.FixtureType",
-            [
-                LiteralType(fixture.scope, fallback=checker.named_type("builtins.object")),
-                decorator.func.type,
-                LiteralType(
-                    decorator.func.is_generator, fallback=checker.named_type("builtins.object")
-                ),
-                LiteralType(decorator.fullname, fallback=checker.named_type("builtins.object")),
-            ],
-        )
-
-    @classmethod
     def _update_return_type(cls, return_type: Type, checker: TypeChecker) -> None:
         if (
             isinstance(return_type, CallableType)
             and return_type.fallback.type.fullname == "builtins.function"
         ):
             return_type.fallback = checker.named_type(f"{TYPES_MODULE}.Testable")
+
+    @classmethod
+    def _check_decorators(cls, node: Decorator, checker: TypeChecker) -> None:
+        test_info = TestInfo.from_fn_def(node, checker=checker)
+        if test_info is not None:
+            test_info.check()
 
 
 def plugin(version: str) -> type[PytestPlugin]:
