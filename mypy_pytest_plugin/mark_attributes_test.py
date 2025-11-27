@@ -30,3 +30,7 @@ def test_mark_name_valid() -> None:
 
 def test_mark_name_not_predefined() -> None:
     _mark_name_test_body("invalid", False)
+
+
+def test_mark_name_user_defined() -> None:
+    _mark_name_test_body("used_for_testing", True)
