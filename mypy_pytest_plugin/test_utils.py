@@ -101,7 +101,8 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = False) 
     ]
 
     options = mypy.options.Options()
-    options.incremental = False
+    options.show_traceback = True
+    options.incremental = True
     options.show_traceback = True
     options.preserve_asts = True
     options.disallow_untyped_defs = False
@@ -159,8 +160,7 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = False) 
 
 
 @functools.lru_cache(maxsize=1)
-def parse(code: str, *, header: bool = True) -> ParseResult:
-    module_name = "test_module"
+def parse(code: str, *, header: bool = True, module_name: str = "test_module") -> ParseResult:
     parse_result = parse_multiple([(module_name, code)], header=header)
     return parse_result.single(module_name)
 

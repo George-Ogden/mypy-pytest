@@ -23,6 +23,7 @@ from .defer import DeferralError
 from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTURE, REQUEST_KEYWORD
 from .fullname import Fullname
 from .test_argument import TestArgument
+from .types_module import TYPES_MODULE
 
 FixtureScope = enum.IntEnum(
     "FixtureScope", ["function", "class", "module", "package", "session", "unknown"]
@@ -92,6 +93,20 @@ class Fixture:
     @property
     def module_name(self) -> Fullname:
         return self.fullname.module_name
+
+    def as_fixture_type(self, *, decorator: Decorator, checker: TypeChecker) -> Type:
+        assert decorator.func.type is not None
+        return checker.named_generic_type(
+            f"{TYPES_MODULE}.FixtureType",
+            [
+                LiteralType(self.scope, fallback=checker.named_type("builtins.object")),
+                decorator.func.type,
+                LiteralType(
+                    decorator.func.is_generator, fallback=checker.named_type("builtins.object")
+                ),
+                LiteralType(decorator.fullname, fallback=checker.named_type("builtins.object")),
+            ],
+        )
 
 
 @dataclass(frozen=True, slots=True)
