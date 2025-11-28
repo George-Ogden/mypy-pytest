@@ -9,11 +9,12 @@ from mypy.nodes import ArgKind, CallExpr, Context, Expression
 from mypy.subtypes import is_subtype
 from mypy.types import CallableType, Instance, Type
 
+from .checker_wrapper import CheckerWrapper
 from .error_codes import ITERABLE_SEQUENCE
 
 
 @dataclass(frozen=True, slots=True)
-class IterableSequenceChecker:
+class IterableSequenceChecker(CheckerWrapper):
     checker: TypeChecker
 
     def check_iterable_sequence_call(self, call: CallExpr) -> None:
@@ -42,14 +43,14 @@ class IterableSequenceChecker:
     def _display_error_message(
         self, expected_type: Type, argument_type: Type, context: Context
     ) -> None:
-        self.checker.fail(
+        self.fail(
             f"Argument has type {format_type(argument_type, self.checker.options)}; expected {format_type(expected_type, self.checker.options)}.",
-            context,
+            context=context,
             code=ITERABLE_SEQUENCE,
         )
-        self.checker.note(
+        self.note(
             "This still type checks, but could be made more robust by using `iter()`",
-            context,
+            context=context,
             code=ITERABLE_SEQUENCE,
         )
 

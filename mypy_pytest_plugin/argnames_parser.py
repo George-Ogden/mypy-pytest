@@ -12,6 +12,7 @@ from mypy.nodes import (
     TupleExpr,
 )
 
+from .checker_wrapper import CheckerWrapper
 from .error_codes import (
     DUPLICATE_ARGNAME,
     INVALID_ARGNAME,
@@ -22,7 +23,7 @@ from .error_codes import (
 
 
 @dataclass(frozen=True)
-class ArgnamesParser:
+class ArgnamesParser(CheckerWrapper):
     checker: TypeChecker
 
     def parse_names(self, expression: Expression) -> str | list[str] | None:
@@ -32,7 +33,7 @@ class ArgnamesParser:
             case ListExpr() | TupleExpr():
                 argnames = self.parse_names_sequence(expression)
             case _:
-                self.checker.fail(
+                self.fail(
                     "Unable to identify argnames. (Use a comma-separated string, list of strings or tuple of strings).",
                     context=expression,
                     code=UNREADABLE_ARGNAMES,
@@ -43,13 +44,13 @@ class ArgnamesParser:
 
     def _check_valid_identifier(self, name: str, context: StrExpr) -> bool:
         if not (valid_identifier := name.isidentifier()):
-            self.checker.fail(
+            self.fail(
                 f"Invalid identifier {name!r}.",
                 context=context,
                 code=INVALID_ARGNAME,
             )
         elif not (valid_identifier := (name != "request")):
-            self.checker.fail(
+            self.fail(
                 f"{name!r} is not allowed as an argname; it is a reserved word in Pytest.",
                 context=context,
                 code=REQUEST_KEYWORD,
@@ -72,7 +73,7 @@ class ArgnamesParser:
             if self._check_valid_identifier(name, expression):
                 return name
         else:
-            self.checker.fail(
+            self.fail(
                 "Unable to read identifier. (Use a sequence of strings instead.)",
                 context=expression,
                 code=UNREADABLE_ARGNAME,
@@ -104,7 +105,7 @@ class ArgnamesParser:
 
     def _warn_duplicate_argnames(self, duplicates: Iterable[str], context: Context) -> None:
         for argname in duplicates:
-            self.checker.fail(
+            self.fail(
                 f"Duplicated argname {argname!r}.",
                 context=context,
                 code=DUPLICATE_ARGNAME,

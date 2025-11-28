@@ -7,12 +7,13 @@ from mypy.checker import TypeChecker
 from mypy.nodes import MemberExpr
 from mypy.subtypes import is_same_type
 
+from .checker_wrapper import CheckerWrapper
 from .error_codes import UNKNOWN_MARK
 from .pytest_config_manager import PytestConfigManager
 
 
 @dataclass(frozen=True)
-class MarkChecker:
+class MarkChecker(CheckerWrapper):
     checker: TypeChecker
 
     def check_attribute(self, expr: MemberExpr) -> None:
@@ -25,8 +26,8 @@ class MarkChecker:
                 note_suffix = f"a user defined mark (one of {self.user_defined_names!r})."
             else:
                 note_suffix = "see https://docs.pytest.org/en/stable/how-to/mark.html for how to register marks."
-            self.checker.fail(error_msg, context=expr, code=UNKNOWN_MARK)
-            self.checker.note(note_prefix + note_suffix, context=expr, code=UNKNOWN_MARK)
+            self.fail(error_msg, context=expr, code=UNKNOWN_MARK)
+            self.note(note_prefix + note_suffix, context=expr, code=UNKNOWN_MARK)
 
     def is_valid_mark(self, name: str) -> bool:
         return not name.startswith("_") and (name in self._mark_names_index)

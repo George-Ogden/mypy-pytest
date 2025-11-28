@@ -7,11 +7,12 @@ from mypy.nodes import CallExpr, Expression
 from mypy.types import Instance
 
 from .argmapper import ArgMapper
+from .checker_wrapper import CheckerWrapper
 from .error_codes import UNREADABLE_ARGNAMES_ARGVALUES
 
 
 @dataclass(frozen=True, slots=True)
-class DecoratorWrapper:
+class DecoratorWrapper(CheckerWrapper):
     call: CallExpr
     checker: TypeChecker
 
@@ -43,7 +44,7 @@ class DecoratorWrapper:
         try:
             return name_mapping["argnames"], name_mapping["argvalues"]
         except KeyError:
-            self.checker.fail(
+            self.fail(
                 "Unable to read argnames and argvalues. Use positional or keyword arguments.",
                 context=self.call,
                 code=UNREADABLE_ARGNAMES_ARGVALUES,

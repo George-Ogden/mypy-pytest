@@ -16,12 +16,13 @@ from mypy.types import (
 )
 
 from .argmapper import ArgMapper
+from .checker_wrapper import CheckerWrapper
 from .fullname import Fullname
 from .types_module import TYPES_MODULE
 
 
 @dataclass(frozen=True, slots=True)
-class PatchCallChecker:
+class PatchCallChecker(CheckerWrapper):
     checker: TypeChecker
 
     def add_patch_generics(self, call: CallExpr) -> Type | None:
@@ -54,7 +55,7 @@ class PatchCallChecker:
                 return type_
             target = target.push_front(module_name.name)
             module_name = module_name.module_name
-        self.checker.fail(f"{fullname!r} does not exist.", context=context, code=NAME_DEFINED)
+        self.fail(f"{fullname!r} does not exist.", context=context, code=NAME_DEFINED)
         return None
 
     def _lookup_fullname_type_in_module(self, module: MypyFile, target: Fullname) -> Type | None:

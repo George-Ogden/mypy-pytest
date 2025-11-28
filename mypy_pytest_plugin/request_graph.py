@@ -11,6 +11,7 @@ from mypy.options import Options
 from mypy.subtypes import is_subtype
 from mypy.types import Type
 
+from .checker_wrapper import CheckerWrapper
 from .error_codes import (
     FIXTURE_ARGUMENT_TYPE,
     INVERTED_FIXTURE_SCOPE,
@@ -22,7 +23,7 @@ from .request import Request
 
 
 @dataclass(frozen=True, kw_only=True)
-class RequestGraph:
+class RequestGraph(CheckerWrapper):
     name: str
     checker: TypeChecker
     available_requests: dict[str, Request]
@@ -93,7 +94,7 @@ class RequestGraph:
     def _check_unused(self, active_requests: dict[str, Request]) -> None:
         for request in self.available_requests.values():
             if request.used and request.name not in active_requests:
-                self.checker.fail(
+                self.fail(
                     f"Argname {request.name!r} is invalid as the fixture is shadowed by another argument.",
                     context=self.dummy_context,
                     code=REPEATED_FIXTURE_ARGNAME,
