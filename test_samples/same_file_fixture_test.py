@@ -47,3 +47,11 @@ def missing_fixture(missing_arg: str) -> None: ...
 
 @pytest.mark.parametrize("", [])
 def test_missing_fixture(missing_fixture: None) -> None: ...
+
+
+def missed_fixture_decorator() -> None:
+    return None
+
+
+@pytest.mark.parametrize("", [])
+def test_missed_fixture_decorator(missed_fixture_decorator: None) -> None: ...

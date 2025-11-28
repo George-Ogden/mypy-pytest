@@ -14,6 +14,7 @@ from mypy.nodes import (
 
 from .argnames_parser import ArgnamesParser
 from .argvalues import Argvalues
+from .checker_wrapper import CheckerWrapper
 from .decorator_wrapper import DecoratorWrapper
 from .error_codes import (
     REPEATED_ARGNAME,
@@ -31,7 +32,7 @@ from .test_signature import TestSignature
 
 
 @dataclass(frozen=True, kw_only=True)
-class TestInfo:
+class TestInfo(CheckerWrapper):
     fullname: Fullname
     fn_name: str
     arguments: Sequence[TestArgument]
@@ -113,7 +114,7 @@ class TestInfo:
             available_fixtures={fixture.name: fixture for fixture in available_fixtures},
             available_requests=available_requests,
             options=self.checker.options,
-            name=self.name,
+            fullname=self.fullname,
             checker=self.checker,
         )
 
@@ -161,7 +162,7 @@ class TestInfo:
         if known_name := arg_name in self._available_requests:
             self._check_repeated_arg_name(arg_name, context)
         else:
-            self.checker.fail(
+            self.fail(
                 f"Unknown argname {arg_name!r} used as test argument.",
                 context=context,
                 code=UNKNOWN_ARGNAME,
@@ -170,7 +171,7 @@ class TestInfo:
 
     def _check_repeated_arg_name(self, arg_name: str, context: Context) -> None:
         if self._available_requests[arg_name].used:
-            self.checker.fail(
+            self.fail(
                 f"Repeated argname {arg_name!r} in multiple parametrizations.",
                 context=context,
                 code=REPEATED_ARGNAME,

@@ -19,6 +19,7 @@ from mypy.types import (
     TypeVarLikeType,
 )
 
+from .checker_wrapper import CheckerWrapper
 from .defer import DeferralError
 from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTURE, REQUEST_KEYWORD
 from .fullname import Fullname
@@ -110,7 +111,7 @@ class Fixture:
 
 
 @dataclass(frozen=True, slots=True)
-class FixtureParser:
+class FixtureParser(CheckerWrapper):
     checker: TypeChecker
 
     def from_decorator(self, decorator: Decorator) -> Fixture | None:
@@ -180,7 +181,7 @@ class FixtureParser:
         if is_mark := is_subtype(
             self.checker.lookup_type(expression), self.checker.named_type("pytest.MarkDecorator")
         ):
-            self.checker.fail(
+            self.fail(
                 "Marks cannot be applied to fixtures.",
                 context=expression,
                 code=MARKED_FIXTURE,
@@ -200,7 +201,7 @@ class FixtureParser:
         return [decorator for decorator in decorators if self._is_fixture_decorator(decorator)]
 
     def _warn_extra_decorator(self, decorator: Expression) -> None:
-        self.checker.fail(
+        self.fail(
             "Extra `pytest.fixture` decorator. Only one is allowed.",
             context=decorator,
             code=DUPLICATE_FIXTURE,
@@ -241,7 +242,7 @@ class FixtureParser:
     def _fixture_scope_from_type(self, type_: Type, context: Context) -> FixtureScope:
         if isinstance(type_, LiteralType) and type_.value in FixtureScope._member_names_:
             return FixtureScope[cast(str, type_.value)]
-        self.checker.fail(
+        self.fail(
             "Invalid type for fixture scope.",
             context=context,
             code=INVALID_FIXTURE_SCOPE,
@@ -251,7 +252,7 @@ class FixtureParser:
 
     def is_request_name(self, decorator: Decorator) -> bool:
         if is_request_name := decorator.name == "request":
-            self.checker.fail(
+            self.fail(
                 """"request" is a reserved name in Pytest. Use another name for this fixture.""",
                 context=decorator.func,
                 code=REQUEST_KEYWORD,

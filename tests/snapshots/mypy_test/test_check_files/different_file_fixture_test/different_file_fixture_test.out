@@ -1,2 +1,4 @@
 test_samples/conftest.py:10: error: 'indirect_int_fixture' requests 'base_int_fixture' with type "str", but expects type "int". This happens when executing 'test_invalid_indirect_int_fixture'.  [fixture-arg-type]
-Found 1 error in 1 file (checked 1 source file)
+test_samples/different_file_fixture_test.py:19: note: 'missed_fixture_decorator_in_another_file' is defined in 'conftest', but not marked as a fixture.
+test_samples/different_file_fixture_test.py:19: error: Argname 'missed_fixture_decorator_in_another_file' not included in parametrization.  [missing-argname]
+Found 2 errors in 2 files (checked 1 source file)

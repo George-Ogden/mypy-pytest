@@ -25,6 +25,9 @@ class Fullname:
     def push_back(self, extra: str, /) -> Self:
         return type(self)((*self._parts, extra))
 
+    def pop_front(self) -> Self:
+        return type(self)(self._parts[1:])
+
     @property
     def name(self) -> str:
         return self._parts[-1]

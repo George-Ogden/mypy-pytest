@@ -1,16 +1,17 @@
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 import functools
+from typing import Any, TypeGuard, cast
 
 from mypy.checker import TypeChecker
 from mypy.messages import format_type
-from mypy.nodes import (
-    Context,
-)
+from mypy.nodes import Context, FuncDef
 from mypy.options import Options
 from mypy.subtypes import is_subtype
-from mypy.types import Type
+from mypy.types import CallableType, Type
 
+from .checker_wrapper import CheckerWrapper
 from .error_codes import (
     FIXTURE_ARGUMENT_TYPE,
     INVERTED_FIXTURE_SCOPE,
@@ -18,16 +19,26 @@ from .error_codes import (
     REPEATED_FIXTURE_ARGNAME,
 )
 from .fixture import Fixture, FixtureScope
+from .fixture_manager import FixtureManager
+from .fullname import Fullname
 from .request import Request
 
 
 @dataclass(frozen=True, kw_only=True)
-class RequestGraph:
-    name: str
+class RequestGraph(CheckerWrapper):
+    fullname: Fullname
     checker: TypeChecker
     available_requests: dict[str, Request]
     available_fixtures: dict[str, Fixture]
     options: Options
+
+    @property
+    def name(self) -> str:
+        return self.fullname.name
+
+    @property
+    def module_name(self) -> Fullname:
+        return self.fullname.module_name
 
     @functools.cached_property
     def dummy_context(self) -> Context:
@@ -89,11 +100,28 @@ class RequestGraph:
                     file=request.file,
                     code=MISSING_ARGNAME,
                 )
+                self._check_unmarked_fixture(request.name)
+
+    def _check_unmarked_fixture(self, fixture_name: str) -> None:
+        for module_name in FixtureManager.resolution_sequence(self.module_name):
+            symbol_table_node = self.lookup_fullname(
+                module_name.push_back(fixture_name),
+                context=None,
+                predicate=cast(
+                    Callable[[Any], TypeGuard[FuncDef]], lambda node: isinstance(node, FuncDef)
+                ),
+            )
+            if symbol_table_node is not None and isinstance(symbol_table_node.type, CallableType):
+                self.note(
+                    f"{fixture_name!r} is defined in '{module_name}', but not marked as a fixture.",
+                    context=symbol_table_node,
+                    code=None,
+                )
 
     def _check_unused(self, active_requests: dict[str, Request]) -> None:
         for request in self.available_requests.values():
             if request.used and request.name not in active_requests:
-                self.checker.fail(
+                self.fail(
                     f"Argname {request.name!r} is invalid as the fixture is shadowed by another argument.",
                     context=self.dummy_context,
                     code=REPEATED_FIXTURE_ARGNAME,
