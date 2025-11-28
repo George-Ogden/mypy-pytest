@@ -16,13 +16,13 @@ jobs:
         total-shards: [3]
     uses: George-Ogden/actions/.github/workflows/python-test.yaml@v3.1.3
     with:
-      python-versions: "['3.13']"
+      python-versions: "['3.12', '3.13', '3.14']"
       timeout-minutes: 15
       pytest-flags: -vv mypy_pytest_plugin -n auto --shard-id=${{ matrix.shard }} --num-shards=${{ matrix.total-shards }}
 
   integration_tests:
     uses: George-Ogden/actions/.github/workflows/python-test.yaml@v3.1.3
     with:
-      python-versions: "['3.13']"
+      python-versions: "['3.12', '3.13', '3.14']"
       timeout-minutes: 10
       pytest-flags: -vv tests -n auto
