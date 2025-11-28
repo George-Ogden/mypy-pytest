@@ -65,8 +65,6 @@ class PytestPlugin(Plugin):
 
     @classmethod
     def check_mark(cls, ctx: AttributeContext) -> Type:
-        if ctx.api.path == "test_samples/mark_test.py":
-            ...
         if (
             not ctx.is_lvalue
             and isinstance(checker := ctx.api, TypeChecker)
