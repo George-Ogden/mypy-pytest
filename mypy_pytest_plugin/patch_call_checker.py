@@ -1,10 +1,8 @@
 from dataclasses import dataclass
-from typing import Any
 
 from mypy.checker import TypeChecker
-from mypy.errorcodes import NAME_DEFINED
 from mypy.expandtype import expand_type_by_instance
-from mypy.nodes import CallExpr, Context, Expression, MypyFile, StrExpr
+from mypy.nodes import CallExpr, Expression, StrExpr
 from mypy.types import (
     CallableType,
     Instance,
@@ -29,7 +27,11 @@ class PatchCallChecker(CheckerWrapper):
         if (
             (target_arg := self._target_arg(call)) is not None
             and (arg_value := self._string_value(target_arg)) is not None
-            and (original_type := self._lookup_fullname_type(arg_value, context=target_arg))
+            and (
+                original_type := self._lookup_fullname_type(
+                    Fullname.from_string(arg_value), context=target_arg, fail_on_error=True
+                )
+            )
         ):
             return self._specialized_patcher_type(original_type)
         return None
@@ -45,30 +47,6 @@ class PatchCallChecker(CheckerWrapper):
         ) and isinstance(literal_type.value, str):
             return literal_type.value
         return None
-
-    def _lookup_fullname_type(self, fullname: str, *, context: Context) -> Type | None:
-        module_name, target = Fullname.from_string(fullname), Fullname(())
-        while module_name:
-            if (module := self.checker.modules.get(str(module_name))) and (
-                type_ := self._lookup_fullname_type_in_module(module, target)
-            ):
-                return type_
-            target = target.push_front(module_name.name)
-            module_name = module_name.module_name
-        self.fail(f"{fullname!r} does not exist.", context=context, code=NAME_DEFINED)
-        return None
-
-    def _lookup_fullname_type_in_module(self, module: MypyFile, target: Fullname) -> Type | None:
-        resource: Any = module
-        for name in target:
-            try:
-                resource = resource.names[name].node
-            except KeyError:
-                return None
-        try:
-            return resource.type
-        except AttributeError:
-            return None
 
     def _specialized_patcher_type(
         self, original_type: Type, *, attribute: str | None = None
