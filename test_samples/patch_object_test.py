@@ -41,3 +41,6 @@ mock.patch.object(PropertyClass(), "prop", None)
 mock.patch.object(PropertyClass(), "prop", False)
 mock.patch.object(PropertyClass(), "prop", mock.PropertyMock(2.0))
 mock.patch.object(PropertyClass(), "prop", mock.PropertyMock(False))
+
+
+mock.patch.object(X(), "doesnotexist", mock.MagicMock())

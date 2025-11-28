@@ -2,7 +2,7 @@ from mypy.nodes import CallExpr, Expression
 from mypy.subtypes import is_same_type
 
 from .object_patch_call_checker import ObjectPatchCallChecker
-from .test_utils import dump_expr, parse
+from .test_utils import check_error_messages, dump_expr, get_error_messages, parse
 
 
 def _attribute_arg_test_body(defs: str) -> None:
@@ -65,14 +65,17 @@ def test_attribute_arg_readable() -> None:
     )
 
 
-def _attribute_type_test_body(defs: str, attribute: str) -> None:
+def _attribute_type_test_body(
+    defs: str, attribute: str, *, errors: None | list[str] = None
+) -> None:
     parse_result = parse(defs)
-    patch_call_checker = ObjectPatchCallChecker(parse_result.checker)
+    checker = parse_result.checker
+    patch_call_checker = ObjectPatchCallChecker(checker)
 
     base = parse_result.defs["base"]
     assert isinstance(base, Expression)
 
-    attribute_type = patch_call_checker._attribute_type(base, attribute)
+    attribute_type = patch_call_checker._attribute_type(base, attribute, context=base)
 
     expected = parse_result.types.get("expected")
     if expected is None:
@@ -80,6 +83,9 @@ def _attribute_type_test_body(defs: str, attribute: str) -> None:
     else:
         assert attribute_type is not None
         assert is_same_type(attribute_type, expected)
+
+    error_messages = get_error_messages(checker)
+    check_error_messages(error_messages, errors=errors)
 
 
 def test_attribute_type_simple_class() -> None:
@@ -116,6 +122,7 @@ def test_attribute_type_invalid_base() -> None:
         base = None
         """,
         "attribute",
+        errors=["attr-defined"],
     )
 
 
@@ -128,6 +135,7 @@ def test_attribute_type_invalid_attribute() -> None:
         base = Base()
         """,
         "not_an_attribute",
+        errors=["attr-defined"],
     )
 
 

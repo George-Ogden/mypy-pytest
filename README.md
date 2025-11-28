@@ -14,6 +14,7 @@ A Mypy plugin for type checking Pytest code.
   - [x] All the fixture arguments are included
   - [x] You don't have conflicting fixtures
 - Checks your mocks
+  - [x] You're mocking something that exists
   - [x] Your mock has the correct type (or close enough)
 - Checks your marks
   - [x] You're using a pre-defined mark
@@ -44,7 +45,7 @@ plugins = ["mypy_pytest_plugin.plugin"]
 
 `mypy.ini`:
 
-```toml
+```ini
 plugins = mypy_pytest_plugin.plugin
 ```
 

@@ -2,13 +2,9 @@ from dataclasses import dataclass
 from typing import Any
 
 from mypy.checker import TypeChecker
+from mypy.errorcodes import NAME_DEFINED
 from mypy.expandtype import expand_type_by_instance
-from mypy.nodes import (
-    CallExpr,
-    Expression,
-    MypyFile,
-    StrExpr,
-)
+from mypy.nodes import CallExpr, Context, Expression, MypyFile, StrExpr
 from mypy.types import (
     CallableType,
     Instance,
@@ -32,7 +28,7 @@ class PatchCallChecker:
         if (
             (target_arg := self._target_arg(call)) is not None
             and (arg_value := self._string_value(target_arg)) is not None
-            and (original_type := self._lookup_fullname_type(arg_value))
+            and (original_type := self._lookup_fullname_type(arg_value, context=target_arg))
         ):
             return self._specialized_patcher_type(original_type)
         return None
@@ -49,7 +45,7 @@ class PatchCallChecker:
             return literal_type.value
         return None
 
-    def _lookup_fullname_type(self, fullname: str) -> Type | None:
+    def _lookup_fullname_type(self, fullname: str, *, context: Context) -> Type | None:
         module_name, target = Fullname.from_string(fullname), Fullname(())
         while module_name:
             if (module := self.checker.modules.get(str(module_name))) and (
@@ -58,6 +54,7 @@ class PatchCallChecker:
                 return type_
             target = target.push_front(module_name.name)
             module_name = module_name.module_name
+        self.checker.fail(f"{fullname!r} does not exist.", context=context, code=NAME_DEFINED)
         return None
 
     def _lookup_fullname_type_in_module(self, module: MypyFile, target: Fullname) -> Type | None:
