@@ -15,7 +15,9 @@ TEST_FILES = list(filter(Path.exists, map(Path, glob("test_samples/**/*.py", rec
 @pytest.mark.parametrize("filepath", TEST_FILES, ids=map(operator.attrgetter("stem"), TEST_FILES))
 def test_check_files(filepath: Path, snapshot: Snapshot) -> None:
     sys.modules.pop("plugin", None)  # required for plugin to work correctly
-    stdout, stderr, _exit_code = mypy.api.run([str(filepath), "--cache-dir", os.devnull])
+    stdout, stderr, _exit_code = mypy.api.run(
+        [str(filepath), "--cache-dir", os.devnull, "--show-traceback"]
+    )
     assert stderr == "", stderr
     stdout_snapshot_file = f"{filepath.stem}.out"
     snapshot.assert_match(stdout, stdout_snapshot_file)
