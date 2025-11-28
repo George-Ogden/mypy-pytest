@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock, Mock, NonCallableMock, PropertyMock, ThreadingMock
+from unittest.mock import MagicMock, Mock, NonCallableMock, PropertyMock
 
 if TYPE_CHECKING:
     from mypy_pytest_plugin_types.mock import Mock as _Mock
@@ -42,4 +42,7 @@ property_mock.return_value = None
 Mock() + Mock()
 MagicMock() + MagicMock()
 
-ThreadingMock()
+if sys.version_info >= (3, 13):
+    from unittest.mock import ThreadingMock
+
+    ThreadingMock()
