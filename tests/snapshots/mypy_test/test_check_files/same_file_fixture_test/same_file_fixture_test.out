@@ -4,4 +4,6 @@ test_samples/same_file_fixture_test.py:32: error: Argument 1 has incompatible ty
 test_samples/same_file_fixture_test.py:36: error: No return value expected  [return-value]
 test_samples/same_file_fixture_test.py:41: error: Argname 'bool_fixture' is invalid as the fixture is shadowed by another argument.  [repeated-fixture-argname]
 test_samples/same_file_fixture_test.py:49: error: Argname 'missing_arg' not included in parametrization.  [missing-argname]
-Found 6 errors in 1 file (checked 1 source file)
+test_samples/same_file_fixture_test.py:52: note: 'missed_fixture_decorator' is defined in 'same_file_fixture_test', but not marked as a fixture.
+test_samples/same_file_fixture_test.py:57: error: Argname 'missed_fixture_decorator' not included in parametrization.  [missing-argname]
+Found 7 errors in 1 file (checked 1 source file)

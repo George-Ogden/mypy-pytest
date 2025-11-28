@@ -28,8 +28,8 @@ class PatchCallChecker(CheckerWrapper):
             (target_arg := self._target_arg(call)) is not None
             and (arg_value := self._string_value(target_arg)) is not None
             and (
-                original_type := self._lookup_fullname_type(
-                    Fullname.from_string(arg_value), context=target_arg, fail_on_error=True
+                original_type := self.lookup_fullname_type(
+                    Fullname.from_string(arg_value), context=target_arg
                 )
             )
         ):

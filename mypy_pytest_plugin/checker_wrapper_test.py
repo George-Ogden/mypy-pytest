@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 
 from mypy.checker import TypeChecker
-from mypy.nodes import Context
 from mypy.subtypes import is_same_type
 
 from .checker_wrapper import CheckerWrapper
@@ -21,14 +20,9 @@ def _lookup_fullname_type_test_body(sources: list[tuple[str, str]], fullname: st
     expected_type = parse_result.types[last_module_name].get("expected")
     checker_wrapper = CheckerWrapperMock(checker)
     if expected_type is None:
-        assert (
-            checker_wrapper._lookup_fullname_type(Fullname.from_string(fullname), context=Context())
-            is None
-        )
+        assert checker_wrapper.lookup_fullname_type(Fullname.from_string(fullname)) is None
     else:
-        type_ = checker_wrapper._lookup_fullname_type(
-            Fullname.from_string(fullname), context=Context()
-        )
+        type_ = checker_wrapper.lookup_fullname_type(Fullname.from_string(fullname))
         assert type_ is not None
         assert is_same_type(type_, expected_type)
 

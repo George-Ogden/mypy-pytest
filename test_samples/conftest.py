@@ -14,3 +14,7 @@ def indirect_int_fixture(base_int_fixture: int) -> int:
 @pytest.fixture
 @pytest.mark.skip
 def fixture_and_mark() -> None: ...
+
+
+def missed_fixture_decorator_in_another_file() -> int:
+    return 0

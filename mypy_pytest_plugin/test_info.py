@@ -114,7 +114,7 @@ class TestInfo(CheckerWrapper):
             available_fixtures={fixture.name: fixture for fixture in available_fixtures},
             available_requests=available_requests,
             options=self.checker.options,
-            name=self.name,
+            fullname=self.fullname,
             checker=self.checker,
         )
 
