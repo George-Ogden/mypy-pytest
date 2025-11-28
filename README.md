@@ -44,7 +44,7 @@ plugins = ["mypy_pytest_plugin.plugin"]
 
 `mypy.ini`:
 
-```toml
+```ini
 plugins = mypy_pytest_plugin.plugin
 ```
 
