@@ -75,7 +75,7 @@ def _attribute_type_test_body(
     base = parse_result.defs["base"]
     assert isinstance(base, Expression)
 
-    attribute_type = patch_call_checker._attribute_type(base, attribute)
+    attribute_type = patch_call_checker._attribute_type(base, attribute, context=base)
 
     expected = parse_result.types.get("expected")
     if expected is None:
