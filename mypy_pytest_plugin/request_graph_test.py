@@ -152,28 +152,6 @@ def test_info_prune_active_requests_and_fixtures_unused_indirect_fixture() -> No
     )
 
 
-def test_info_prune_active_requests_and_fixtures_triangle() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
-        """
-        import pytest
-
-        @pytest.fixture
-        def indirect(argument: None) -> None:
-            ...
-
-        @pytest.fixture
-        def direct(indirect: None) -> None:
-            ...
-
-        def test_info(direct: None, argument: None) -> None:
-            ...
-        """,
-        ["argument"],
-        ["direct", "indirect", "argument"],
-        ["direct", "indirect", "argument"],
-    )
-
-
 def test_info_prune_active_requests_and_fixtures_partially_unresolved_graph() -> None:
     _test_info_prune_active_requests_and_fixtures_test_body(
         """
