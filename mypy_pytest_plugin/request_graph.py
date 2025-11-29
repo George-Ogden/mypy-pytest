@@ -104,19 +104,21 @@ class RequestGraph(CheckerWrapper):
 
     def _check_unmarked_fixture(self, fixture_name: str) -> None:
         for module_name in FixtureManager.resolution_sequence(self.module_name):
-            symbol_table_node = self.lookup_fullname(
+            result = self.lookup_fullname(
                 module_name.push_back(fixture_name),
                 context=None,
                 predicate=cast(
                     Callable[[Any], TypeGuard[FuncDef]], lambda node: isinstance(node, FuncDef)
                 ),
             )
-            if symbol_table_node is not None and isinstance(symbol_table_node.type, CallableType):
-                self.note(
-                    f"{fixture_name!r} is defined in '{module_name}', but not marked as a fixture.",
-                    context=symbol_table_node,
-                    code=None,
-                )
+            if result is not None:
+                module, node = result
+                if isinstance(node.type, CallableType):
+                    self.checker.msg.note(
+                        f"{fixture_name!r} is defined in '{module_name}', but not marked as a fixture.",
+                        context=node,
+                        file=module.path,
+                    )
 
     def _check_unused(self, active_requests: dict[str, Request]) -> None:
         for request in self.available_requests.values():
