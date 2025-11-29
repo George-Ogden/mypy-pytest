@@ -1,6 +1,6 @@
 from collections import deque
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import functools
 from typing import Any, TypeGuard, cast
 
@@ -30,7 +30,7 @@ class RequestGraph(CheckerWrapper):
     checker: TypeChecker
     available_requests: dict[str, Request]
     available_fixtures: dict[str, Fixture]
-    options: Options
+    options: Options = field(repr=False)
 
     @property
     def name(self) -> str:

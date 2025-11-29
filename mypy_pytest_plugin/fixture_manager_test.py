@@ -372,9 +372,9 @@ def test_fixture_manager_resolve_requests_complex_graph() -> None:
             "file_test.indirect_local",
             "file_test.local",
             "file_test.inverted_local",
+            "file_test.non_local",
             "conftest.indirect_inverted_local",
             "conftest.indirect_non_local",
-            "conftest.non_local",
         ],
     )
 
