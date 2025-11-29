@@ -56,58 +56,43 @@ class FixtureManager:
         return Fullname.from_string(fixture.func.__module__)
 
     def resolve_requests_and_fixtures(
-        self, start: Sequence[TestArgument], module: Fullname
+        self, test_arguments: Sequence[TestArgument], module: Fullname
     ) -> tuple[dict[str, Request], list[Fixture]]:
-        unresolved_requests = {
-            argument.name: Request(argument, source="argument", file=self.checker.path)
-            for argument in start
-        }
+        unresolved_requests = deque(
+            Request(argument, source="argument", file=self.checker.path)
+            for argument in test_arguments
+        )
         resolved_requests: dict[str, Request] = {}
         fixtures: list[Fixture] = []
-        for module_name in self.resolution_sequence(module):
-            module_fullname: str | None = str(module_name) if module_name else None
-            if module_fullname is None or module_fullname in self.checker.modules:
-                fixtures.extend(
-                    self.resolve_fixtures_at_module(
-                        unresolved_requests,
-                        resolved_requests,
-                        module=None
-                        if module_fullname is None
-                        else self.checker.modules[module_fullname],
-                    )
-                )
-        return resolved_requests | {
-            name: argument for name, argument in unresolved_requests.items()
-        }, fixtures
-
-    def resolve_fixtures_at_module(
-        self,
-        unresolved: dict[str, Request],
-        resolved: dict[str, Request],
-        *,
-        module: MypyFile | None,
-    ) -> Iterable[Fixture]:
-        maybe_resolved = deque(
-            unresolved.pop(argument_name) for argument_name in list(unresolved.keys())
-        )
-        while maybe_resolved:
-            request = maybe_resolved.popleft()
-            if request.name in resolved.keys() or request.name in unresolved.keys():
+        while unresolved_requests:
+            request = unresolved_requests.popleft()
+            if request.name in resolved_requests:
                 continue
-            fixture: Fixture | None = self.lookup_or_none(module, request.name)
-            if fixture is None:
-                unresolved[request.name] = request
-            else:
-                resolved[request.name] = request
-                yield fixture
+            resolved_requests[request.name] = request
+            fixture = self.resolve_fixture(request.name, module)
+            if fixture is not None:
+                fixtures.append(fixture)
                 for argument in fixture.arguments:
-                    maybe_resolved.append(
+                    unresolved_requests.append(
                         Request(
                             argument,
                             source="fixture",
                             file=fixture.file,
                         )
                     )
+        return resolved_requests, fixtures
+
+    def resolve_fixture(self, request_name: str, root_module: Fullname) -> Fixture | None:
+        for module_name in self.resolution_sequence(root_module):
+            module_fullname: str | None = str(module_name) if module_name else None
+            try:
+                module = None if module_fullname is None else self.checker.modules[module_fullname]
+            except KeyError:
+                continue
+            fixture: Fixture | None = self.lookup_or_none(module, request_name)
+            if fixture is not None:
+                return fixture
+        return None
 
     def lookup_or_none(self, module: MypyFile | None, request_name: str) -> Fixture | None:
         if module is None:

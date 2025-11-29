@@ -22,8 +22,8 @@ def _test_info_prune_active_requests_and_fixtures_test_body(
         test_info._available_requests[argument].used = True
 
     active_requests, active_fixtures = test_info.request_graph._prune_active_nodes_and_fixtures()
-    assert active_requests.keys() == set(expected_requests)
-    assert active_fixtures.keys() == set(expected_fixtures)
+    assert set(active_requests.keys()) == set(expected_requests)
+    assert set(active_fixtures.keys()) == set(expected_fixtures)
 
 
 def test_info_prune_active_requests_and_fixtures_no_fixtures_no_arguments() -> None:

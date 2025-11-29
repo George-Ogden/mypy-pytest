@@ -372,10 +372,42 @@ def test_fixture_manager_resolve_requests_complex_graph() -> None:
             "file_test.indirect_local",
             "file_test.local",
             "file_test.inverted_local",
+            "file_test.non_local",
             "conftest.indirect_inverted_local",
             "conftest.indirect_non_local",
-            "conftest.non_local",
         ],
+    )
+
+
+def test_fixture_manager_resolve_inverted_request_graph() -> None:
+    _fixture_manager_resolve_requests_and_fixtures_test_body(
+        [
+            (
+                "conftest",
+                """
+                import pytest
+
+                @pytest.fixture
+                def direct(indirect: None) -> None:
+                    ...
+                """,
+            ),
+            (
+                "file_test",
+                """
+                import pytest
+
+                @pytest.fixture
+                def indirect(argument: None) -> None:
+                    ...
+
+                def test_request(direct: None, argument: None) -> None:
+                    ...
+                """,
+            ),
+        ],
+        ["direct", "indirect", "argument"],
+        ["conftest.direct", "file_test.indirect"],
     )
 
 

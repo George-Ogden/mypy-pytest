@@ -33,7 +33,8 @@ class CheckerWrapper(abc.ABC):
         )
         if result is None:
             return None
-        return result.type
+        _module, node = result
+        return node.type
 
     @overload
     def lookup_fullname[T](
@@ -42,7 +43,7 @@ class CheckerWrapper(abc.ABC):
         *,
         context: Context | None,
         predicate: None | Callable[[Any], TypeGuard[T]] = None,
-    ) -> T | None: ...
+    ) -> tuple[MypyFile, T] | None: ...
 
     @overload
     def lookup_fullname(
@@ -51,7 +52,7 @@ class CheckerWrapper(abc.ABC):
         *,
         context: Context | None,
         predicate: None | Callable[[Any], bool] = None,
-    ) -> Any | None: ...
+    ) -> tuple[MypyFile, Any] | None: ...
 
     def lookup_fullname(
         self,
@@ -59,7 +60,7 @@ class CheckerWrapper(abc.ABC):
         *,
         context: Context | None,
         predicate: None | Callable[[Any], bool] = None,
-    ) -> Any | None:
+    ) -> tuple[MypyFile, Any] | None:
         module_name, target = (
             Fullname(()),
             fullname,
@@ -70,7 +71,7 @@ class CheckerWrapper(abc.ABC):
             if (module := self.checker.modules.get(str(module_name))) and (
                 result := self._lookup_fullname_in_module(module, target, predicate=predicate)
             ):
-                return result
+                return module, result
         if context is not None:
             self.fail(f"'{fullname!s}' does not exist.", context=context, code=NAME_DEFINED)
         return None
