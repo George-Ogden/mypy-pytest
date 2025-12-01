@@ -5,8 +5,8 @@ from typing import cast
 from mypy.checker import TypeChecker
 from mypy.nodes import CallExpr, Decorator, Expression, MemberExpr, MypyFile
 from mypy.options import Options
-from mypy.plugin import AttributeContext, FunctionContext, MethodContext, Plugin
-from mypy.types import CallableType, Type
+from mypy.plugin import AttributeContext, FunctionContext, FunctionSigContext, MethodContext, Plugin
+from mypy.types import CallableType, FunctionLike, Type
 
 from .defer import DeferralError
 from .excluded_test_checker import ExcludedTestChecker
@@ -73,10 +73,37 @@ class PytestPlugin(Plugin):
             MarkChecker(checker).check_attribute(expr)
         return ctx.default_attr_type
 
+    def get_function_signature_hook(
+        self, fullname: str
+    ) -> Callable[[FunctionSigContext], FunctionLike] | None:
+        if fullname == "_pytest.mark.param":
+            return self.inject_param_stub
+        return None
+
+    @classmethod
+    def inject_param_stub(cls, ctx: FunctionSigContext) -> FunctionLike:
+        if isinstance(ctx.api, TypeChecker):
+            symbol_table_node = ctx.api.lookup_qualified(f"{TYPES_MODULE}.param")
+            type_ = symbol_table_node.type
+            assert isinstance(type_, FunctionLike)
+            return type_
+        return ctx.default_signature
+
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
         if fullname.startswith("unittest.mock"):
             return functools.partial(FunctionMockCallChecker.check_mock_calls, fullname=fullname)
         if fullname == "_pytest.fixtures.fixture":
+            hook_fn = self.check_pytest_structure
+        else:
+            hook_fn = self.check_iterable_sequence
+        return compose(hook_fn, self.enable_test_attribute)
+
+    def get_method_hook(self, fullname: str) -> Callable[[MethodContext], Type] | None:
+        if fullname.startswith("unittest.mock"):
+            return functools.partial(MethodMockCallChecker.check_mock_calls, fullname=fullname)
+        if (
+            fullname.startswith("_pytest.mark.structures") and "Mark" in fullname
+        ) or fullname.startswith("_pytest.fixtures.FixtureFunctionMarker"):
             hook_fn = self.check_pytest_structure
         else:
             hook_fn = self.check_iterable_sequence
@@ -91,17 +118,6 @@ class PytestPlugin(Plugin):
         ):
             cls._update_return_type(ctx.default_return_type, checker=ctx.api)
         return ctx
-
-    def get_method_hook(self, fullname: str) -> Callable[[MethodContext], Type] | None:
-        if fullname.startswith("unittest.mock"):
-            return functools.partial(MethodMockCallChecker.check_mock_calls, fullname=fullname)
-        if (
-            fullname.startswith("_pytest.mark.structures") and "Mark" in fullname
-        ) or fullname.startswith("_pytest.fixtures.FixtureFunctionMarker"):
-            hook_fn = self.check_pytest_structure
-        else:
-            hook_fn = self.check_iterable_sequence
-        return compose(hook_fn, self.enable_test_attribute)
 
     @classmethod
     def check_iterable_sequence(cls, ctx: MethodContext | FunctionContext) -> Type:
