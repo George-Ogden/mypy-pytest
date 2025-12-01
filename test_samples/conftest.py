@@ -18,3 +18,7 @@ def fixture_and_mark() -> None: ...
 
 def missed_fixture_decorator_in_another_file() -> int:
     return 0
+
+
+@pytest.fixture
+def fixture_with_missing_argument(missing_argument: None) -> None: ...
