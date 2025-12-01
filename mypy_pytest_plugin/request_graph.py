@@ -94,10 +94,9 @@ class RequestGraph(CheckerWrapper):
     ) -> None:
         for request in active_requests.values():
             if not request.used and request.name not in active_fixtures:
-                self.checker.msg.fail(
+                self.fail(
                     f"Argname {request.name!r} not included in parametrization.",
                     context=request.context if request.source == "argument" else self.dummy_context,
-                    file=request.file,
                     code=MISSING_ARGNAME,
                 )
                 self._check_unmarked_fixture(request.name)
