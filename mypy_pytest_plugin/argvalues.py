@@ -9,11 +9,11 @@ from .test_signature import TestSignature
 
 @dataclass(frozen=True, slots=True)
 class Argvalues:
-    node: Expression
+    expr: Expression
 
     def __iter__(self) -> Iterator[TestCase]:
-        assert isinstance(self.node, SetExpr | ListExpr | TupleExpr)
-        for item in self.node.items:
+        assert isinstance(self.expr, SetExpr | ListExpr | TupleExpr)
+        for item in self.expr.items:
             yield TestCase(item)
 
     def check_sequence_against(self, signature: TestSignature) -> None:
@@ -21,7 +21,7 @@ class Argvalues:
             test_case.check_against(signature)
 
     def check_entire_against(self, signature: TestSignature) -> None:
-        signature.check_sequence(self.node)
+        signature.check_sequence(self.expr)
 
     def check_against(self, signature: TestSignature) -> None:
         if self.is_ordered_sequence:
@@ -31,6 +31,6 @@ class Argvalues:
 
     @property
     def is_ordered_sequence(self) -> bool:
-        return isinstance(self.node, SetExpr | ListExpr | TupleExpr) and not any(
-            isinstance(item, StarExpr) for item in self.node.items
+        return isinstance(self.expr, SetExpr | ListExpr | TupleExpr) and not any(
+            isinstance(item, StarExpr) for item in self.expr.items
         )

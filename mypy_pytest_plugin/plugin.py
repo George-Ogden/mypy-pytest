@@ -169,8 +169,8 @@ class PytestPlugin(Plugin):
             return_type.fallback = checker.named_type(f"{TYPES_MODULE}.Testable")
 
     @classmethod
-    def _check_decorators(cls, node: Decorator, checker: TypeChecker) -> None:
-        test_info = TestInfo.from_fn_def(node, checker=checker)
+    def _check_decorators(cls, decorator: Decorator, checker: TypeChecker) -> None:
+        test_info = TestInfo.from_fn_def(decorator, checker=checker)
         if test_info is not None:
             test_info.check()
 

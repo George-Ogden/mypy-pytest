@@ -178,7 +178,9 @@ def _many_items_test_signature_check_items_test_body(defs: str, *, passes: bool)
     test_signature_custom_check_test_body(
         defs,
         passes,
-        ManyItemsTestSignature.check_items,
+        lambda test_signature, expression: ManyItemsTestSignature.check_items(
+            test_signature, expression.items, context=expression
+        ),
         bound=TupleExpr | ListExpr,  # type: ignore
     )
 

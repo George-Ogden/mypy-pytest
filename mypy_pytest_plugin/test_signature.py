@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Self, TypeGuard, cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import ArgKind, Context, Expression, ListExpr, TupleExpr
+from mypy.nodes import ArgKind, Context, Expression
 from mypy.types import CallableType, NoneType, Type, TypeVarLikeType
 
 
@@ -46,20 +46,20 @@ class TestSignature(abc.ABC):
     @abc.abstractmethod
     def items_signature(self) -> CallableType: ...
 
-    def _check_call(self, callee: CallableType, args: list[Expression], node: Context) -> None:
+    def _check_call(self, callee: CallableType, args: list[Expression], context: Context) -> None:
         self.checker.expr_checker.check_call(
             callee=callee,
             args=args,
             arg_kinds=[ArgKind.ARG_POS] * len(args),
-            context=node,
+            context=context,
             callable_name=self.fn_name,
         )
 
-    def check_items(self, node: TupleExpr | ListExpr) -> None:
-        self._check_call(self.items_signature, node.items, node)
+    def check_items(self, items: list[Expression], *, context: Context) -> None:
+        self._check_call(self.items_signature, items, context)
 
-    def check_test_case(self, node: Expression) -> None:
-        self._check_call(self.test_case_signature, [node], node)
+    def check_test_case(self, expr: Expression) -> None:
+        self._check_call(self.test_case_signature, [expr], expr)
 
-    def check_sequence(self, node: Expression) -> None:
-        self._check_call(self.sequence_signature, [node], node)
+    def check_sequence(self, expr: Expression) -> None:
+        self._check_call(self.sequence_signature, [expr], expr)

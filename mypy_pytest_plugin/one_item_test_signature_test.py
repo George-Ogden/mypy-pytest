@@ -5,6 +5,34 @@ from .test_utils import (
 )
 
 
+def _one_item_test_signature_items_signature_test_body(defs: str) -> None:
+    test_signature_custom_signature_test_body(defs, attr="items_signature", extra_expected=True)
+
+
+def test_one_item_test_signature_items_signature() -> None:
+    _one_item_test_signature_items_signature_test_body(
+        """
+        def test_case(x_1: int) -> None:
+            ...
+
+        def expected(x: int) -> None:
+            ...
+        """,
+    )
+
+
+def test_one_item_test_signature_items_signature_generic() -> None:
+    _one_item_test_signature_items_signature_test_body(
+        """
+        def test_case[T](x_1: T) -> None:
+            ...
+
+        def expected[T](x: T) -> None:
+            ...
+        """,
+    )
+
+
 def _one_item_test_signature_test_case_signature_test_body(defs: str) -> None:
     test_signature_custom_signature_test_body(defs, attr="test_case_signature", extra_expected=True)
 

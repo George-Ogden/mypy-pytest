@@ -282,7 +282,7 @@ def default_argnames_parser(checker: TypeChecker) -> ArgnamesParser:
 
 
 def test_info_from_defs(defs: str, *, name: str) -> TestInfo:
-    parse_result = parse(defs)
+    parse_result = parse(defs, header="import mypy_pytest_plugin_types")
     parse_result.accept_all()
     test_node = parse_result.defs[name]
     assert isinstance(test_node, FuncDef | Decorator)

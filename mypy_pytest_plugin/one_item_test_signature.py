@@ -25,7 +25,14 @@ class OneItemTestSignature(TestSignature):
 
     @property
     def items_signature(self) -> CallableType:
-        raise NotImplementedError()
+        return CallableType(
+            arg_types=[self.arg_type],
+            arg_names=[self.arg_name],
+            arg_kinds=[ArgKind.ARG_POS],
+            fallback=self.checker.named_type("builtins.function"),
+            ret_type=NoneType(),
+            variables=self.type_variables,
+        )
 
     @property
     def signature_type(self) -> Type:

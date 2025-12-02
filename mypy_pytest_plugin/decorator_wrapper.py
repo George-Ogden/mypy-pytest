@@ -17,21 +17,21 @@ class DecoratorWrapper(CheckerWrapper):
     checker: TypeChecker
 
     @classmethod
-    def decorators_from_nodes(
-        cls, nodes: Sequence[Expression], *, checker: TypeChecker
+    def decorators_from_exprs(
+        cls, exprs: Sequence[Expression], *, checker: TypeChecker
     ) -> Sequence[Self]:
         return [
             cls(node, checker=checker)
-            for node in nodes
-            if cls._is_parametrized_decorator_node(node, checker=checker)
+            for node in exprs
+            if cls._is_parametrized_decorator_expr(node, checker=checker)
         ]
 
     @classmethod
-    def _is_parametrized_decorator_node(
-        cls, node: Expression, checker: TypeChecker
+    def _is_parametrized_decorator_expr(
+        cls, expr: Expression, checker: TypeChecker
     ) -> TypeGuard[CallExpr]:
-        if isinstance(node, CallExpr):
-            callee_type = node.callee.accept(checker.expr_checker)
+        if isinstance(expr, CallExpr):
+            callee_type = expr.callee.accept(checker.expr_checker)
             return (
                 isinstance(callee_type, Instance)
                 and callee_type.type.fullname == "_pytest.mark.structures._ParametrizeMarkDecorator"
