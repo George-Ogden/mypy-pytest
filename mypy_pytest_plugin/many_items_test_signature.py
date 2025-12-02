@@ -3,9 +3,10 @@ from dataclasses import dataclass
 
 from mypy.nodes import ArgKind
 from mypy.subtypes import is_same_type
-from mypy.types import CallableType, NoneType, TupleType, Type
+from mypy.types import CallableType, NoneType, TupleType, Type, UnionType
 
 from .test_signature import TestSignature
+from .types_module import TYPES_MODULE
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -43,17 +44,24 @@ class ManyItemsTestSignature(TestSignature):
             variables=self.type_variables,
         )
 
-    def _test_case_arg_type(self) -> TupleType:
-        return TupleType(list(self.arg_types), fallback=self.checker.named_type("builtins.tuple"))
+    def signature_type(self) -> Type:
+        return UnionType(
+            [
+                TupleType(list(self.arg_types), fallback=self.checker.named_type("builtins.tuple")),
+                self.checker.named_generic_type(
+                    f"{TYPES_MODULE}.ParameterSet", list(self.arg_types)
+                ),
+            ]
+        )
 
     @property
     def test_case_signature(self) -> CallableType:
-        return self._one_unnamed_arg_fn(self._test_case_arg_type())
+        return self._one_unnamed_arg_fn(self.signature_type())
 
     @property
     def sequence_signature(self) -> CallableType:
         arg_type = self.checker.named_generic_type(
             "typing.Iterable",
-            args=[self._test_case_arg_type()],
+            args=[self.signature_type()],
         )
         return self._one_unnamed_arg_fn(arg_type)

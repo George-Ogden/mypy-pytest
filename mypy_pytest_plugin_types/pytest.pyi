@@ -5,7 +5,9 @@ from pytest import Mark, MarkDecorator  # noqa: PT013
 
 class ParameterSet[*Ts]:
     @classmethod
-    def __test_init__(cls, *params: *Ts) -> ParameterSet[*Ts]: ...
+    def __test_init__(
+        cls, *params: *Ts, marks: Collection[MarkDecorator | Mark] = ()
+    ) -> ParameterSet[*Ts]: ...
 
 def param[*Ts](
     *values: *Ts,

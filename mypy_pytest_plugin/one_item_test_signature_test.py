@@ -183,3 +183,17 @@ def test_one_item_test_signature_check_sequence_nested_val_list() -> None:
         """,
         passes=False,
     )
+
+
+def test_one_item_test_signature_check_sequence_param_edge_case() -> None:
+    _one_item_test_signature_check_sequence_test_body(
+        """
+        from mypy_pytest_plugin_types import ParameterSet
+        def test_case(x_1: int) -> None:
+            ...
+
+        vals = ParameterSet.__test_init__(0, 1)
+
+        """,
+        passes=False,
+    )
