@@ -1,10 +1,11 @@
 from collections.abc import Collection
 
-from _pytest.mark import ParameterSet as PytestParameterSet
 from _pytest.mark import _HiddenParam
 from pytest import Mark, MarkDecorator  # noqa: PT013
 
-class ParameterSet[*Ts](PytestParameterSet): ...
+class ParameterSet[*Ts]:
+    @classmethod
+    def __test_init__(cls, *params: *Ts) -> ParameterSet[*Ts]: ...
 
 def param[*Ts](
     *values: *Ts,
