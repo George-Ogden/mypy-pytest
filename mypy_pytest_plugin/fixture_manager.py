@@ -13,6 +13,7 @@ from mypy.nodes import MypyFile
 from mypy.types import CallableType, Instance, LiteralType, Type, UnionType
 from pytest import FixtureDef  # noqa: PT013
 
+from .checker_wrapper import CheckerWrapper
 from .fixture import Fixture, FixtureScope
 from .fullname import Fullname
 from .request import Request
@@ -22,7 +23,7 @@ from .utils import extract_singleton, strict_cast, strict_not_none
 
 
 @dataclass(frozen=True, slots=True)
-class FixtureManager:
+class FixtureManager(CheckerWrapper):
     checker: TypeChecker
 
     @classmethod
@@ -57,7 +58,7 @@ class FixtureManager:
     def _fixture_module(cls, fixture: FixtureDef) -> Fullname:
         return Fullname.from_string(fixture.func.__module__)
 
-    def autouse_fixtures(self, root_module: Fullname) -> dict[str, Fixture]:
+    def autouse_fixtures(self, root_module: Fullname) -> Iterable[Fixture]:
         fixtures = {}
         for module_name in itertools.chain(
             self.resolution_sequence(root_module), self.default_fixture_module_names()
@@ -68,7 +69,7 @@ class FixtureManager:
                     if fixture_name not in fixtures:
                         fixture = self._module_lookup(module, fixture_name)
                         fixtures[fixture_name] = strict_not_none(fixture)
-        return fixtures
+        return fixtures.values()
 
     @classmethod
     def autouse_fixture_names_from_module(cls, module: MypyFile) -> Sequence[str]:
@@ -98,7 +99,28 @@ class FixtureManager:
             for argument in test_arguments
         )
         resolved_requests: dict[str, Request] = {}
-        fixtures: list[Fixture] = []
+        fixtures = list(
+            self._resolve_requests_and_fixtures_from_queue(
+                unresolved_requests, resolved_requests, module
+            )
+        )
+        autouse_fixtures = deque(
+            Request.from_autouse(fixture) for fixture in self.autouse_fixtures(module)
+        )
+        fixtures.extend(
+            self._resolve_requests_and_fixtures_from_queue(
+                autouse_fixtures, resolved_requests, module
+            )
+        )
+
+        return resolved_requests, fixtures
+
+    def _resolve_requests_and_fixtures_from_queue(
+        self,
+        unresolved_requests: deque[Request],
+        resolved_requests: dict[str, Request],
+        module: Fullname,
+    ) -> Iterable[Fixture]:
         while unresolved_requests:
             request = unresolved_requests.popleft()
             if request.name in resolved_requests:
@@ -106,7 +128,7 @@ class FixtureManager:
             resolved_requests[request.name] = request
             fixture = self.resolve_fixture(request.name, module)
             if fixture is not None:
-                fixtures.append(fixture)
+                yield fixture
                 for argument in fixture.arguments:
                     unresolved_requests.append(
                         Request(
@@ -115,7 +137,6 @@ class FixtureManager:
                             file=fixture.file,
                         )
                     )
-        return resolved_requests, fixtures
 
     @functools.lru_cache  # noqa: B019
     def resolve_fixture(self, request_name: str, root_module: Fullname) -> Fixture | None:

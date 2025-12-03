@@ -1,10 +1,11 @@
 from collections.abc import Sequence
 from dataclasses import KW_ONLY, dataclass, field
-from typing import Literal
+from typing import Literal, Self
 
 from mypy.nodes import Context
 from mypy.types import Type, TypeVarLikeType
 
+from .fixture import Fixture
 from .test_argument import TestArgument
 
 
@@ -13,8 +14,14 @@ class Request:
     request: TestArgument
     _: KW_ONLY
     file: str
-    source: Literal["argument", "fixture"]
+    source: Literal["argument", "fixture", "autouse"]
     used: bool = field(default=False, init=False)
+
+    @classmethod
+    def from_autouse(cls, fixture: Fixture) -> Self:
+        request = cls(fixture.as_argument(), file=fixture.file, source="autouse")
+        request.used = True
+        return request
 
     @property
     def name(self) -> str:

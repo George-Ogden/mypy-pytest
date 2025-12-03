@@ -454,6 +454,93 @@ def test_fixture_manager_resolve_requests_request_cycles() -> None:
     )
 
 
+def test_fixture_manager_resolve_requests_autouse_fixtures() -> None:
+    _fixture_manager_resolve_requests_and_fixtures_test_body(
+        [
+            (
+                "file_test",
+                """
+                import pytest
+                from typing import Literal
+
+                @pytest.fixture
+                def requested_fixture() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def automatic_fixture(requested_fixture: None, requested_arg: None) -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def automatic_fixture2() -> None:
+                    ...
+
+                @pytest.fixture
+                def manual_fixture() -> None:
+                    ...
+
+                def test_request(manual_fixture: None) -> None:
+                    ...
+
+                __autouse__: Literal["automatic_fixture", "automatic_fixture2"]
+                """,
+            ),
+        ],
+        [
+            "manual_fixture",
+            "automatic_fixture",
+            "automatic_fixture2",
+            "requested_fixture",
+            "requested_arg",
+        ],
+        [
+            "file_test.manual_fixture",
+            "file_test.automatic_fixture",
+            "file_test.automatic_fixture2",
+            "file_test.requested_fixture",
+        ],
+    )
+
+
+def test_fixture_manager_resolve_requests_autouse_fixture_ignored() -> None:
+    _fixture_manager_resolve_requests_and_fixtures_test_body(
+        [
+            (
+                "conftest",
+                """
+                import pytest
+                from typing import Literal
+
+                @pytest.fixture
+                def requested_fixture() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def non_automatic_fixture(requested_fixture: None) -> None:
+                    ...
+
+                __autouse__: Literal["non_automatic_fixture"]
+                """,
+            ),
+            (
+                "file_test",
+                """
+                import pytest
+
+                @pytest.fixture
+                def non_automatic_fixture() -> None:
+                    ...
+
+                def test_request(non_automatic_fixture: None) -> None:
+                    ...
+                """,
+            ),
+        ],
+        ["non_automatic_fixture"],
+        ["file_test.non_automatic_fixture"],
+    )
+
+
 def _fixture_manager_resolve_autouse_fixtures_test_body(
     modules: list[tuple[str, str]], expected_fixtures_fullnames: list[str]
 ) -> None:
@@ -483,7 +570,7 @@ def _fixture_manager_resolve_autouse_fixtures_test_body(
         strict_cast(Decorator, checker.modules[module_name].names[name].node).var.type = type_
 
     fixtures = FixtureManager(checker).autouse_fixtures(Fullname.from_string(module_name))
-    assert sorted(str(fixture.fullname) for fixture in fixtures.values()) == sorted(
+    assert sorted(str(fixture.fullname) for fixture in fixtures) == sorted(
         expected_fixtures_fullnames
     )
 
