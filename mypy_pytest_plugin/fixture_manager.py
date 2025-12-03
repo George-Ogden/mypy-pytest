@@ -2,6 +2,7 @@ from collections import deque
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 import functools
+import itertools
 from typing import cast
 
 import _pytest.config
@@ -9,7 +10,7 @@ from _pytest.fixtures import FixtureManager as PytestFixtureManager
 from _pytest.main import Session
 from mypy.checker import TypeChecker
 from mypy.nodes import MypyFile
-from mypy.types import CallableType, Instance, LiteralType
+from mypy.types import CallableType, Instance, LiteralType, Type, UnionType
 from pytest import FixtureDef  # noqa: PT013
 
 from .fixture import Fixture, FixtureScope
@@ -17,6 +18,7 @@ from .fullname import Fullname
 from .request import Request
 from .test_argument import TestArgument
 from .types_module import TYPES_MODULE
+from .utils import extract_singleton, strict_cast, strict_not_none
 
 
 @dataclass(frozen=True, slots=True)
@@ -55,6 +57,39 @@ class FixtureManager:
     def _fixture_module(cls, fixture: FixtureDef) -> Fullname:
         return Fullname.from_string(fixture.func.__module__)
 
+    def autouse_fixtures(self, root_module: Fullname) -> dict[str, Fixture]:
+        fixtures = {}
+        for module_name in itertools.chain(
+            self.resolution_sequence(root_module), self.default_fixture_module_names()
+        ):
+            module = self.checker.modules.get(str(module_name))
+            if module is not None:
+                for fixture_name in self.autouse_fixture_names_from_module(module):
+                    if fixture_name not in fixtures:
+                        fixture = self._module_lookup(module, fixture_name)
+                        fixtures[fixture_name] = strict_not_none(fixture)
+        return fixtures
+
+    @classmethod
+    def autouse_fixture_names_from_module(cls, module: MypyFile) -> Sequence[str]:
+        autouse_node = module.names.get(Fixture.AUTOUSE_NAME)
+        if autouse_node is None:
+            return []
+        assert autouse_node.type is not None
+        return cls.autouse_fixture_names_from_type(strict_not_none(autouse_node.type))
+
+    @classmethod
+    def autouse_fixture_names_from_type(cls, type_: Type) -> Sequence[str]:
+        match type_:
+            case UnionType():
+                return [
+                    extract_singleton(cls.autouse_fixture_names_from_type(type_))
+                    for type_ in type_.items
+                ]
+            case LiteralType():
+                return [strict_cast(str, type_.value)]
+        raise TypeError()
+
     def resolve_requests_and_fixtures(
         self, test_arguments: Sequence[TestArgument], module: Fullname
     ) -> tuple[dict[str, Request], list[Fixture]]:
@@ -82,6 +117,7 @@ class FixtureManager:
                     )
         return resolved_requests, fixtures
 
+    @functools.lru_cache  # noqa: B019
     def resolve_fixture(self, request_name: str, root_module: Fullname) -> Fixture | None:
         for module_name in self.resolution_sequence(root_module):
             module_fullname: str | None = str(module_name) if module_name else None

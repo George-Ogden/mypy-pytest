@@ -6,7 +6,16 @@ import enum
 from typing import ClassVar, Final, Self, cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import CallExpr, Context, Decorator, Expression, FuncDef
+from mypy.nodes import (
+    GDEF,
+    CallExpr,
+    Context,
+    Decorator,
+    Expression,
+    FuncDef,
+    SymbolTableNode,
+    Var,
+)
 from mypy.subtypes import is_subtype
 from mypy.types import (
     AnyType,
@@ -17,6 +26,7 @@ from mypy.types import (
     Type,
     TypeOfAny,
     TypeVarLikeType,
+    UnionType,
 )
 
 from .argmapper import ArgMapper
@@ -32,6 +42,7 @@ from .error_codes import (
 from .fullname import Fullname
 from .test_argument import TestArgument
 from .types_module import TYPES_MODULE
+from .utils import strict_cast, strict_not_none
 
 FixtureScope = enum.IntEnum(
     "FixtureScope", ["function", "class", "module", "package", "session", "unknown"]
@@ -41,6 +52,7 @@ DEFAULT_SCOPE: Final[FixtureScope] = FixtureScope.function
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Fixture:
+    AUTOUSE_NAME: ClassVar[str] = "__autouse__"
     fullname: Fullname
     file: str
     return_type: Type
@@ -68,8 +80,9 @@ class Fixture:
         func = type.definition
         assert isinstance(func, FuncDef | None)
         if isinstance(func, FuncDef):
-            arguments = TestArgument.from_fn_def(func, checker=None, source="fixture")
-            assert arguments is not None
+            arguments = strict_not_none(
+                TestArgument.from_fn_def(func, checker=None, source="fixture")
+            )
             context: Context = func
         else:
             arguments = TestArgument.from_type(type)
@@ -107,6 +120,8 @@ class Fixture:
 
     def as_fixture_type(self, *, decorator: Decorator, checker: TypeChecker) -> Type:
         assert decorator.func.type is not None
+        if self.autouse:
+            self.save_to_autouse(checker)
         return checker.named_generic_type(
             f"{TYPES_MODULE}.FixtureType",
             [
@@ -119,6 +134,33 @@ class Fixture:
                 LiteralType(self.autouse, fallback=checker.named_type("builtins.object")),
             ],
         )
+
+    def save_to_autouse(self, checker: TypeChecker) -> None:
+        if str(self.module_name) in checker.modules:
+            node = checker.modules[str(self.module_name)].names.setdefault(
+                self.AUTOUSE_NAME,
+                SymbolTableNode(
+                    GDEF,
+                    Var(
+                        self.AUTOUSE_NAME,
+                        UnionType([]),
+                    ),
+                    implicit=True,
+                    module_hidden=True,
+                    plugin_generated=True,
+                ),
+            )
+            literal_type = LiteralType(
+                self.name,
+                fallback=checker.named_type("builtins.str"),
+            )
+            assert isinstance(node.node, Var)
+            assert isinstance(node.type, UnionType)
+            if not any(
+                strict_cast(LiteralType, item).value == literal_type.value
+                for item in node.type.items
+            ):
+                node.type.items.append(literal_type)
 
 
 @dataclass(frozen=True, slots=True)

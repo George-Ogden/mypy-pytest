@@ -2,12 +2,15 @@ from collections.abc import Sequence
 from unittest import mock
 
 from inline_snapshot import snapshot
-from mypy.nodes import FuncDef
+from mypy.nodes import Decorator, FuncDef
+from mypy.subtypes import is_same_type
 
+from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .test_argument import TestArgument
 from .test_utils import parse_multiple, simple_module_lookup
+from .utils import strict_cast, strict_not_none
 
 
 def _fixture_manager_conftest_names_test_body(fullname: str, expected_fullnames: list[str]) -> None:
@@ -107,7 +110,7 @@ def _fixture_manager_resolve_requests_and_fixtures_test_body(
     assert not checker.errors.is_errors()
     assert sorted(requests.keys()) == sorted(expected_request_names)
     assert sorted(str(fixture.fullname) for fixture in fixtures) == sorted(
-        fullname for fullname in expected_fixture_fullnames
+        expected_fixture_fullnames
     )
 
 
@@ -447,5 +450,240 @@ def test_fixture_manager_resolve_requests_request_cycles() -> None:
             "file_test.indirect_cycle_1",
             "file_test.indirect_cycle_2",
             "file_test.indirect_cycle_3",
+        ],
+    )
+
+
+def _fixture_manager_resolve_autouse_fixtures_test_body(
+    modules: list[tuple[str, str]], expected_fixtures_fullnames: list[str]
+) -> None:
+    parse_result = parse_multiple(modules, header="import mypy_pytest_plugin_types")
+
+    overrides = {}
+    for module_name, module in parse_result.modules.items():
+        checker = parse_result.checkers[module_name]
+        parse_result.checker_accept_all(checker)
+        autouse_node = module.names.pop(Fixture.AUTOUSE_NAME, None)
+        for name, node in list(module.names.items()):
+            if (
+                isinstance(decorator := node.node, Decorator)
+                and (fixture := Fixture.from_decorator(decorator, checker)) is not None
+            ):
+                overrides[(module_name, name)] = fixture.as_fixture_type(
+                    decorator=decorator, checker=checker
+                )
+        if autouse_node is not None:
+            assert is_same_type(
+                strict_not_none(module.names[Fixture.AUTOUSE_NAME].type),
+                strict_not_none(autouse_node.type),
+            )
+            module.names[Fixture.AUTOUSE_NAME] = autouse_node
+
+    for (module_name, name), type_ in overrides.items():
+        strict_cast(Decorator, checker.modules[module_name].names[name].node).var.type = type_
+
+    fixtures = FixtureManager(checker).autouse_fixtures(Fullname.from_string(module_name))
+    assert sorted(str(fixture.fullname) for fixture in fixtures.values()) == sorted(
+        expected_fixtures_fullnames
+    )
+
+
+def test_fixture_manager_resolve_autouse_fixtures_none() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body([("file_test", "")], [])
+
+
+def test_fixture_manager_resolve_autouse_fixtures_same_file() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body(
+        [
+            (
+                "file_test",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["fixture"]
+
+                @pytest.fixture(autouse=True)
+                def fixture() -> None:
+                    ...
+                """,
+            )
+        ],
+        ["file_test.fixture"],
+    )
+
+
+def test_fixture_manager_resolve_autouse_fixtures_conftest() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body(
+        [
+            (
+                "conftest",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["conftest_fixture"]
+
+                @pytest.fixture(autouse=True)
+                def conftest_fixture() -> None:
+                    ...
+                """,
+            ),
+            (
+                "file_test",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["file_fixture"]
+
+                @pytest.fixture(autouse=True)
+                def file_fixture() -> None:
+                    ...
+                """,
+            ),
+        ],
+        ["conftest.conftest_fixture", "file_test.file_fixture"],
+    )
+
+
+def test_fixture_manager_resolve_autouse_fixtures_nested_conftest() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body(
+        [
+            (
+                "conftest",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["conftest_fixture"]
+
+                @pytest.fixture(autouse=True)
+                def conftest_fixture() -> None:
+                    ...
+                """,
+            ),
+            (
+                "nested.file_test",
+                """
+                import pytest
+                from typing import Literal
+
+                __autouse__: Literal["file_fixture1", "file_fixture2"]
+
+                @pytest.fixture(autouse=True)
+                def file_fixture1() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def file_fixture2() -> None:
+                    ...
+                """,
+            ),
+        ],
+        [
+            "conftest.conftest_fixture",
+            "nested.file_test.file_fixture1",
+            "nested.file_test.file_fixture2",
+        ],
+    )
+
+
+def test_fixture_manager_resolve_autouse_fixtures_conflicting_names() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body(
+        [
+            (
+                "conftest",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["conftest_fixture", "fixture"]
+
+                @pytest.fixture(autouse=True)
+                def fixture() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def conftest_fixture() -> None:
+                    ...
+                """,
+            ),
+            (
+                "nested.conftest",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["conftest_fixture", "fixture"]
+
+                @pytest.fixture(autouse=True)
+                def fixture() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def conftest_fixture() -> None:
+                    ...
+                """,
+            ),
+            (
+                "nested.file_test",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["file_fixture", "fixture"]
+
+                @pytest.fixture(autouse=True)
+                def file_fixture() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def fixture() -> None:
+                    ...
+                """,
+            ),
+        ],
+        [
+            "nested.conftest.conftest_fixture",
+            "nested.file_test.file_fixture",
+            "nested.file_test.fixture",
+        ],
+    )
+
+
+def test_fixture_manager_resolve_autouse_fixtures_builtin() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body(
+        [
+            (
+                "_pytest.capture",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["capture_fixture"]
+
+                @pytest.fixture(autouse=True)
+                def capture_fixture() -> None:
+                    ...
+                """,
+            ),
+            (
+                "file_test",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["fixture"]
+
+                @pytest.fixture(autouse=True)
+                def fixture() -> None:
+                    ...
+                """,
+            ),
+        ],
+        [
+            "_pytest.capture.capture_fixture",
+            "file_test.fixture",
         ],
     )
