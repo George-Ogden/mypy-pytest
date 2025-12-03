@@ -32,6 +32,7 @@ from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
 from .test_info import TestInfo
 from .test_signature import TestSignature
+from .types_module import TYPES_MODULE
 
 
 @dataclass(frozen=True)
@@ -91,11 +92,11 @@ class MultiParseResult(_ParseResultBase):
         )
 
 
-def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = False) -> MultiParseResult:
+def parse_multiple(modules: Sequence[tuple[str, str]], *, header: str = "") -> MultiParseResult:
     modules = [
         (
             module_name,
-            f"{'import _pytest.fixtures\nimport typing\n' if header else ''}{textwrap.dedent(code)}".strip(),
+            f"{header + '\n'}{textwrap.dedent(code)}".strip(),
         )
         for module_name, code in modules
     ]
@@ -160,7 +161,7 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: bool = False) 
 
 
 @functools.lru_cache(maxsize=1)
-def parse(code: str, *, header: bool = True, module_name: str = "test_module") -> ParseResult:
+def parse(code: str, *, header: str = "", module_name: str = "test_module") -> ParseResult:
     parse_result = parse_multiple([(module_name, code)], header=header)
     return parse_result.single(module_name)
 
@@ -208,7 +209,7 @@ test_signature_from_fn_type.__test__ = False  # type: ignore
 def get_signature_and_vals(
     defs: str,
 ) -> tuple[TestSignature, Expression]:
-    parse_result = parse(defs)
+    parse_result = parse(defs, header=f"import {TYPES_MODULE}")
     fn_type = parse_result.types["test_case"]
     assert isinstance(fn_type, CallableType)
     test_signature = test_signature_from_fn_type(
@@ -232,7 +233,7 @@ def test_signature_custom_signature_test_body(
     attr: Literal["items_signature", "test_case_signature", "sequence_signature"],
     extra_expected: bool,
 ) -> None:
-    parse_result = parse(fn_defs)
+    parse_result = parse(fn_defs, header=f"import {TYPES_MODULE}")
     fn_type = parse_result.types["test_case"]
     assert isinstance(fn_type, CallableType)
     test_signature = test_signature_from_fn_type(
@@ -281,7 +282,7 @@ def default_argnames_parser(checker: TypeChecker) -> ArgnamesParser:
 
 
 def test_info_from_defs(defs: str, *, name: str) -> TestInfo:
-    parse_result = parse(defs)
+    parse_result = parse(defs, header="import mypy_pytest_plugin_types")
     parse_result.accept_all()
     test_node = parse_result.defs[name]
     assert isinstance(test_node, FuncDef | Decorator)

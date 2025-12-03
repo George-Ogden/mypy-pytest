@@ -126,6 +126,12 @@ UNKNOWN_MARK: Final[ErrorCode] = ErrorCode(
     category="Pytest",
 )
 
+PARAM_USEFIXTURES: Final[ErrorCode] = ErrorCode(
+    "param-usefixtures",
+    "`pytest.mark.usefixtures` is not allowed as a `pytest.param`.",
+    category="Pytest",
+)
+
 ITERABLE_SEQUENCE: Final[ErrorCode] = ErrorCode(
     "iterable-sequence",
     """"Sequence" passed into a function expecting "Iterable" in a test.""",

@@ -1,6 +1,6 @@
 test_samples/same_file_fixture_test.py:20: error: 'test_invalid_fixture_type' requests 'bool_fixture' with type "bool", but expects type "Literal[True]".  [fixture-arg-type]
 test_samples/same_file_fixture_test.py:24: error: 'indirect_bool_fixture_invalid' requests 'bool_fixture' with type "bool", but expects type "Literal[False]". This happens when executing 'test_indirect_bool_fixture_invalid'.  [fixture-arg-type]
-test_samples/same_file_fixture_test.py:32: error: Argument 1 has incompatible type "Literal[False]"; expected "Literal[True]"  [arg-type]
+test_samples/same_file_fixture_test.py:32: error: Argument 1 has incompatible type "Literal[False]"; expected "Literal[True] | ParameterSet[Literal[True]]"  [arg-type]
 test_samples/same_file_fixture_test.py:36: error: No return value expected  [return-value]
 test_samples/same_file_fixture_test.py:41: error: Argname 'bool_fixture' is invalid as the fixture is shadowed by another argument.  [repeated-fixture-argname]
 test_samples/same_file_fixture_test.py:49: error: Argname 'missing_arg' not included in parametrization.  [missing-argname]

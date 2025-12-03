@@ -80,8 +80,8 @@ class ArgnamesParser(CheckerWrapper):
             )
         return None
 
-    def parse_names_sequence(self, node: TupleExpr | ListExpr) -> list[str] | None:
-        names = [self._parse_name(item) for item in node.items]
+    def parse_names_sequence(self, expr: TupleExpr | ListExpr) -> list[str] | None:
+        names = [self._parse_name(item) for item in expr.items]
         if all([isinstance(name, str) for name in names]):
             return cast(list[str], names)
         return None

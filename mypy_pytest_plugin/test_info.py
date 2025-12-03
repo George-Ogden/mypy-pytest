@@ -45,7 +45,7 @@ class TestInfo(CheckerWrapper):
         test_arguments = TestArgument.from_fn_def(fn_def, checker=checker, source="test")
         if test_arguments is None:
             return None
-        test_decorators = DecoratorWrapper.decorators_from_nodes(decorators, checker=checker)
+        test_decorators = DecoratorWrapper.decorators_from_exprs(decorators, checker=checker)
         return cls(
             fullname=Fullname.from_string(fn_def.fullname),
             fn_name=fn_def.name,
@@ -144,13 +144,13 @@ class TestInfo(CheckerWrapper):
         return ArgnamesParser(self.checker)
 
     def _check_argnames_and_argvalues(
-        self, arg_names_node: Expression, arg_values_node: Expression
+        self, arg_names_expr: Expression, arg_values_expr: Expression
     ) -> None:
-        arg_names = self._argnames_parser.parse_names(arg_names_node)
-        if arg_names is not None and self._check_arg_names(arg_names, context=arg_names_node):
+        arg_names = self._argnames_parser.parse_names(arg_names_expr)
+        if arg_names is not None and self._check_arg_names(arg_names, context=arg_names_expr):
             sub_signature = self.sub_signature(arg_names)
             if sub_signature is not None:
-                arg_values = Argvalues(arg_values_node)
+                arg_values = Argvalues(arg_values_expr)
                 arg_values.check_against(sub_signature)
 
     def _check_arg_names(self, arg_names: str | list[str], *, context: Context) -> bool:

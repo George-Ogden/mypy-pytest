@@ -12,4 +12,13 @@ test_samples/invalid_test.py:47: note: This still type checks, but could be made
 test_samples/invalid_test.py:48: error: Argument has type "list[int]"; expected "Iterable[int]".  [iterable-sequence]
 test_samples/invalid_test.py:48: note: This still type checks, but could be made more robust by using `iter()`
 test_samples/invalid_test.py:61: error: Function is missing a type annotation  [no-untyped-def]
-Found 12 errors in 1 file (checked 1 source file)
+test_samples/invalid_test.py:68: error: Unexpected keyword argument "foo" for "param"  [call-arg]
+mypy_pytest_plugin_types/pytest.pyi:12: note: "param" defined here
+test_samples/invalid_test.py:64: error: Too many arguments  [call-arg]
+test_samples/invalid_test.py:68: error: Argument 1 has incompatible type "str"; expected "int"  [arg-type]
+test_samples/invalid_test.py:69: error: `pytest.mark.usefixtures` is not allowed in a `pytest.param`.  [param-usefixtures]
+test_samples/invalid_test.py:73: error: Argument 1 has incompatible type "str"; expected "float"  [arg-type]
+test_samples/invalid_test.py:73: error: Argument 2 has incompatible type "int"; expected "str"  [arg-type]
+test_samples/invalid_test.py:73: error: Argument 1 to "param" has incompatible type "*tuple[str, float]"; expected "float"  [arg-type]
+test_samples/invalid_test.py:73: error: Argument 1 to "param" has incompatible type "*tuple[str, float]"; expected "str"  [arg-type]
+Found 20 errors in 1 file (checked 1 source file)

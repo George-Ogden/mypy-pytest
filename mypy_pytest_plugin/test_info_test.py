@@ -17,7 +17,7 @@ from .test_utils import (
 
 
 def _test_info_from_fn_def_test_body(source: str, *, errors: list[str] | None = None) -> None:
-    parse_result = parse(source)
+    parse_result = parse(source, header="import _pytest.fixtures")
     checker = parse_result.checker
 
     test_node = parse_result.defs["test_info"]
@@ -450,6 +450,28 @@ def test_test_info_check_multiple_decorators_valid_split_argnames() -> None:
     )
 
 
+def test_test_info_check_multiple_decorators_valid_split_argnames_with_params() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from mypy_pytest_plugin_types import ParameterSet
+        from typing import cast
+
+        @pytest.mark.parametrize(
+            "", [ParameterSet.__test_init__()]
+        )
+        @pytest.mark.parametrize(
+            "x", [ParameterSet.__test_init__(1), ParameterSet.__test_init__(cast(int, 2), marks=[pytest.mark.skip])]
+        )
+        @pytest.mark.parametrize(
+            "y, z", [ParameterSet.__test_init__(3.0, "4"), ParameterSet.__test_init__(*(5.0, "6.0"))]
+        )
+        def test_info(x: int, y: float, z: str) -> None:
+            ...
+        """
+    )
+
+
 def test_test_info_check_multiple_decorators_missing_argnames() -> None:
     _test_info_check_test_body(
         """
@@ -566,6 +588,30 @@ def test_test_info_check_multiple_decorators_multiple_type_errors() -> None:
             ...
         """,
         errors=["arg-type"] * 4,
+    )
+
+
+def test_test_info_check_decorator_multiple_errors_with_params() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+        from pytest import param
+        from mypy_pytest_plugin_types import ParameterSet
+        from typing import cast
+
+        @pytest.mark.parametrize(
+            "", [param(())]
+        )
+        @pytest.mark.parametrize(
+            "x", [pytest.param("1"), pytest.param(cast(int, 2), marks=[pytest.mark.skip])]
+        )
+        @pytest.mark.parametrize(
+            "y, z", [pytest.param("3", 4), pytest.param(*(5.0, "6.0"))]
+        )
+        def test_info(x: int, y: float, z: str) -> None:
+            ...
+        """,
+        errors=["call-arg"] + ["arg-type"] * 4,
     )
 
 

@@ -1,4 +1,6 @@
 test_samples/valid_test.py:14: error: Incompatible return value type (got "tuple[Literal[0], Literal[2]]", expected "tuple[Literal[1], Literal[2]]")  [return-value]
-test_samples/valid_test.py:19: error: No return value expected  [return-value]
-test_samples/valid_test.py:25: error: No return value expected  [return-value]
-Found 3 errors in 1 file (checked 1 source file)
+test_samples/valid_test.py:17: error: Unexpected keyword argument "foo" for "param"  [call-arg]
+test_samples/valid_test.py:20: error: No return value expected  [return-value]
+mypy_pytest_plugin_types/pytest.pyi:12: note: "param" defined here
+test_samples/valid_test.py:26: error: No return value expected  [return-value]
+Found 4 errors in 1 file (checked 1 source file)
