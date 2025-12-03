@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, Sequence
+from typing import Callable, Iterable, Sequence, cast
 import pytest
 
 
@@ -59,3 +59,17 @@ def wrap(x: Callable) -> None: ...
 @wrap
 @pytest.mark.parametrize("x", [])
 def test_x(x): ...
+
+
+@pytest.mark.parametrize("", [pytest.param(())])
+@pytest.mark.parametrize(
+    "x",
+    [
+        pytest.param("1", foo="bar"),
+        pytest.param(cast(int, 2), marks=[pytest.mark.skip, pytest.mark.usefixtures("fixtures")]),
+    ],
+)
+@pytest.mark.parametrize(
+    "y, z", [pytest.param("3", 4), pytest.param(*(5.0, "6.0")), pytest.param(*("7.0", 8.0))]
+)
+def test_pytest_param(x: int, y: float, z: str) -> None: ...

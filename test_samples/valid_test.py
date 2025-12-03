@@ -14,7 +14,8 @@ def pair() -> tuple[Literal[1], Literal[2]]:
     return 0, 2
 
 
-@pytest.mark.parametrize("x, y", [(1, 2), pair()])
+@pytest.mark.parametrize("", [(), pytest.param(), pytest.param(foo="bar")])
+@pytest.mark.parametrize("x, y", [(1, 2), pair(), pytest.param(3, 4)])
 def test_internal_error(x: int, y: int) -> None:
     return x + y
 

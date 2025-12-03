@@ -10,6 +10,6 @@ reveal_type(pytest.param("a", None, 3.5))
 reveal_type(
     pytest.param(
         lambda *args, **kwargs: ...,
-        marks=[pytest.mark.skip, pytest.mark.notamark],
+        marks=[pytest.mark.skip, pytest.mark.notamark, pytest.mark.usefixtures()],
     )
 )

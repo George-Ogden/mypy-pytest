@@ -16,6 +16,7 @@ from .fullname import Fullname
 from .iterable_sequence_checker import IterableSequenceChecker
 from .mark_checker import MarkChecker
 from .mock_call_checker import FunctionMockCallChecker, MethodMockCallChecker
+from .param_mark_checker import ParamMarkChecker
 from .test_body_ranges import TestBodyRanges
 from .test_info import TestInfo
 from .test_name_checker import TestNameChecker
@@ -89,9 +90,16 @@ class PytestPlugin(Plugin):
             return type_
         return ctx.default_signature
 
+    def check_param_marks(self, ctx: FunctionContext) -> Type:
+        if isinstance(ctx.api, TypeChecker) and isinstance(ctx.context, CallExpr):
+            ParamMarkChecker(ctx.api).check_param_marks(ctx.context)
+        return ctx.default_return_type
+
     def get_function_hook(self, fullname: str) -> Callable[[FunctionContext], Type] | None:
         if fullname.startswith("unittest.mock"):
             return functools.partial(FunctionMockCallChecker.check_mock_calls, fullname=fullname)
+        if fullname == "_pytest.mark.param":
+            return self.check_param_marks
         if fullname == "_pytest.fixtures.fixture":
             hook_fn = self.check_pytest_structure
         else:
