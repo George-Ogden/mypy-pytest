@@ -32,7 +32,7 @@ A Mypy plugin for type checking Pytest code.
 Install with pip
 
 ```bash
-pip install git+https://github.com/George-Ogden/dbg.git
+pip install git+https://github.com/George-Ogden/mypy-pytest.git
 ```
 
 Then register the plugin.
