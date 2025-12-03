@@ -106,14 +106,16 @@ class FixtureManager:
             and isinstance(type_ := decorator.type, Instance)
             and type_.type.fullname == f"{TYPES_MODULE}.fixture_type.FixtureType"
         ):
-            [scope, signature, is_generator, fullname] = type_.args
+            [scope, signature, is_generator, fullname, autouse] = type_.args
             assert isinstance(scope, LiteralType)
             assert isinstance(signature, CallableType)
             assert isinstance(is_generator, LiteralType)
             assert isinstance(fullname, LiteralType)
+            assert isinstance(autouse, LiteralType)
             return Fixture.from_type(
                 signature,
                 scope=cast(FixtureScope, scope.value),
+                autouse=cast(bool, autouse.value),
                 file=module.path,
                 is_generator=cast(bool, is_generator.value),
                 fullname=cast(str, fullname.value),

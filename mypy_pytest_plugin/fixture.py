@@ -19,9 +19,16 @@ from mypy.types import (
     TypeVarLikeType,
 )
 
+from .argmapper import ArgMapper
 from .checker_wrapper import CheckerWrapper
 from .defer import DeferralError
-from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTURE, REQUEST_KEYWORD
+from .error_codes import (
+    DUPLICATE_FIXTURE,
+    INVALID_FIXTURE_AUTOUSE,
+    INVALID_FIXTURE_SCOPE,
+    MARKED_FIXTURE,
+    REQUEST_KEYWORD,
+)
 from .fullname import Fullname
 from .test_argument import TestArgument
 from .types_module import TYPES_MODULE
@@ -39,6 +46,7 @@ class Fixture:
     return_type: Type
     arguments: Sequence[TestArgument]
     scope: FixtureScope
+    autouse: bool
     type_variables: Sequence[TypeVarLikeType]
     context: Context
 
@@ -54,6 +62,7 @@ class Fixture:
         scope: FixtureScope,
         file: str,
         is_generator: bool,
+        autouse: bool,
         fullname: str,
     ) -> Self:
         func = type.definition
@@ -71,6 +80,7 @@ class Fixture:
             return_type=FixtureParser.fixture_return_type(type.ret_type, is_generator=is_generator),
             arguments=arguments,
             scope=scope,
+            autouse=autouse,
             context=context,
             type_variables=type.variables,
         )
@@ -106,6 +116,7 @@ class Fixture:
                     decorator.func.is_generator, fallback=checker.named_type("builtins.object")
                 ),
                 LiteralType(decorator.fullname, fallback=checker.named_type("builtins.object")),
+                LiteralType(self.autouse, fallback=checker.named_type("builtins.object")),
             ],
         )
 
@@ -134,6 +145,7 @@ class FixtureParser(CheckerWrapper):
             ),
             arguments=arguments,
             scope=self._fixture_scope_from_decorator(fixture_decorator),
+            autouse=self._fixture_autouse_from_decorator(fixture_decorator),
             context=decorator.func,
             type_variables=type_.variables,
         )
@@ -229,12 +241,9 @@ class FixtureParser(CheckerWrapper):
         return DEFAULT_SCOPE
 
     def _fixture_scope_from_call(self, call: CallExpr) -> FixtureScope:
-        scope_expressions = [
-            arg for name, arg in zip(call.arg_names, call.args, strict=True) if name == "scope"
-        ]
-        if not scope_expressions:
+        scope_expression = ArgMapper.named_arg(call, "scope")
+        if scope_expression is None:
             return DEFAULT_SCOPE
-        [scope_expression] = scope_expressions
         return self._fixture_scope_from_type(
             self.checker.lookup_type(scope_expression), context=scope_expression
         )
@@ -249,6 +258,39 @@ class FixtureParser(CheckerWrapper):
         )
 
         return FixtureScope.unknown
+
+    def _fixture_autouse_from_decorator(self, decorator: Expression) -> bool:
+        if isinstance(decorator, CallExpr):
+            return self._fixture_autouse_from_call(decorator)
+        return False
+
+    def _fixture_autouse_from_call(self, call: CallExpr) -> bool:
+        autouse_expression = ArgMapper.named_arg(call, "autouse")
+        if autouse_expression is None:
+            return False
+        return self._fixture_autouse_from_type(
+            self.checker.lookup_type(autouse_expression), context=autouse_expression
+        )
+
+    def _fixture_autouse_from_type(self, type_: Type, context: Context) -> bool:
+        for value in [True, False]:
+            if is_subtype(
+                type_, LiteralType(value, fallback=self.checker.named_type("builtins.bool"))
+            ):
+                return value
+        if isinstance(type_, LiteralType) and isinstance(type_.value, bool):
+            return type_.value
+        self.fail(
+            """Invalid type for "autouse". This fixture will be not be applied automatically when type checking.""",
+            context=context,
+            code=INVALID_FIXTURE_AUTOUSE,
+        )
+        self.note(
+            "Use `autouse=True` directly.",
+            context=context,
+            code=INVALID_FIXTURE_AUTOUSE,
+        )
+        return False
 
     def is_request_name(self, decorator: Decorator) -> bool:
         if is_request_name := decorator.name == "request":

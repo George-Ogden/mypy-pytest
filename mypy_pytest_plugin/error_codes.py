@@ -89,6 +89,12 @@ MARKED_FIXTURE: Final[ErrorCode] = ErrorCode(
     "Do not use `pytest.mark` with `pytest.fixture`.",
     category="Pytest",
 )
+INVALID_FIXTURE_AUTOUSE: Final[ErrorCode] = ErrorCode(
+    "invalid-fixture-autouse",
+    "Use literal value when setting autouse of a Pytest fixture.",
+    category="Pytest",
+)
+
 
 INVALID_FIXTURE_SCOPE: Final[ErrorCode] = ErrorCode(
     "invalid-fixture-scope",
