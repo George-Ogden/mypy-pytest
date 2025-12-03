@@ -11,7 +11,7 @@ from _pytest.main import Session
 from mypy.checker import TypeChecker
 from mypy.nodes import MypyFile
 from mypy.types import CallableType, Instance, LiteralType, Type, UnionType
-from pytest import FixtureDef  # noqa: PT013
+from pytest import FixtureDef
 
 from .checker_wrapper import CheckerWrapper
 from .fixture import Fixture, FixtureScope

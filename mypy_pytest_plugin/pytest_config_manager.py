@@ -1,7 +1,7 @@
 import functools
 
 import _pytest.config
-from pytest import Config, Session  # noqa: PT013
+from pytest import Config, Session
 
 
 class PytestConfigManager:
