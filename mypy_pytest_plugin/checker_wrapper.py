@@ -1,11 +1,12 @@
 import abc
 from collections.abc import Callable
-from typing import Any, TypeGuard, overload
+import functools
+from typing import Any, TypeGuard, cast, overload
 
 from mypy.checker import TypeChecker
 from mypy.errorcodes import NAME_DEFINED, ErrorCode
-from mypy.nodes import Context, MypyFile
-from mypy.types import Type
+from mypy.nodes import Context, MypyFile, TypeInfo
+from mypy.types import AnyType, Instance, Type, TypeOfAny
 
 from .fullname import Fullname
 
@@ -21,6 +22,21 @@ class CheckerWrapper(abc.ABC):
 
     def note(self, msg: str, *, context: Context, code: ErrorCode | None) -> None:
         self.checker.note(msg, context=context, code=code)
+
+    @functools.lru_cache  # noqa: B019
+    def named_type(self, fullname: Fullname) -> Instance:
+        node = self.lookup_fullname(
+            fullname,
+            predicate=cast(
+                Callable[[Any], TypeGuard[TypeInfo]], lambda node: isinstance(node, TypeInfo)
+            ),
+        )
+        if node is None:
+            raise KeyError()
+        _module, type_info = node
+        return Instance(
+            type_info, [AnyType(TypeOfAny.from_omitted_generics)] * len(type_info.type_vars)
+        )
 
     def lookup_fullname_type(
         self,
@@ -41,7 +57,7 @@ class CheckerWrapper(abc.ABC):
         self,
         fullname: Fullname,
         *,
-        context: Context | None,
+        context: Context | None = None,
         predicate: None | Callable[[Any], TypeGuard[T]] = None,
     ) -> tuple[MypyFile, T] | None: ...
 
@@ -50,7 +66,7 @@ class CheckerWrapper(abc.ABC):
         self,
         fullname: Fullname,
         *,
-        context: Context | None,
+        context: Context | None = None,
         predicate: None | Callable[[Any], bool] = None,
     ) -> tuple[MypyFile, Any] | None: ...
 
@@ -58,7 +74,7 @@ class CheckerWrapper(abc.ABC):
         self,
         fullname: Fullname,
         *,
-        context: Context | None,
+        context: Context | None = None,
         predicate: None | Callable[[Any], bool] = None,
     ) -> tuple[MypyFile, Any] | None:
         module_name, target = (
