@@ -38,6 +38,7 @@ class TestInfo(CheckerWrapper):
     arguments: Sequence[TestArgument]
     decorators: Sequence[DecoratorWrapper]
     checker: TypeChecker
+    context: Context
     _used_argnames: set[str] = field(default_factory=set, init=False)
 
     @classmethod
@@ -53,6 +54,7 @@ class TestInfo(CheckerWrapper):
             checker=checker,
             arguments=test_arguments,
             decorators=test_decorators,
+            context=fn_def,
         )
 
     @classmethod
@@ -115,6 +117,7 @@ class TestInfo(CheckerWrapper):
             autouse_names=self.autouse_names,
             fullname=self.fullname,
             checker=self.checker,
+            context=self.context,
         )
 
     @functools.cached_property

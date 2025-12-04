@@ -70,6 +70,7 @@ class RequestGraph(CheckerWrapper):
     fullname: Fullname
     checker: TypeChecker
     requests: Sequence[Request]
+    context: Context
 
     @classmethod
     def build(
@@ -81,6 +82,7 @@ class RequestGraph(CheckerWrapper):
         available_fixtures: Mapping[str, Sequence[Fixture]],
         fullname: Fullname,
         checker: TypeChecker,
+        context: Context,
     ) -> RequestGraph:
         original_requests = [
             Request(test_arg, file=checker.path, source="argument", source_name=fullname.name)
@@ -97,7 +99,7 @@ class RequestGraph(CheckerWrapper):
         )
 
         builder.build()
-        return cls(fullname=fullname, checker=checker, requests=builder.requests)
+        return cls(fullname=fullname, checker=checker, requests=builder.requests, context=context)
 
     @property
     def name(self) -> str:
@@ -110,19 +112,6 @@ class RequestGraph(CheckerWrapper):
     @property
     def options(self) -> Options:
         return self.checker.options
-
-    @functools.cached_property
-    def dummy_context(self) -> Context:
-        earliest_context = min(
-            (request.request.context for request in self if request.source == "argument"),
-            key=lambda context: (context.line, context.column),
-        )
-        if earliest_context:
-            context = Context(earliest_context.line, max(earliest_context.column - 1, 0))
-            context.end_line = context.line
-            context.end_column = context.column
-            return context
-        return Context(-1, -1)
 
     def argname_types(self, argnames: Collection[str]) -> dict[str, TestArgument]:
         return {
@@ -145,7 +134,7 @@ class RequestGraph(CheckerWrapper):
             sources = [repr(request.source_name) for request in requests]
             self.fail(
                 f"Unable to identify type for {request.name}. Received {', '.join(types)} from {', '.join(sources)}",
-                context=self.dummy_context,
+                context=self.context,
                 code=VALID_TYPE,
             )
             target_type = AnyType(TypeOfAny.from_error)
@@ -155,7 +144,7 @@ class RequestGraph(CheckerWrapper):
             type_variables=list(
                 itertools.chain.from_iterable(request.type_variables for request in requests)
             ),
-            context=self.dummy_context,
+            context=self.context,
         )
 
     def __iter__(self) -> Iterator[Request]:
@@ -171,7 +160,7 @@ class RequestGraph(CheckerWrapper):
             if request.resolver is None:
                 self.fail(
                     f"Argname {request.name!r} cannot be resolved.",
-                    context=request.context if request.source == "argument" else self.dummy_context,
+                    context=request.context if request.source == "argument" else self.context,
                     code=MISSING_ARGNAME,
                 )
                 self._check_unmarked_fixture(request.name)
