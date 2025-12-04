@@ -1,16 +1,20 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Collection, Iterable, Mapping, Sequence
+from collections import defaultdict
+from collections.abc import Callable, Collection, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 import functools
+import itertools
 from typing import Any, TypeGuard, cast
 
 from mypy.checker import TypeChecker
+from mypy.errorcodes import VALID_TYPE
+from mypy.meet import meet_types
 from mypy.messages import format_type
 from mypy.nodes import Context, FuncDef
 from mypy.options import Options
 from mypy.subtypes import is_subtype
-from mypy.types import CallableType
+from mypy.types import AnyType, CallableType, TypeOfAny, UninhabitedType
 
 from .checker_wrapper import CheckerWrapper
 from .error_codes import (
@@ -110,7 +114,7 @@ class RequestGraph(CheckerWrapper):
     @functools.cached_property
     def dummy_context(self) -> Context:
         earliest_context = min(
-            (request.request.context for request in self.requests if request.source == "argument"),
+            (request.request.context for request in self if request.source == "argument"),
             key=lambda context: (context.line, context.column),
         )
         if earliest_context:
@@ -120,13 +124,50 @@ class RequestGraph(CheckerWrapper):
             return context
         return Context(-1, -1)
 
+    def argname_types(self, argnames: Collection[str]) -> dict[str, TestArgument]:
+        return {
+            requests[0].name: self._meet_requests(requests)
+            for requests in self._argument_requests(argnames)
+        }
+
+    def _argument_requests(self, argnames: Collection[str]) -> Iterable[Sequence[Request]]:
+        argument_requests = defaultdict(list)
+        for request in self:
+            if request.name in argnames:
+                argument_requests[request.name].append(request)
+        return argument_requests.values()
+
+    def _meet_requests(self, requests: Sequence[Request]) -> TestArgument:
+        target_type = functools.reduce(meet_types, (request.type_ for request in requests))
+        request = requests[0]
+        if isinstance(target_type, UninhabitedType):
+            types = [format_type(request.type_, self.options) for request in requests]
+            sources = [repr(request.source_name) for request in requests]
+            self.fail(
+                f"Unable to identify type for {request.name}. Received {', '.join(types)} from {', '.join(sources)}",
+                context=self.dummy_context,
+                code=VALID_TYPE,
+            )
+            target_type = AnyType(TypeOfAny.from_error)
+        return TestArgument(
+            name=request.name,
+            type_=target_type,
+            type_variables=list(
+                itertools.chain.from_iterable(request.type_variables for request in requests)
+            ),
+            context=self.dummy_context,
+        )
+
+    def __iter__(self) -> Iterator[Request]:
+        return iter(self.requests)
+
     def check(self) -> None:
         self._check_resolved()
         self._check_scope()
         self._check_request_types()
 
     def _check_resolved(self) -> None:
-        for request in self.requests:
+        for request in self:
             if request.resolver is None:
                 self.fail(
                     f"Argname {request.name!r} cannot be resolved.",
@@ -154,7 +195,7 @@ class RequestGraph(CheckerWrapper):
                     )
 
     def _check_scope(self) -> None:
-        for request in self.requests:
+        for request in self:
             if (
                 isinstance(request.resolver, Fixture)
                 and request.scope > request.resolver.scope
@@ -172,7 +213,7 @@ class RequestGraph(CheckerWrapper):
                 )
 
     def _check_request_types(self) -> None:
-        for request in self.requests:
+        for request in self:
             if isinstance(request.resolver, Fixture) and not is_subtype(
                 request.resolver.return_type, request.type_
             ):

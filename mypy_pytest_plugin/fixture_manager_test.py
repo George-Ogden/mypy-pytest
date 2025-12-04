@@ -86,7 +86,6 @@ def test_fixture_manager_default_fixture_module_names() -> None:
 
 def _fixture_manager_resolve_fixtures_test_body(
     modules: Sequence[tuple[str, str]],
-    argnames: list[str],
     expected_fixtures: dict[str, list[str]],
 ) -> None:
     parse_result = parse_multiple(modules, header="import _pytest.fixtures\nimport typing")
@@ -105,7 +104,6 @@ def _fixture_manager_resolve_fixtures_test_body(
     with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
         fixtures = FixtureManager(checker).resolve_fixtures(
             [test_argument.name for test_argument in test_arguments],
-            argnames,
             Fullname.from_string(last_module_name),
         )
 
@@ -137,7 +135,6 @@ def test_fixture_manager_resolve_fixtures_no_requests() -> None:
                 """,
             ),
         ],
-        [],
         {},
     )
 
@@ -153,8 +150,7 @@ def test_fixture_manager_resolve_fixtures_no_fixtures() -> None:
                 """,
             ),
         ],
-        ["x", "y"],
-        {},
+        dict(x=[], y=[]),
     )
 
 
@@ -185,7 +181,6 @@ def test_fixture_manager_resolve_fixtures_single_request_same_file() -> None:
                 """,
             ),
         ],
-        [],
         dict(fixture=["file_test.fixture", "conftest.fixture"]),
     )
 
@@ -215,7 +210,6 @@ def test_fixture_manager_resolve_fixtures_long_chain_same_file() -> None:
                 """,
             ),
         ],
-        [],
         dict(
             fixture_1=["file_test.fixture_1"],
             fixture_2=["file_test.fixture_2"],
@@ -268,8 +262,13 @@ def test_fixture_manager_resolve_fixtures_long_chain_masked_by_arg() -> None:
                 """,
             ),
         ],
-        ["fixture_2"],
-        dict(fixture_1=["file_test.fixture_1"]),
+        dict(
+            fixture_1=["file_test.fixture_1"],
+            fixture_2=["file_test.fixture_2", "conftest.fixture_2"],
+            fixture_3=["file_test.fixture_3", "conftest.fixture_3"],
+            fixture_4=["conftest.fixture_4"],
+            fixture_5=[],
+        ),
     )
 
 
@@ -314,7 +313,6 @@ def test_fixture_manager_resolve_fixtures_single_request_different_file() -> Non
                 """,
             ),
         ],
-        [],
         dict(capsys=["folder.conftest.capsys", "conftest.capsys", "_pytest.capture.capsys"]),
     )
 
@@ -352,7 +350,6 @@ def test_fixture_manager_resolve_fixtures_request_builtins() -> None:
                 """,
             ),
         ],
-        [],
         dict(capsys=["_pytest.capture.capsys"], snapshot=["pytest_snapshot.plugin.snapshot"]),
     )
 
@@ -384,8 +381,7 @@ def test_fixture_manager_resolve_inverted_request_graph() -> None:
                 """,
             ),
         ],
-        ["argument"],
-        dict(direct=["conftest.direct"], indirect=["file_test.indirect"]),
+        dict(direct=["conftest.direct"], indirect=["file_test.indirect"], argument=[]),
     )
 
 
@@ -419,7 +415,6 @@ def test_fixture_manager_resolve_fixtures_request_cycles() -> None:
                 """,
             ),
         ],
-        [],
         dict(
             direct_cycle=["file_test.direct_cycle"],
             indirect_cycle_1=["file_test.indirect_cycle_1"],
@@ -461,12 +456,12 @@ def test_fixture_manager_resolve_fixtures_autouse_fixtures() -> None:
                 """,
             ),
         ],
-        ["requested_arg"],
         dict(
             manual_fixture=["file_test.manual_fixture"],
             automatic_fixture=["file_test.automatic_fixture"],
             automatic_fixture2=["file_test.automatic_fixture2"],
             requested_fixture=["file_test.requested_fixture"],
+            requested_arg=[],
         ),
     )
 
@@ -505,7 +500,6 @@ def test_fixture_manager_resolve_fixtures_autouse_fixture_ignored() -> None:
                 """,
             ),
         ],
-        [],
         dict(
             masked_automatic_fixture=[
                 "file_test.masked_automatic_fixture",

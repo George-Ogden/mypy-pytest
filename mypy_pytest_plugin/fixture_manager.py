@@ -86,7 +86,7 @@ class FixtureManager(CheckerWrapper):
         raise TypeError()
 
     def resolve_fixtures(
-        self, request_names: Sequence[str], parametrize_names: Sequence[str], test_module: Fullname
+        self, request_names: Sequence[str], test_module: Fullname
     ) -> Mapping[str, Sequence[Fixture]]:
         unresolved_fixtures = deque(
             itertools.chain(request_names, self.autouse_fixture_names(test_module))
@@ -94,11 +94,10 @@ class FixtureManager(CheckerWrapper):
         fixtures: dict[str, list[Fixture]] = {}
         while unresolved_fixtures:
             fixture_name = unresolved_fixtures.popleft()
-            if not (fixture_name in fixtures or fixture_name in parametrize_names):
+            if fixture_name not in fixtures:
                 fixtures[fixture_name] = self.resolve_fixture(fixture_name, test_module)
                 for fixture in fixtures[fixture_name]:
                     unresolved_fixtures.extend(argument.name for argument in fixture.arguments)
-
         return fixtures
 
     @functools.lru_cache  # noqa: B019

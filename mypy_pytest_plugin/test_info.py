@@ -11,7 +11,6 @@ from mypy.nodes import (
     Expression,
     FuncDef,
 )
-from mypy.types import AnyType, TypeOfAny
 
 from .argnames_parser import ArgnamesParser
 from .argvalues import Argvalues
@@ -19,8 +18,10 @@ from .checker_wrapper import CheckerWrapper
 from .decorator_wrapper import DecoratorWrapper
 from .error_codes import (
     DUPLICATE_ARGNAME,
+    REPEATED_FIXTURE_ARGNAME,
     UNKNOWN_ARGNAME,
 )
+from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .many_items_test_signature import ManyItemsTestSignature
@@ -76,8 +77,8 @@ class TestInfo(CheckerWrapper):
             checker=self.checker,
             fn_name=self.fn_name,
             arg_name=arg_name,
-            arg_type=self._argname_types[arg_name].type_,
-            type_variables=self._argname_types[arg_name].type_variables,
+            arg_type=self.argname_types[arg_name].type_,
+            type_variables=self.argname_types[arg_name].type_variables,
         )
 
     def many_items_sub_signature(self, arg_names: list[str]) -> TestSignature:
@@ -85,10 +86,10 @@ class TestInfo(CheckerWrapper):
             checker=self.checker,
             fn_name=self.fn_name,
             arg_names=arg_names,
-            arg_types=[self._argname_types[arg_name].type_ for arg_name in arg_names],
+            arg_types=[self.argname_types[arg_name].type_ for arg_name in arg_names],
             type_variables=list(
                 itertools.chain.from_iterable(
-                    self._argname_types[arg_name].type_variables for arg_name in arg_names
+                    self.argname_types[arg_name].type_variables for arg_name in arg_names
                 )
             ),
         )
@@ -107,36 +108,29 @@ class TestInfo(CheckerWrapper):
 
     @functools.cached_property
     def request_graph(self) -> RequestGraph:
-        available_fixtures = self.fixture_manager.resolve_fixtures(
-            request_names=[argument.name for argument in self.arguments],
-            parametrize_names=self.parametrized_argnames,
-            test_module=self.module_name,
-        )
         return RequestGraph.build(
             test_arguments=self.arguments,
-            available_fixtures=available_fixtures,
+            available_fixtures=self._available_fixtures,
             parametrized_names=self.parametrized_argnames,
             autouse_names=self.autouse_names,
             fullname=self.fullname,
             checker=self.checker,
         )
 
+    @functools.cached_property
+    def _available_fixtures(self) -> Mapping[str, Sequence[Fixture]]:
+        return self.fixture_manager.resolve_fixtures(
+            request_names=[argument.name for argument in self.arguments],
+            test_module=self.module_name,
+        )
+
     @property
     def autouse_names(self) -> Iterable[str]:
         return self.fixture_manager.autouse_fixture_names(self.module_name)
 
-    @property
-    def _argname_types(self) -> Mapping[str, TestArgument]:
-        return {
-            request.name: TestArgument(
-                type_=AnyType(TypeOfAny.special_form),
-                type_variables=(),
-                context=request.context,
-                name=request.name,
-            )
-            for request in self.request_graph.requests
-            if request.source == "argument"
-        }
+    @functools.cached_property
+    def argname_types(self) -> Mapping[str, TestArgument]:
+        return self.request_graph.argname_types(self.parametrized_argnames)
 
     @property
     def parametrized_argnames(self) -> Sequence[str]:
@@ -188,7 +182,7 @@ class TestInfo(CheckerWrapper):
         return all([self._check_arg_name(arg_name, context) for arg_name in arg_names])
 
     def _check_arg_name(self, arg_name: str, context: Context) -> bool:
-        if known_name := arg_name in self._argname_types:
+        if known_name := (arg_name in self.argname_types):
             self._check_repeated_arg_name(arg_name, context)
         else:
             self.fail(
@@ -196,6 +190,12 @@ class TestInfo(CheckerWrapper):
                 context=context,
                 code=UNKNOWN_ARGNAME,
             )
+            if arg_name in self._available_fixtures:
+                self.note(
+                    f"{arg_name!r} is part of the original request, but is shadowed by another parameter.",
+                    code=REPEATED_FIXTURE_ARGNAME,
+                    context=context,
+                )
         return known_name
 
     def _check_repeated_arg_name(self, arg_name: str, context: Context) -> None:
