@@ -1,5 +1,5 @@
 from collections import deque
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 import functools
 import itertools
@@ -57,9 +57,9 @@ class FixtureManager(CheckerWrapper):
         return Fullname.from_string(fixture.func.__module__)
 
     @filter_unique
-    def autouse_fixture_names(self, root_module: Fullname) -> Iterable[str]:
+    def autouse_fixture_names(self, test_module: Fullname) -> Iterable[str]:
         for module_name in itertools.chain(
-            self.resolution_sequence(root_module), self.default_fixture_module_names()
+            self.resolution_sequence(test_module), self.default_fixture_module_names()
         ):
             module = self.checker.modules.get(str(module_name))
             if module is not None:
@@ -86,25 +86,25 @@ class FixtureManager(CheckerWrapper):
         raise TypeError()
 
     def resolve_fixtures(
-        self, test_names: Sequence[str], parametrize_names: Sequence[str], root_module: Fullname
-    ) -> dict[str, list[Fixture]]:
+        self, request_names: Sequence[str], parametrize_names: Sequence[str], test_module: Fullname
+    ) -> Mapping[str, Sequence[Fixture]]:
         unresolved_fixtures = deque(
-            itertools.chain(test_names, self.autouse_fixture_names(root_module))
+            itertools.chain(request_names, self.autouse_fixture_names(test_module))
         )
         fixtures: dict[str, list[Fixture]] = {}
         while unresolved_fixtures:
             fixture_name = unresolved_fixtures.popleft()
             if not (fixture_name in fixtures or fixture_name in parametrize_names):
-                fixtures[fixture_name] = self.resolve_fixture(fixture_name, root_module)
+                fixtures[fixture_name] = self.resolve_fixture(fixture_name, test_module)
                 for fixture in fixtures[fixture_name]:
                     unresolved_fixtures.extend(argument.name for argument in fixture.arguments)
 
         return fixtures
 
     @functools.lru_cache  # noqa: B019
-    def resolve_fixture(self, request_name: str, root_module: Fullname) -> list[Fixture]:
+    def resolve_fixture(self, request_name: str, test_module: Fullname) -> list[Fixture]:
         fixtures = []
-        for module_name in self.resolution_sequence(root_module):
+        for module_name in self.resolution_sequence(test_module):
             module_fullname: str | None = str(module_name) if module_name else None
             try:
                 module = None if module_fullname is None else self.checker.modules[module_fullname]

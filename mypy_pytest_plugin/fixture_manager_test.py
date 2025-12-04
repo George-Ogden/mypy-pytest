@@ -384,7 +384,7 @@ def test_fixture_manager_resolve_inverted_request_graph() -> None:
                 """,
             ),
         ],
-        [],
+        ["argument"],
         dict(direct=["conftest.direct"], indirect=["file_test.indirect"]),
     )
 
@@ -546,7 +546,7 @@ def _fixture_manager_resolve_autouse_fixtures_test_body(
     for (module_name, name), type_ in overrides.items():
         strict_cast(Decorator, checker.modules[module_name].names[name].node).var.type = type_
 
-    fixtures = FixtureManager(checker).autouse_fixtures(Fullname.from_string(module_name))
+    fixtures = FixtureManager(checker).autouse_fixture_names(Fullname.from_string(module_name))
     assert sorted(fixtures) == sorted(expected_fixture_names)
 
 

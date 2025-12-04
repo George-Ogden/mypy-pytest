@@ -518,7 +518,7 @@ def test_test_info_check_multiple_decorators_missing_optional_argname() -> None:
     )
 
 
-def test_test_info_check_multiple_decorators_repeated_argnames() -> None:
+def test_test_info_check_multiple_decorators_duplicate_argnames() -> None:
     _test_info_check_test_body(
         """
         import pytest

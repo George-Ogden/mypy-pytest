@@ -1,11 +1,16 @@
+from __future__ import annotations
+
 from collections.abc import Sequence
-from dataclasses import KW_ONLY, dataclass, field
+from dataclasses import KW_ONLY, dataclass
 from typing import Literal, Self
 
+from mypy.checker import TypeChecker
 from mypy.nodes import Context
 from mypy.types import Type, TypeVarLikeType
 
-from .fixture import Fixture
+from .fixture import Fixture, FixtureScope
+from .fixture_manager import FixtureManager
+from .fullname import Fullname
 from .test_argument import TestArgument
 
 
@@ -15,12 +20,22 @@ class Request:
     _: KW_ONLY
     file: str
     source: Literal["argument", "fixture", "autouse"]
-    used: bool = field(default=False, init=False)
+    source_name: str
+    resolver: Fixture | None | Literal["param"] = None
+    scope: FixtureScope = FixtureScope.function
+
+    @classmethod
+    def from_autouse_name(cls, name: str, module: Fullname, checker: TypeChecker) -> Self:
+        for fixture in FixtureManager(checker).resolve_fixture(name, module):
+            if fixture.autouse:
+                return cls.from_autouse(fixture)
+        raise AssertionError()
 
     @classmethod
     def from_autouse(cls, fixture: Fixture) -> Self:
-        request = cls(fixture.as_argument(), file=fixture.file, source="autouse")
-        request.used = True
+        request = cls(
+            fixture.as_argument(), file=fixture.file, source="autouse", source_name=fixture.name
+        )
         return request
 
     @property

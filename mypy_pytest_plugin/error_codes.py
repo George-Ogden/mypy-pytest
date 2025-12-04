@@ -24,10 +24,6 @@ DUPLICATE_ARGNAME: Final[ErrorCode] = ErrorCode(
     "duplicate-argname", "Pytest parametrize contains duplicate argnames.", category="Pytest"
 )
 
-REPEATED_ARGNAME: Final[ErrorCode] = ErrorCode(
-    "repeated-argname", "Pytest parametrizations contain repeated argname.", category="Pytest"
-)
-
 
 REPEATED_FIXTURE_ARGNAME: Final[ErrorCode] = ErrorCode(
     "repeated-fixture-argname",

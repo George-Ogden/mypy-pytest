@@ -1,4 +1,4 @@
-from collections.abc import Iterable, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 import functools
 import itertools
@@ -11,21 +11,20 @@ from mypy.nodes import (
     Expression,
     FuncDef,
 )
+from mypy.types import AnyType, TypeOfAny
 
 from .argnames_parser import ArgnamesParser
 from .argvalues import Argvalues
 from .checker_wrapper import CheckerWrapper
 from .decorator_wrapper import DecoratorWrapper
 from .error_codes import (
-    REPEATED_ARGNAME,
+    DUPLICATE_ARGNAME,
     UNKNOWN_ARGNAME,
 )
-from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
-from .request import Request
 from .request_graph import RequestGraph
 from .test_argument import TestArgument
 from .test_signature import TestSignature
@@ -76,8 +75,8 @@ class TestInfo(CheckerWrapper):
             checker=self.checker,
             fn_name=self.fn_name,
             arg_name=arg_name,
-            arg_type=self._available_requests[arg_name].type_,
-            type_variables=self._available_requests[arg_name].type_variables,
+            arg_type=self._argname_types[arg_name].type_,
+            type_variables=self._argname_types[arg_name].type_variables,
         )
 
     def many_items_sub_signature(self, arg_names: list[str]) -> TestSignature:
@@ -85,10 +84,10 @@ class TestInfo(CheckerWrapper):
             checker=self.checker,
             fn_name=self.fn_name,
             arg_names=arg_names,
-            arg_types=[self._available_requests[arg_name].type_ for arg_name in arg_names],
+            arg_types=[self._argname_types[arg_name].type_ for arg_name in arg_names],
             type_variables=list(
                 itertools.chain.from_iterable(
-                    self._available_requests[arg_name].type_variables for arg_name in arg_names
+                    self._argname_types[arg_name].type_variables for arg_name in arg_names
                 )
             ),
         )
@@ -107,24 +106,54 @@ class TestInfo(CheckerWrapper):
 
     @functools.cached_property
     def request_graph(self) -> RequestGraph:
-        available_requests, available_fixtures = self.fixture_manager.resolve_fixtures(
-            self.arguments, self.module_name
+        available_fixtures = self.fixture_manager.resolve_fixtures(
+            request_names=[argument.name for argument in self.arguments],
+            parametrize_names=self.parametrized_argnames,
+            test_module=self.module_name,
         )
-        return RequestGraph(
-            available_fixtures={fixture.name: fixture for fixture in available_fixtures},
-            available_requests=available_requests,
-            options=self.checker.options,
+        return RequestGraph.build(
+            test_arguments=self.arguments,
+            available_fixtures=available_fixtures,
+            parametrized_names=self.parametrized_argnames,
+            autouse_names=self.autouse_names,
             fullname=self.fullname,
             checker=self.checker,
         )
 
     @property
-    def _available_requests(self) -> dict[str, Request]:
-        return self.request_graph.available_requests
+    def autouse_names(self) -> Iterable[str]:
+        return self.fixture_manager.autouse_fixture_names(self.module_name)
 
     @property
-    def _available_fixtures(self) -> dict[str, Fixture]:
-        return self.request_graph.available_fixtures
+    def _argname_types(self) -> Mapping[str, TestArgument]:
+        return {
+            request.name: TestArgument(
+                type_=AnyType(TypeOfAny.special_form),
+                type_variables=(),
+                context=request.context,
+                name=request.name,
+            )
+            for request in self.request_graph.requests
+            if request.source == "argument"
+        }
+        return self.request_graph._argname_types
+
+    @property
+    def parametrized_argnames(self) -> Sequence[str]:
+        return list(
+            itertools.chain.from_iterable(
+                self._decorator_argnames(decorator) for decorator in self.decorators
+            )
+        )
+
+    def _decorator_argnames(self, decorator: DecoratorWrapper) -> list[str]:
+        if decorator.arg_names is not None:
+            match self._argnames_parser.parse_names(decorator.arg_names):
+                case str() as argname:
+                    return [argname]
+                case [*argnames]:
+                    return argnames
+        return []
 
     def check(self) -> None:
         self.check_decorators(self.decorators)
@@ -159,7 +188,7 @@ class TestInfo(CheckerWrapper):
         return all([self._check_arg_name(arg_name, context) for arg_name in arg_names])
 
     def _check_arg_name(self, arg_name: str, context: Context) -> bool:
-        if known_name := arg_name in self._available_requests:
+        if known_name := arg_name in self._argname_types:
             self._check_repeated_arg_name(arg_name, context)
         else:
             self.fail(
@@ -170,11 +199,10 @@ class TestInfo(CheckerWrapper):
         return known_name
 
     def _check_repeated_arg_name(self, arg_name: str, context: Context) -> None:
-        if self._available_requests[arg_name].used:
+        return
+        if todo:  # fixme
             self.fail(
                 f"Repeated argname {arg_name!r} in multiple parametrizations.",
                 context=context,
-                code=REPEATED_ARGNAME,
+                code=DUPLICATE_ARGNAME,
             )
-        else:
-            self._available_requests[arg_name].used = True
