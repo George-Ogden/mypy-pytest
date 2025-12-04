@@ -107,7 +107,7 @@ class TestInfo(CheckerWrapper):
 
     @functools.cached_property
     def request_graph(self) -> RequestGraph:
-        available_requests, available_fixtures = self.fixture_manager.resolve_requests_and_fixtures(
+        available_requests, available_fixtures = self.fixture_manager.resolve_fixtures(
             self.arguments, self.module_name
         )
         return RequestGraph(

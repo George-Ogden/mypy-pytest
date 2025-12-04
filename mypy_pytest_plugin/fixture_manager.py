@@ -16,8 +16,6 @@ from pytest import FixtureDef
 from .checker_wrapper import CheckerWrapper
 from .fixture import Fixture, FixtureScope
 from .fullname import Fullname
-from .request import Request
-from .test_argument import TestArgument
 from .types_module import TYPES_MODULE
 from .utils import extract_singleton, filter_unique, strict_cast, strict_not_none
 
@@ -87,47 +85,25 @@ class FixtureManager(CheckerWrapper):
                 return [strict_cast(str, type_.value)]
         raise TypeError()
 
-    def resolve_requests_and_fixtures(
-        self, test_arguments: Sequence[TestArgument], module: Fullname
-    ) -> tuple[dict[str, Request], list[Fixture]]:
-        unresolved_requests = deque(
-            Request(argument, source="argument", file=self.checker.path)
-            for argument in test_arguments
+    def resolve_fixtures(
+        self, test_names: Sequence[str], parametrize_names: Sequence[str], root_module: Fullname
+    ) -> dict[str, list[Fixture]]:
+        unresolved_fixtures = deque(
+            itertools.chain(test_names, self.autouse_fixture_names(root_module))
         )
-        resolved_requests: dict[str, Request] = {}
-        fixtures = list(
-            self._resolve_requests_and_fixtures_from_queue(
-                unresolved_requests, resolved_requests, module
-            )
-        )
+        fixtures: dict[str, list[Fixture]] = {}
+        while unresolved_fixtures:
+            fixture_name = unresolved_fixtures.popleft()
+            if not (fixture_name in fixtures or fixture_name in parametrize_names):
+                fixtures[fixture_name] = self.resolve_fixture(fixture_name, root_module)
+                for fixture in fixtures[fixture_name]:
+                    unresolved_fixtures.extend(argument.name for argument in fixture.arguments)
 
-        return resolved_requests, fixtures
-
-    def _resolve_requests_and_fixtures_from_queue(
-        self,
-        unresolved_requests: deque[Request],
-        resolved_requests: dict[str, Request],
-        module: Fullname,
-    ) -> Iterable[Fixture]:
-        while unresolved_requests:
-            request = unresolved_requests.popleft()
-            if request.name in resolved_requests:
-                continue
-            resolved_requests[request.name] = request
-            fixture = self.resolve_fixture(request.name, module)
-            if fixture is not None:
-                yield fixture
-                for argument in fixture.arguments:
-                    unresolved_requests.append(
-                        Request(
-                            argument,
-                            source="fixture",
-                            file=fixture.file,
-                        )
-                    )
+        return fixtures
 
     @functools.lru_cache  # noqa: B019
-    def resolve_fixture(self, request_name: str, root_module: Fullname) -> Fixture | None:
+    def resolve_fixture(self, request_name: str, root_module: Fullname) -> list[Fixture]:
+        fixtures = []
         for module_name in self.resolution_sequence(root_module):
             module_fullname: str | None = str(module_name) if module_name else None
             try:
@@ -136,8 +112,8 @@ class FixtureManager(CheckerWrapper):
                 continue
             fixture: Fixture | None = self.lookup_or_none(module, request_name)
             if fixture is not None:
-                return fixture
-        return None
+                fixtures.append(fixture)
+        return fixtures
 
     def lookup_or_none(self, module: MypyFile | None, request_name: str) -> Fixture | None:
         if module is None:
