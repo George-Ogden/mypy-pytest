@@ -1,10 +1,11 @@
 from collections.abc import Callable, Iterable, Sequence
+from dataclasses import dataclass
 import itertools
 from typing import Any
 
 import pytest
 
-from .utils import extract_singleton, filter_unique, strict_cast, strict_not_none
+from .utils import cache_by_id, extract_singleton, filter_unique, strict_cast, strict_not_none
 
 
 def test_strict_cast_type() -> None:
@@ -88,3 +89,31 @@ def count_to_n_twice(n: int) -> Iterable[int]:
 @pytest.mark.parametrize("n", range(5))
 def test_unique_wrapper(n: int) -> None:
     assert list(count_to_n_twice(n)) == list(range(n))
+
+
+def test_cache_by_id() -> None:
+    id = 0
+
+    @cache_by_id
+    def foo(*args: Any) -> int:
+        nonlocal id
+        return (id := id + 1)
+
+    assert foo() == foo()
+    assert foo(None) == foo(None)
+
+    @dataclass(unsafe_hash=True)
+    class IntWrapper:
+        x: int
+
+    a = IntWrapper(0)
+    b = IntWrapper(0)
+    foo_a = foo(a)
+    foo_b = foo(b)
+    assert foo_a != foo_b
+
+    a.x += 1
+    b.x += 1
+
+    assert foo(a) == foo_a
+    assert foo(b) == foo_b

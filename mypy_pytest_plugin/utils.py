@@ -1,4 +1,5 @@
 from collections.abc import Callable, Hashable, Iterable
+import functools
 from typing import Any, overload
 
 
@@ -67,3 +68,16 @@ def _filter_unique_iterator(it: Iterable[Any], key: None | Callable[[Any], Any])
         if value not in seen:
             yield element
             seen.add(value)
+
+
+def cache_by_id[*Ts, R](fn: Callable[[*Ts], R]) -> Callable[[*Ts], R]:
+    cache = {}
+
+    @functools.wraps(fn)
+    def wrapper(*args: *Ts) -> R:
+        key = tuple(map(id, args))
+        if key not in cache:
+            cache[key] = fn(*args)
+        return cache[key]
+
+    return wrapper
