@@ -19,7 +19,7 @@ from .fullname import Fullname
 from .request import Request
 from .test_argument import TestArgument
 from .types_module import TYPES_MODULE
-from .utils import extract_singleton, strict_cast, strict_not_none
+from .utils import extract_singleton, filter_unique, strict_cast, strict_not_none
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,18 +58,14 @@ class FixtureManager(CheckerWrapper):
     def _fixture_module(cls, fixture: FixtureDef) -> Fullname:
         return Fullname.from_string(fixture.func.__module__)
 
-    def autouse_fixtures(self, root_module: Fullname) -> Iterable[Fixture]:
-        fixtures = {}
+    @filter_unique
+    def autouse_fixture_names(self, root_module: Fullname) -> Iterable[str]:
         for module_name in itertools.chain(
             self.resolution_sequence(root_module), self.default_fixture_module_names()
         ):
             module = self.checker.modules.get(str(module_name))
             if module is not None:
-                for fixture_name in self.autouse_fixture_names_from_module(module):
-                    if fixture_name not in fixtures:
-                        fixture = self._module_lookup(module, fixture_name)
-                        fixtures[fixture_name] = strict_not_none(fixture)
-        return fixtures.values()
+                yield from self.autouse_fixture_names_from_module(module)
 
     @classmethod
     def autouse_fixture_names_from_module(cls, module: MypyFile) -> Sequence[str]:
@@ -102,14 +98,6 @@ class FixtureManager(CheckerWrapper):
         fixtures = list(
             self._resolve_requests_and_fixtures_from_queue(
                 unresolved_requests, resolved_requests, module
-            )
-        )
-        autouse_fixtures = deque(
-            Request.from_autouse(fixture) for fixture in self.autouse_fixtures(module)
-        )
-        fixtures.extend(
-            self._resolve_requests_and_fixtures_from_queue(
-                autouse_fixtures, resolved_requests, module
             )
         )
 

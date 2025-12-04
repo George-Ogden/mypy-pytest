@@ -542,7 +542,7 @@ def test_fixture_manager_resolve_requests_autouse_fixture_ignored() -> None:
 
 
 def _fixture_manager_resolve_autouse_fixtures_test_body(
-    modules: list[tuple[str, str]], expected_fixtures_fullnames: list[str]
+    modules: list[tuple[str, str]], expected_fixture_names: list[str]
 ) -> None:
     parse_result = parse_multiple(modules, header="import mypy_pytest_plugin_types")
 
@@ -569,10 +569,8 @@ def _fixture_manager_resolve_autouse_fixtures_test_body(
     for (module_name, name), type_ in overrides.items():
         strict_cast(Decorator, checker.modules[module_name].names[name].node).var.type = type_
 
-    fixtures = FixtureManager(checker).autouse_fixtures(Fullname.from_string(module_name))
-    assert sorted(str(fixture.fullname) for fixture in fixtures) == sorted(
-        expected_fixtures_fullnames
-    )
+    fixtures = FixtureManager(checker).autouse_fixture_names(Fullname.from_string(module_name))
+    assert sorted(fixtures) == sorted(expected_fixture_names)
 
 
 def test_fixture_manager_resolve_autouse_fixtures_none() -> None:
@@ -596,7 +594,7 @@ def test_fixture_manager_resolve_autouse_fixtures_same_file() -> None:
                 """,
             )
         ],
-        ["file_test.fixture"],
+        ["fixture"],
     )
 
 
@@ -630,7 +628,7 @@ def test_fixture_manager_resolve_autouse_fixtures_conftest() -> None:
                 """,
             ),
         ],
-        ["conftest.conftest_fixture", "file_test.file_fixture"],
+        ["conftest_fixture", "file_fixture"],
     )
 
 
@@ -669,9 +667,9 @@ def test_fixture_manager_resolve_autouse_fixtures_nested_conftest() -> None:
             ),
         ],
         [
-            "conftest.conftest_fixture",
-            "nested.file_test.file_fixture1",
-            "nested.file_test.file_fixture2",
+            "conftest_fixture",
+            "file_fixture1",
+            "file_fixture2",
         ],
     )
 
@@ -732,9 +730,9 @@ def test_fixture_manager_resolve_autouse_fixtures_conflicting_names() -> None:
             ),
         ],
         [
-            "nested.conftest.conftest_fixture",
-            "nested.file_test.file_fixture",
-            "nested.file_test.fixture",
+            "conftest_fixture",
+            "file_fixture",
+            "fixture",
         ],
     )
 
@@ -770,7 +768,7 @@ def test_fixture_manager_resolve_autouse_fixtures_builtin() -> None:
             ),
         ],
         [
-            "_pytest.capture.capture_fixture",
-            "file_test.fixture",
+            "capture_fixture",
+            "fixture",
         ],
     )
