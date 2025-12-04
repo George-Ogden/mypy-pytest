@@ -1,2 +1,2 @@
-test_samples/duplicated_argname_test.py:5: error: Repeated argname 'x' in multiple parametrizations.  [repeated-argname]
+test_samples/duplicated_argname_test.py:5: error: Repeated argname 'x' in multiple parametrizations.  [duplicate-argname]
 Found 1 error in 1 file (checked 1 source file)

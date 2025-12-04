@@ -22,3 +22,11 @@ def missed_fixture_decorator_in_another_file() -> int:
 
 @pytest.fixture
 def fixture_with_missing_argument(missing_argument: None) -> None: ...
+
+
+@pytest.fixture(autouse=True, scope="module")
+def autouse_request() -> None: ...
+
+
+@pytest.fixture(autouse=True, scope="module")
+def autouse_fixture(autouse_request: None) -> None: ...
