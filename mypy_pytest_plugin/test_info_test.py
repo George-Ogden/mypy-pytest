@@ -540,7 +540,7 @@ def test_test_info_check_multiple_decorators_duplicate_argnames() -> None:
         def test_info(x: int, y: str, z: float) -> None:
             ...
         """,
-        errors=["repeated-argname"],
+        errors=["duplicate-argname"],
     )
 
 

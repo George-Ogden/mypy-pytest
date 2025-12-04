@@ -1,5 +1,5 @@
 from collections.abc import Iterable, Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import functools
 import itertools
 from typing import Self
@@ -30,13 +30,14 @@ from .test_argument import TestArgument
 from .test_signature import TestSignature
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(frozen=True, kw_only=True, eq=False)
 class TestInfo(CheckerWrapper):
     fullname: Fullname
     fn_name: str
     arguments: Sequence[TestArgument]
     decorators: Sequence[DecoratorWrapper]
     checker: TypeChecker
+    _used_argnames: set[str] = field(default_factory=set, init=False)
 
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
@@ -136,7 +137,6 @@ class TestInfo(CheckerWrapper):
             for request in self.request_graph.requests
             if request.source == "argument"
         }
-        return self.request_graph._argname_types
 
     @property
     def parametrized_argnames(self) -> Sequence[str]:
@@ -199,10 +199,11 @@ class TestInfo(CheckerWrapper):
         return known_name
 
     def _check_repeated_arg_name(self, arg_name: str, context: Context) -> None:
-        return
-        if todo:  # fixme
+        if arg_name in self._used_argnames:
             self.fail(
                 f"Repeated argname {arg_name!r} in multiple parametrizations.",
                 context=context,
                 code=DUPLICATE_ARGNAME,
             )
+        else:
+            self._used_argnames.add(arg_name)
