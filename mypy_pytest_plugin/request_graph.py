@@ -158,10 +158,16 @@ class RequestGraph(CheckerWrapper):
     def _check_resolved(self) -> None:
         for request in self:
             if request.resolver is None:
+                suffix = (
+                    ""
+                    if request.source == "argument"
+                    else f" (requested in {str(self.fullname)!r})"
+                )
                 self.fail(
-                    f"Argname {request.name!r} cannot be resolved.",
-                    context=request.context if request.source == "argument" else self.context,
+                    f"Argname {request.name!r} cannot be resolved{suffix}.",
+                    context=request.context,
                     code=MISSING_ARGNAME,
+                    file=request.file,
                 )
                 self._check_unmarked_fixture(request.name)
 

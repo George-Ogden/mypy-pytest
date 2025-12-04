@@ -4,7 +4,7 @@ test_samples/same_file_fixture_test.py:33: error: Unable to identify type for bo
 test_samples/same_file_fixture_test.py:36: error: No return value expected  [return-value]
 test_samples/same_file_fixture_test.py:39: error: Unknown argname 'bool_fixture' used as test argument.  [unknown-argname]
 test_samples/same_file_fixture_test.py:39: note: 'bool_fixture' is part of the original request, but is shadowed by another parameter.
-test_samples/same_file_fixture_test.py:49: error: Argname 'missing_arg' cannot be resolved.  [missing-argname]
+test_samples/same_file_fixture_test.py:45: error: Argname 'missing_arg' cannot be resolved (requested in 'same_file_fixture_test.test_missing_fixture').  [missing-argname]
 test_samples/same_file_fixture_test.py:52: note: 'missed_fixture_decorator' is defined in 'same_file_fixture_test', but not marked as a fixture.
 test_samples/same_file_fixture_test.py:57: error: Argname 'missed_fixture_decorator' cannot be resolved.  [missing-argname]
 Found 7 errors in 1 file (checked 1 source file)

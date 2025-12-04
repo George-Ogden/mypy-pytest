@@ -1,3 +1,4 @@
+from typing import Literal
 import pytest
 
 
@@ -30,3 +31,13 @@ def autouse_request() -> None: ...
 
 @pytest.fixture(autouse=True, scope="module")
 def autouse_fixture(autouse_request: None) -> None: ...
+
+
+@pytest.fixture
+def ordered_fixture1() -> Literal[0]:
+    return 0
+
+
+@pytest.fixture
+def ordered_fixture2() -> Literal[1]:
+    return 1
