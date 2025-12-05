@@ -12,7 +12,7 @@ from mypy.nodes import (
 from mypy.subtypes import is_same_type
 from mypy.types import LiteralType
 
-from .defer import DeferralError
+from .defer import DeferralError, DeferralReason
 
 
 class ExcludedTestChecker:
@@ -46,7 +46,7 @@ class ExcludedTestChecker:
     ) -> Iterable[str]:
         rvalue_type = checker.lookup_type_or_none(assignment.rvalue)
         if rvalue_type is None:
-            raise DeferralError()
+            raise DeferralError(DeferralReason.REQUIRED_WAIT)
         if is_same_type(rvalue_type, LiteralType(False, checker.named_type("builtins.bool"))):
             for lvalue in assignment.lvalues:
                 assignment_target = cls._test_assignment_target(lvalue)

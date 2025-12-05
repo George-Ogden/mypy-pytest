@@ -31,7 +31,7 @@ from mypy.types import (
 
 from .argmapper import ArgMapper
 from .checker_wrapper import CheckerWrapper
-from .defer import DeferralError
+from .defer import DeferralError, DeferralReason
 from .error_codes import (
     DUPLICATE_FIXTURE,
     INVALID_FIXTURE_AUTOUSE,
@@ -264,7 +264,7 @@ class FixtureParser(CheckerWrapper):
     def _is_fixture_decorator(self, decorator: Expression) -> bool:
         decorator_type = self.checker.lookup_type_or_none(decorator)
         if decorator_type is None:
-            raise DeferralError()
+            raise DeferralError(DeferralReason.REQUIRED_WAIT)
         return self._is_fixture_type(decorator_type) or (
             isinstance(decorator_type, Overloaded)
             and any(self._is_fixture_type(overload.ret_type) for overload in decorator_type.items)
