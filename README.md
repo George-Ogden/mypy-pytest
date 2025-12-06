@@ -56,6 +56,7 @@ See the [Mypy docs](https://mypy.readthedocs.io/en/stable/extending_mypy.html#co
 The Mypy plugin system is fairly limited, so this can only check marked functions.
 If you're using parametrized testing, that's fine as you `pytest.mark.parametrize`.
 If not, [add a `typed` mark](https://docs.pytest.org/en/stable/how-to/mark.html#registering-marks) then mark any remaining tests you want to check.
+The order of the error messages is unclear, but this isn't an issue if you're using a plugin.
 
 ```python
 import random
