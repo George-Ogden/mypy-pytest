@@ -3,12 +3,18 @@ import functools
 from typing import cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import CallExpr, Decorator, Expression, MemberExpr, MypyFile
+from mypy.nodes import (
+    CallExpr,
+    Decorator,
+    Expression,
+    MemberExpr,
+    MypyFile,
+)
 from mypy.options import Options
 from mypy.plugin import AttributeContext, FunctionContext, FunctionSigContext, MethodContext, Plugin
 from mypy.types import CallableType, FunctionLike, Type
 
-from .defer import DeferralError
+from .defer import DeferralError, DeferralReason
 from .excluded_test_checker import ExcludedTestChecker
 from .fixture import Fixture
 from .fixture_manager import FixtureManager
@@ -36,6 +42,7 @@ class PytestPlugin(Plugin):
         options.preserve_asts = True
         options.follow_untyped_imports = True
         super().__init__(options)
+        self._deferred_tests: set[int] = set()
 
     def get_additional_deps(self, file: MypyFile) -> list[tuple[int, str, int]]:
         deps = [
@@ -143,19 +150,19 @@ class PytestPlugin(Plugin):
     def _is_real_argument(cls, argument: Expression) -> bool:
         return argument.line != -1 and argument.end_line is not None
 
-    @classmethod
-    def check_pytest_structure(cls, ctx: MethodContext | FunctionContext) -> Type:
+    def check_pytest_structure(self, ctx: MethodContext | FunctionContext) -> Type:
         try:
-            return cls._check_pytest_structure(ctx)
-        except DeferralError:
+            return self._check_pytest_structure(ctx)
+        except DeferralError as e:
             assert isinstance(ctx.api, TypeChecker)
             ctx.api.defer_node(cast(Decorator, ctx.context), None)
+            if e.cause == DeferralReason.REQUIRED_WAIT:
+                self._deferred_tests.clear()
             return ctx.default_return_type
 
-    @classmethod
-    def _check_pytest_structure(cls, ctx: MethodContext | FunctionContext) -> Type:
+    def _check_pytest_structure(self, ctx: MethodContext | FunctionContext) -> Type:
         if isinstance(ctx.context, Decorator) and isinstance(ctx.api, TypeChecker):
-            cls._update_return_type(ctx.default_return_type, ctx.api)
+            self._update_return_type(ctx.default_return_type, ctx.api)
             if not Fixture.is_fixture_and_mark(ctx.context, checker=ctx.api):
                 if fixture := Fixture.from_decorator(ctx.context, checker=ctx.api):
                     return fixture.as_fixture_type(decorator=ctx.context, checker=ctx.api)
@@ -165,7 +172,10 @@ class PytestPlugin(Plugin):
                 if ctx.context.name not in ignored_testnames and TestNameChecker.is_test_name(
                     ctx.context.fullname
                 ):
-                    cls._check_decorators(ctx.context, ctx.api)
+                    if id(ctx.context) not in self._deferred_tests:
+                        self._deferred_tests.add(id(ctx.context))
+                        raise DeferralError(DeferralReason.SPECULATIVE_WAIT)
+                    self._check_decorators(ctx.context, ctx.api)
         return ctx.default_return_type
 
     @classmethod

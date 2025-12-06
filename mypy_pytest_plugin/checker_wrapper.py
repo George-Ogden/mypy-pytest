@@ -17,8 +17,8 @@ class CheckerWrapper(abc.ABC):
     @abc.abstractmethod
     def __init__(self) -> None: ...
 
-    def fail(self, msg: str, *, context: Context, code: ErrorCode) -> None:
-        self.checker.fail(msg, context=context, code=code)
+    def fail(self, msg: str, *, context: Context, code: ErrorCode, file: None | str = None) -> None:
+        self.checker.msg.fail(msg, context=context, code=code, file=file)
 
     def note(self, msg: str, *, context: Context, code: ErrorCode | None) -> None:
         self.checker.note(msg, context=context, code=code)

@@ -1,3 +1,4 @@
+from typing import Literal
 import pytest
 
 
@@ -22,3 +23,21 @@ def missed_fixture_decorator_in_another_file() -> int:
 
 @pytest.fixture
 def fixture_with_missing_argument(missing_argument: None) -> None: ...
+
+
+@pytest.fixture(autouse=True, scope="module")
+def autouse_request() -> None: ...
+
+
+@pytest.fixture(autouse=True, scope="module")
+def autouse_fixture(autouse_request: None) -> None: ...
+
+
+@pytest.fixture
+def ordered_fixture1() -> Literal[0]:
+    return 0
+
+
+@pytest.fixture
+def ordered_fixture2() -> Literal[1]:
+    return 1

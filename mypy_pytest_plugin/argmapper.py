@@ -74,3 +74,13 @@ class ArgMapper:
     @classmethod
     def _merge_mappings(cls, this: ArgMap, that: ArgMap) -> ArgMap:
         return {key: expr for key, expr in this.items() if that.get(key, None) is expr}
+
+    @classmethod
+    def named_arg(cls, call: CallExpr, name: str) -> Expression | None:
+        expressions = [
+            arg for arg_name, arg in zip(call.arg_names, call.args, strict=True) if arg_name == name
+        ]
+        match expressions:
+            case [expression]:
+                return expression
+        return None

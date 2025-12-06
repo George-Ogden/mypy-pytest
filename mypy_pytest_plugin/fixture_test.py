@@ -160,6 +160,48 @@ def test_fixture_from_decorator_wrong_type_scope() -> None:
     )
 
 
+def test_fixture_from_decorator_autouse_explicit() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+        from typing import Literal, cast
+
+        @pytest.fixture(autouse=cast(Literal[True], 0 == 0))
+        def fixture() -> None:
+            ...
+        """,
+        is_fixture=True,
+    )
+
+
+def test_fixture_from_decorator_autouse() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+
+        @pytest.fixture(autouse=False)
+        def fixture() -> None:
+            ...
+        """,
+        is_fixture=True,
+    )
+
+
+def test_fixture_from_decorator_autouse_invalid() -> None:
+    _fixture_from_decorator_test_body(
+        """
+        import pytest
+        from typing import cast
+
+        @pytest.fixture(autouse=cast(bool, True))
+        def fixture() -> None:
+            ...
+        """,
+        is_fixture=True,
+        errors=["invalid-fixture-autouse"],
+    )
+
+
 def test_fixture_from_decorator_mark() -> None:
     _fixture_from_decorator_test_body(
         """
@@ -266,6 +308,7 @@ def _fixture_from_type_test_body(defs: str) -> None:
         file="",
         is_generator=False,
         fullname="test_module.fullname",
+        autouse=False,
     )
     assert fixture is not None
 

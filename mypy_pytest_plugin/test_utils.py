@@ -81,6 +81,7 @@ class MultiParseResult(_ParseResultBase):
     types: dict[str, TypeLookup] = field(default_factory=dict)
     defs: dict[str, Expression | FuncDef | Decorator] = field(default_factory=dict)
     raw_defs: list[Statement] = field(default_factory=list)
+    modules: dict[str, MypyFile] = field(default_factory=dict)
 
     def single(self, module_name: str) -> ParseResult:
         return ParseResult(
@@ -127,8 +128,8 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: str = "") -> M
     parse_result = MultiParseResult(graph=result.graph)
     for module_name in module_names:
         state = result.graph[module_name]
-        tree = state.tree
-        if tree is None:
+        module = state.tree
+        if module is None:
             raise ValueError(f"Unable to infer types. Errors: {state.early_errors}")
 
         type_checker = state.type_checker()
@@ -140,7 +141,7 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: str = "") -> M
             raise TypeError()
 
         defs: dict[str, Expression | FuncDef | Decorator] = {}
-        for def_ in tree.defs:
+        for def_ in module.defs:
             if isinstance(def_, AssignmentStmt):
                 for lvalue in def_.lvalues:
                     if isinstance(lvalue, NameExpr):
@@ -152,9 +153,10 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: str = "") -> M
                 defs[def_.name] = def_
 
         parse_result.checkers[module_name] = type_checker
-        parse_result.raw_defs.extend(tree.defs)
-        parse_result.types[module_name] = TypeLookup(tree.names)
+        parse_result.raw_defs.extend(module.defs)
+        parse_result.types[module_name] = TypeLookup(module.names)
         parse_result.defs.update({f"{module_name}.{name}": def_ for name, def_ in defs.items()})
+        parse_result.modules[module_name] = module
         if len(module_names) == 1:
             parse_result.defs.update(defs)
     return parse_result

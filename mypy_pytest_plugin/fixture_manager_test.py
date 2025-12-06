@@ -2,12 +2,15 @@ from collections.abc import Sequence
 from unittest import mock
 
 from inline_snapshot import snapshot
-from mypy.nodes import FuncDef
+from mypy.nodes import Decorator, FuncDef
+from mypy.subtypes import is_same_type
 
+from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .test_argument import TestArgument
 from .test_utils import parse_multiple, simple_module_lookup
+from .utils import strict_cast, strict_not_none
 
 
 def _fixture_manager_conftest_names_test_body(fullname: str, expected_fullnames: list[str]) -> None:
@@ -81,10 +84,9 @@ def test_fixture_manager_default_fixture_module_names() -> None:
     )
 
 
-def _fixture_manager_resolve_requests_and_fixtures_test_body(
+def _fixture_manager_resolve_fixtures_test_body(
     modules: Sequence[tuple[str, str]],
-    expected_request_names: Sequence[str],
-    expected_fixture_fullnames: Sequence[str],
+    expected_fixtures: dict[str, list[str]],
 ) -> None:
     parse_result = parse_multiple(modules, header="import _pytest.fixtures\nimport typing")
 
@@ -96,23 +98,24 @@ def _fixture_manager_resolve_requests_and_fixtures_test_body(
     assert isinstance(fixture_def, FuncDef)
     parse_result.checker_accept_all(checker)
 
-    start = TestArgument.from_fn_def(fixture_def, checker=checker, source="test")
-    assert start is not None
+    test_arguments = TestArgument.from_fn_def(fixture_def, checker=checker, source="test")
+    assert test_arguments is not None
 
     with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
-        requests, fixtures = FixtureManager(checker).resolve_requests_and_fixtures(
-            start, Fullname.from_string(last_module_name)
+        fixtures = FixtureManager(checker).resolve_fixtures(
+            [test_argument.name for test_argument in test_arguments],
+            Fullname.from_string(last_module_name),
         )
 
     assert not checker.errors.is_errors()
-    assert sorted(requests.keys()) == sorted(expected_request_names)
-    assert sorted(str(fixture.fullname) for fixture in fixtures) == sorted(
-        fullname for fullname in expected_fixture_fullnames
-    )
+    assert {
+        fixture_name: [str(fixture.fullname) for fixture in fixtures]
+        for fixture_name, fixtures in fixtures.items()
+    } == expected_fixtures
 
 
-def test_fixture_manager_resolve_requests_no_requests() -> None:
-    _fixture_manager_resolve_requests_and_fixtures_test_body(
+def test_fixture_manager_resolve_fixtures_no_requests() -> None:
+    _fixture_manager_resolve_fixtures_test_body(
         [
             (
                 "conftest",
@@ -132,13 +135,12 @@ def test_fixture_manager_resolve_requests_no_requests() -> None:
                 """,
             ),
         ],
-        [],
-        [],
+        {},
     )
 
 
-def test_fixture_manager_resolve_requests_no_fixtures() -> None:
-    _fixture_manager_resolve_requests_and_fixtures_test_body(
+def test_fixture_manager_resolve_fixtures_no_fixtures() -> None:
+    _fixture_manager_resolve_fixtures_test_body(
         [
             (
                 "file_test",
@@ -148,13 +150,12 @@ def test_fixture_manager_resolve_requests_no_fixtures() -> None:
                 """,
             ),
         ],
-        ["x", "y"],
-        [],
+        dict(x=[], y=[]),
     )
 
 
-def test_fixture_manager_resolve_requests_single_request_same_file() -> None:
-    _fixture_manager_resolve_requests_and_fixtures_test_body(
+def test_fixture_manager_resolve_fixtures_single_request_same_file() -> None:
+    _fixture_manager_resolve_fixtures_test_body(
         [
             (
                 "conftest",
@@ -180,13 +181,12 @@ def test_fixture_manager_resolve_requests_single_request_same_file() -> None:
                 """,
             ),
         ],
-        ["fixture"],
-        ["file_test.fixture"],
+        dict(fixture=["file_test.fixture", "conftest.fixture"]),
     )
 
 
-def test_fixture_manager_resolve_requests_long_chain_same_file() -> None:
-    _fixture_manager_resolve_requests_and_fixtures_test_body(
+def test_fixture_manager_resolve_fixtures_long_chain_same_file() -> None:
+    _fixture_manager_resolve_fixtures_test_body(
         [
             (
                 "file_test",
@@ -210,13 +210,70 @@ def test_fixture_manager_resolve_requests_long_chain_same_file() -> None:
                 """,
             ),
         ],
-        ["fixture_1", "fixture_2", "fixture_3", "fixture_4"],
-        ["file_test.fixture_1", "file_test.fixture_2", "file_test.fixture_3"],
+        dict(
+            fixture_1=["file_test.fixture_1"],
+            fixture_2=["file_test.fixture_2"],
+            fixture_3=["file_test.fixture_3"],
+            fixture_4=[],
+        ),
     )
 
 
-def test_fixture_manager_resolve_requests_single_request_different_file() -> None:
-    _fixture_manager_resolve_requests_and_fixtures_test_body(
+def test_fixture_manager_resolve_fixtures_long_chain_masked_by_arg() -> None:
+    _fixture_manager_resolve_fixtures_test_body(
+        [
+            (
+                "conftest",
+                """
+                import pytest
+
+                @pytest.fixture
+                def fixture_4(fixture_5: None) -> None:
+                    ...
+
+                @pytest.fixture
+                def fixture_3(fixture_4: None) -> None:
+                    ...
+
+                @pytest.fixture
+                def fixture_2(fixture_3: None) -> None:
+                    ...
+                """,
+            ),
+            (
+                "file_test",
+                """
+                import pytest
+
+                @pytest.fixture
+                def fixture_3(fixture_4: None) -> None:
+                    ...
+
+                @pytest.fixture
+                def fixture_2(fixture_3: None) -> None:
+                    ...
+
+                @pytest.fixture
+                def fixture_1(fixture_2: None) -> None:
+                    ...
+
+                def test_request(fixture_1: None) -> None:
+                    ...
+                """,
+            ),
+        ],
+        dict(
+            fixture_1=["file_test.fixture_1"],
+            fixture_2=["file_test.fixture_2", "conftest.fixture_2"],
+            fixture_3=["file_test.fixture_3", "conftest.fixture_3"],
+            fixture_4=["conftest.fixture_4"],
+            fixture_5=[],
+        ),
+    )
+
+
+def test_fixture_manager_resolve_fixtures_single_request_different_file() -> None:
+    _fixture_manager_resolve_fixtures_test_body(
         [
             (
                 "_pytest.capture",
@@ -256,13 +313,12 @@ def test_fixture_manager_resolve_requests_single_request_different_file() -> Non
                 """,
             ),
         ],
-        ["capsys"],
-        ["folder.conftest.capsys"],
+        dict(capsys=["folder.conftest.capsys", "conftest.capsys", "_pytest.capture.capsys"]),
     )
 
 
-def test_fixture_manager_resolve_requests_request_builtins() -> None:
-    _fixture_manager_resolve_requests_and_fixtures_test_body(
+def test_fixture_manager_resolve_fixtures_request_builtins() -> None:
+    _fixture_manager_resolve_fixtures_test_body(
         [
             (
                 "pytest_snapshot.plugin",
@@ -294,93 +350,12 @@ def test_fixture_manager_resolve_requests_request_builtins() -> None:
                 """,
             ),
         ],
-        ["capsys", "snapshot"],
-        ["_pytest.capture.capsys", "pytest_snapshot.plugin.snapshot"],
-    )
-
-
-def test_fixture_manager_resolve_requests_complex_graph() -> None:
-    _fixture_manager_resolve_requests_and_fixtures_test_body(
-        [
-            (
-                "conftest",
-                """
-                from typing import Any
-                import pytest
-
-                @pytest.fixture
-                def local() -> str:
-                    return ""
-
-                @pytest.fixture
-                def non_local() -> int:
-                    return 1
-
-                @pytest.fixture
-                def indirect_non_local(non_local: int) -> int:
-                    return non_local
-
-                @pytest.fixture
-                def inverted_local() -> bool:
-                    return False
-
-                @pytest.fixture
-                def indirect_inverted_local(inverted_local) -> bool:
-                    return inverted_local
-                """,
-            ),
-            (
-                "file_test",
-                """
-                import pytest
-
-                @pytest.fixture
-                def local() -> str:
-                    return ""
-
-                @pytest.fixture
-                def non_local() -> int:
-                    return 1
-
-                @pytest.fixture
-                def indirect_local(local: str) -> str:
-                    return local
-
-                @pytest.fixture
-                def inverted_local() -> bool:
-                    return True
-
-                def test_request(
-                    indirect_local: str,
-                    indirect_non_local: int,
-                    indirect_inverted_local: bool,
-                    inverted_local: bool,
-                ) -> None:
-                    ...
-                """,
-            ),
-        ],
-        [
-            "indirect_local",
-            "local",
-            "indirect_non_local",
-            "non_local",
-            "inverted_local",
-            "indirect_inverted_local",
-        ],
-        [
-            "file_test.indirect_local",
-            "file_test.local",
-            "file_test.inverted_local",
-            "file_test.non_local",
-            "conftest.indirect_inverted_local",
-            "conftest.indirect_non_local",
-        ],
+        dict(capsys=["_pytest.capture.capsys"], snapshot=["pytest_snapshot.plugin.snapshot"]),
     )
 
 
 def test_fixture_manager_resolve_inverted_request_graph() -> None:
-    _fixture_manager_resolve_requests_and_fixtures_test_body(
+    _fixture_manager_resolve_fixtures_test_body(
         [
             (
                 "conftest",
@@ -406,13 +381,12 @@ def test_fixture_manager_resolve_inverted_request_graph() -> None:
                 """,
             ),
         ],
-        ["direct", "indirect", "argument"],
-        ["conftest.direct", "file_test.indirect"],
+        dict(direct=["conftest.direct"], indirect=["file_test.indirect"], argument=[]),
     )
 
 
-def test_fixture_manager_resolve_requests_request_cycles() -> None:
-    _fixture_manager_resolve_requests_and_fixtures_test_body(
+def test_fixture_manager_resolve_fixtures_request_cycles() -> None:
+    _fixture_manager_resolve_fixtures_test_body(
         [
             (
                 "file_test",
@@ -441,11 +415,331 @@ def test_fixture_manager_resolve_requests_request_cycles() -> None:
                 """,
             ),
         ],
-        ["direct_cycle", "indirect_cycle_1", "indirect_cycle_2", "indirect_cycle_3"],
+        dict(
+            direct_cycle=["file_test.direct_cycle"],
+            indirect_cycle_1=["file_test.indirect_cycle_1"],
+            indirect_cycle_2=["file_test.indirect_cycle_2"],
+            indirect_cycle_3=["file_test.indirect_cycle_3"],
+        ),
+    )
+
+
+def test_fixture_manager_resolve_fixtures_autouse_fixtures() -> None:
+    _fixture_manager_resolve_fixtures_test_body(
         [
-            "file_test.direct_cycle",
-            "file_test.indirect_cycle_1",
-            "file_test.indirect_cycle_2",
-            "file_test.indirect_cycle_3",
+            (
+                "file_test",
+                """
+                import pytest
+                from typing import Literal
+
+                @pytest.fixture
+                def requested_fixture() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def automatic_fixture(requested_fixture: None, requested_arg: None) -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def automatic_fixture2() -> None:
+                    ...
+
+                @pytest.fixture
+                def manual_fixture() -> None:
+                    ...
+
+                def test_request(manual_fixture: None) -> None:
+                    ...
+
+                __autouse__: Literal["automatic_fixture", "automatic_fixture2"]
+                """,
+            ),
+        ],
+        dict(
+            manual_fixture=["file_test.manual_fixture"],
+            automatic_fixture=["file_test.automatic_fixture"],
+            automatic_fixture2=["file_test.automatic_fixture2"],
+            requested_fixture=["file_test.requested_fixture"],
+            requested_arg=[],
+        ),
+    )
+
+
+def test_fixture_manager_resolve_fixtures_autouse_fixture_ignored() -> None:
+    _fixture_manager_resolve_fixtures_test_body(
+        [
+            (
+                "conftest",
+                """
+                import pytest
+                from typing import Literal
+
+                @pytest.fixture
+                def requested_fixture() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def masked_automatic_fixture(requested_fixture: None) -> None:
+                    ...
+
+                __autouse__: Literal["masked_automatic_fixture"]
+                """,
+            ),
+            (
+                "file_test",
+                """
+                import pytest
+
+                @pytest.fixture
+                def masked_automatic_fixture() -> None:
+                    ...
+
+                def test_request(masked_automatic_fixture: None) -> None:
+                    ...
+                """,
+            ),
+        ],
+        dict(
+            masked_automatic_fixture=[
+                "file_test.masked_automatic_fixture",
+                "conftest.masked_automatic_fixture",
+            ],
+            requested_fixture=[
+                "conftest.requested_fixture",
+            ],
+        ),
+    )
+
+
+def _fixture_manager_resolve_autouse_fixtures_test_body(
+    modules: list[tuple[str, str]], expected_fixture_names: list[str]
+) -> None:
+    parse_result = parse_multiple(modules, header="import mypy_pytest_plugin_types")
+
+    overrides = {}
+    for module_name, module in parse_result.modules.items():
+        checker = parse_result.checkers[module_name]
+        parse_result.checker_accept_all(checker)
+        autouse_node = module.names.pop(Fixture.AUTOUSE_NAME, None)
+        for name, node in list(module.names.items()):
+            if (
+                isinstance(decorator := node.node, Decorator)
+                and (fixture := Fixture.from_decorator(decorator, checker)) is not None
+            ):
+                overrides[(module_name, name)] = fixture.as_fixture_type(
+                    decorator=decorator, checker=checker
+                )
+        if autouse_node is not None:
+            assert is_same_type(
+                strict_not_none(module.names[Fixture.AUTOUSE_NAME].type),
+                strict_not_none(autouse_node.type),
+            )
+            module.names[Fixture.AUTOUSE_NAME] = autouse_node
+
+    for (module_name, name), type_ in overrides.items():
+        strict_cast(Decorator, checker.modules[module_name].names[name].node).var.type = type_
+
+    fixtures = FixtureManager(checker).autouse_fixture_names(Fullname.from_string(module_name))
+    assert sorted(fixtures) == sorted(expected_fixture_names)
+
+
+def test_fixture_manager_resolve_autouse_fixtures_none() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body([("file_test", "")], [])
+
+
+def test_fixture_manager_resolve_autouse_fixtures_same_file() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body(
+        [
+            (
+                "file_test",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["fixture"]
+
+                @pytest.fixture(autouse=True)
+                def fixture() -> None:
+                    ...
+                """,
+            )
+        ],
+        ["fixture"],
+    )
+
+
+def test_fixture_manager_resolve_autouse_fixtures_conftest() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body(
+        [
+            (
+                "conftest",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["conftest_fixture"]
+
+                @pytest.fixture(autouse=True)
+                def conftest_fixture() -> None:
+                    ...
+                """,
+            ),
+            (
+                "file_test",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["file_fixture"]
+
+                @pytest.fixture(autouse=True)
+                def file_fixture() -> None:
+                    ...
+                """,
+            ),
+        ],
+        ["conftest_fixture", "file_fixture"],
+    )
+
+
+def test_fixture_manager_resolve_autouse_fixtures_nested_conftest() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body(
+        [
+            (
+                "conftest",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["conftest_fixture"]
+
+                @pytest.fixture(autouse=True)
+                def conftest_fixture() -> None:
+                    ...
+                """,
+            ),
+            (
+                "nested.file_test",
+                """
+                import pytest
+                from typing import Literal
+
+                __autouse__: Literal["file_fixture1", "file_fixture2"]
+
+                @pytest.fixture(autouse=True)
+                def file_fixture1() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def file_fixture2() -> None:
+                    ...
+                """,
+            ),
+        ],
+        [
+            "conftest_fixture",
+            "file_fixture1",
+            "file_fixture2",
+        ],
+    )
+
+
+def test_fixture_manager_resolve_autouse_fixtures_conflicting_names() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body(
+        [
+            (
+                "conftest",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["conftest_fixture", "fixture"]
+
+                @pytest.fixture(autouse=True)
+                def fixture() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def conftest_fixture() -> None:
+                    ...
+                """,
+            ),
+            (
+                "nested.conftest",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["conftest_fixture", "fixture"]
+
+                @pytest.fixture(autouse=True)
+                def fixture() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def conftest_fixture() -> None:
+                    ...
+                """,
+            ),
+            (
+                "nested.file_test",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["file_fixture", "fixture"]
+
+                @pytest.fixture(autouse=True)
+                def file_fixture() -> None:
+                    ...
+
+                @pytest.fixture(autouse=True)
+                def fixture() -> None:
+                    ...
+                """,
+            ),
+        ],
+        [
+            "conftest_fixture",
+            "file_fixture",
+            "fixture",
+        ],
+    )
+
+
+def test_fixture_manager_resolve_autouse_fixtures_builtin() -> None:
+    _fixture_manager_resolve_autouse_fixtures_test_body(
+        [
+            (
+                "_pytest.capture",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["capture_fixture"]
+
+                @pytest.fixture(autouse=True)
+                def capture_fixture() -> None:
+                    ...
+                """,
+            ),
+            (
+                "file_test",
+                """
+                from typing import Literal
+                import pytest
+
+                __autouse__: Literal["fixture"]
+
+                @pytest.fixture(autouse=True)
+                def fixture() -> None:
+                    ...
+                """,
+            ),
+        ],
+        [
+            "capture_fixture",
+            "fixture",
         ],
     )

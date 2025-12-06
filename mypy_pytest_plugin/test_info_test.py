@@ -161,7 +161,15 @@ def _test_info_sub_signature_test_body(
     test_info = test_info_from_defs(defs, name="test_info")
 
     assert not checker.errors.is_errors()
-    sub_signature = test_info.sub_signature(argnames)
+
+    with mock.patch.object(
+        TestInfo,
+        "argname_types",
+        mock.PropertyMock(
+            return_value={argument.name: argument for argument in test_info.arguments}
+        ),
+    ):
+        sub_signature = test_info.sub_signature(argnames)
 
     messages = get_error_messages(checker)
     assert sub_signature == expected_signature, messages
@@ -518,7 +526,7 @@ def test_test_info_check_multiple_decorators_missing_optional_argname() -> None:
     )
 
 
-def test_test_info_check_multiple_decorators_repeated_argnames() -> None:
+def test_test_info_check_multiple_decorators_duplicate_argnames() -> None:
     _test_info_check_test_body(
         """
         import pytest
@@ -540,7 +548,7 @@ def test_test_info_check_multiple_decorators_repeated_argnames() -> None:
         def test_info(x: int, y: str, z: float) -> None:
             ...
         """,
-        errors=["repeated-argname"],
+        errors=["duplicate-argname"],
     )
 
 
@@ -668,7 +676,7 @@ def test_test_info_check_double_used_fixture_argument() -> None:
         def test_info(fixture: str) -> None:
             ...
         """,
-        errors=["repeated-fixture-argname"],
+        errors=["unknown-argname"],
     )
 
 
@@ -687,7 +695,8 @@ def test_test_info_check_cyclic_fixture() -> None:
 
         def test_info(cycle_1: int) -> None:
             ...
-        """
+        """,
+        errors=["missing-argname"],
     )
 
 
@@ -769,7 +778,7 @@ def test_test_info_check_fixture_unknown_scope() -> None:
         def test_info(unknown_fixture: None) -> None:
             ...
         """,
-        errors=["invalid-fixture-scope"],
+        errors=["invalid-fixture-scope", "missing-argname"],
     )
 
 
@@ -965,4 +974,50 @@ def test_test_info_check_untyped_request() -> None:
         def test_info(yield_fixture: Any, number) -> None:
             ...
         """
+    )
+
+
+def test_test_info_check_diamond_lower_bound() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def int_fixture(arg: int) -> int:
+            return arg
+
+        @pytest.fixture
+        def obj_fixture(arg: object) -> object:
+            return arg
+
+        @pytest.mark.parametrize(
+            "arg", [1, object(), "neither"]
+        )
+        def test_info(obj_fixture: object, int_fixture: int) -> None:
+            ...
+        """,
+        errors=["arg-type", "arg-type"],
+    )
+
+
+def test_test_info_check_diamond_no_lower_bound() -> None:
+    _test_info_check_test_body(
+        """
+        import pytest
+
+        @pytest.fixture
+        def int_fixture(arg: int) -> int:
+            return arg
+
+        @pytest.fixture
+        def str_fixture(arg: str) -> str:
+            return arg
+
+        @pytest.mark.parametrize(
+            "arg", [1, object(), "neither"]
+        )
+        def test_info(str_fixture: str, int_fixture: int) -> None:
+            ...
+        """,
+        errors=["valid-type"],
     )

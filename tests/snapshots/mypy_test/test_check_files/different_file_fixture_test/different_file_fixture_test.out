@@ -1,6 +1,14 @@
-test_samples/conftest.py:10: error: 'indirect_int_fixture' requests 'base_int_fixture' with type "str", but expects type "int". This happens when executing 'test_valid_indirect_int_fixture'.  [fixture-arg-type]
-test_samples/conftest.py:10: error: 'indirect_int_fixture' requests 'base_int_fixture' with type "str", but expects type "int". This happens when executing 'test_invalid_indirect_int_fixture'.  [fixture-arg-type]
-test_samples/different_file_fixture_test.py:18: error: Argname 'missing_argument' not included in parametrization.  [missing-argname]
-test_samples/different_file_fixture_test.py:23: error: Argname 'missed_fixture_decorator_in_another_file' not included in parametrization.  [missing-argname]
-test_samples/conftest.py:19: note: 'missed_fixture_decorator_in_another_file' is defined in 'conftest', but not marked as a fixture.
-Found 4 errors in 2 files (checked 1 source file)
+test_samples/conftest.py:11: error: 'indirect_int_fixture' requests 'base_int_fixture' with type "str", but expects type "int". This happens when executing 'test_valid_indirect_int_fixture'.  [fixture-arg-type]
+test_samples/conftest.py:11: error: 'indirect_int_fixture' requests 'base_int_fixture' with type "str", but expects type "int". This happens when executing 'test_invalid_indirect_int_fixture'.  [fixture-arg-type]
+test_samples/conftest.py:25: error: Argname 'missing_argument' cannot be resolved (requested in 'different_file_fixture_test.test_requests_fixture_with_missing_argument').  [missing-argname]
+test_samples/different_file_fixture_test.py:24: error: Argname 'missed_fixture_decorator_in_another_file' cannot be resolved.  [missing-argname]
+test_samples/conftest.py:20: note: 'missed_fixture_decorator_in_another_file' is defined in 'conftest', but not marked as a fixture.
+test_samples/different_file_fixture_test.py:29: error: 'ordered_fixture1' requests 'ordered_fixture2' with type "Literal[3]", but expects type "None". This happens when executing 'test_ordered_case1'.  [fixture-arg-type]
+test_samples/different_file_fixture_test.py:29: error: 'ordered_fixture1' requests 'ordered_fixture2' with type "Literal[1]", but expects type "None". This happens when executing 'test_ordered_case2'.  [fixture-arg-type]
+test_samples/different_file_fixture_test.py:34: error: 'ordered_fixture2' requests 'ordered_fixture1' with type "Literal[0]", but expects type "None". This happens when executing 'test_ordered_case1'.  [fixture-arg-type]
+test_samples/different_file_fixture_test.py:34: error: 'ordered_fixture2' requests 'ordered_fixture1' with type "Literal[2]", but expects type "None". This happens when executing 'test_ordered_case2'.  [fixture-arg-type]
+test_samples/different_file_fixture_test.py:39: error: 'test_ordered_case1' requests 'ordered_fixture1' with type "Literal[2]", but expects type "None". This happens when executing 'test_ordered_case1'.  [fixture-arg-type]
+test_samples/different_file_fixture_test.py:39: error: 'test_ordered_case1' requests 'ordered_fixture2' with type "Literal[3]", but expects type "None". This happens when executing 'test_ordered_case1'.  [fixture-arg-type]
+test_samples/different_file_fixture_test.py:43: error: 'test_ordered_case2' requests 'ordered_fixture2' with type "Literal[3]", but expects type "None". This happens when executing 'test_ordered_case2'.  [fixture-arg-type]
+test_samples/different_file_fixture_test.py:43: error: 'test_ordered_case2' requests 'ordered_fixture1' with type "Literal[2]", but expects type "None". This happens when executing 'test_ordered_case2'.  [fixture-arg-type]
+Found 12 errors in 2 files (checked 1 source file)

@@ -20,11 +20,15 @@ from .error_codes import (
     UNREADABLE_ARGNAME,
     UNREADABLE_ARGNAMES,
 )
+from .utils import cache_by_id
 
 
 @dataclass(frozen=True)
 class ArgnamesParser(CheckerWrapper):
     checker: TypeChecker
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "parse_names", cache_by_id(self.parse_names))
 
     def parse_names(self, expression: Expression) -> str | list[str] | None:
         match expression:

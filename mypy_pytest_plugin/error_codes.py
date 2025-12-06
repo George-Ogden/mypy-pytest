@@ -24,10 +24,6 @@ DUPLICATE_ARGNAME: Final[ErrorCode] = ErrorCode(
     "duplicate-argname", "Pytest parametrize contains duplicate argnames.", category="Pytest"
 )
 
-REPEATED_ARGNAME: Final[ErrorCode] = ErrorCode(
-    "repeated-argname", "Pytest parametrizations contain repeated argname.", category="Pytest"
-)
-
 
 REPEATED_FIXTURE_ARGNAME: Final[ErrorCode] = ErrorCode(
     "repeated-fixture-argname",
@@ -89,6 +85,12 @@ MARKED_FIXTURE: Final[ErrorCode] = ErrorCode(
     "Do not use `pytest.mark` with `pytest.fixture`.",
     category="Pytest",
 )
+INVALID_FIXTURE_AUTOUSE: Final[ErrorCode] = ErrorCode(
+    "invalid-fixture-autouse",
+    "Use literal value when setting autouse of a Pytest fixture.",
+    category="Pytest",
+)
+
 
 INVALID_FIXTURE_SCOPE: Final[ErrorCode] = ErrorCode(
     "invalid-fixture-scope",

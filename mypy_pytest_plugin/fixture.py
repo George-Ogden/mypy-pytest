@@ -6,7 +6,16 @@ import enum
 from typing import ClassVar, Final, Self, cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import CallExpr, Context, Decorator, Expression, FuncDef
+from mypy.nodes import (
+    GDEF,
+    CallExpr,
+    Context,
+    Decorator,
+    Expression,
+    FuncDef,
+    SymbolTableNode,
+    Var,
+)
 from mypy.subtypes import is_subtype
 from mypy.types import (
     AnyType,
@@ -17,14 +26,23 @@ from mypy.types import (
     Type,
     TypeOfAny,
     TypeVarLikeType,
+    UnionType,
 )
 
+from .argmapper import ArgMapper
 from .checker_wrapper import CheckerWrapper
-from .defer import DeferralError
-from .error_codes import DUPLICATE_FIXTURE, INVALID_FIXTURE_SCOPE, MARKED_FIXTURE, REQUEST_KEYWORD
+from .defer import DeferralError, DeferralReason
+from .error_codes import (
+    DUPLICATE_FIXTURE,
+    INVALID_FIXTURE_AUTOUSE,
+    INVALID_FIXTURE_SCOPE,
+    MARKED_FIXTURE,
+    REQUEST_KEYWORD,
+)
 from .fullname import Fullname
 from .test_argument import TestArgument
 from .types_module import TYPES_MODULE
+from .utils import strict_cast, strict_not_none
 
 FixtureScope = enum.IntEnum(
     "FixtureScope", ["function", "class", "module", "package", "session", "unknown"]
@@ -34,11 +52,13 @@ DEFAULT_SCOPE: Final[FixtureScope] = FixtureScope.function
 
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Fixture:
+    AUTOUSE_NAME: ClassVar[str] = "__autouse__"
     fullname: Fullname
     file: str
     return_type: Type
     arguments: Sequence[TestArgument]
     scope: FixtureScope
+    autouse: bool
     type_variables: Sequence[TypeVarLikeType]
     context: Context
 
@@ -54,13 +74,15 @@ class Fixture:
         scope: FixtureScope,
         file: str,
         is_generator: bool,
+        autouse: bool,
         fullname: str,
     ) -> Self:
         func = type.definition
         assert isinstance(func, FuncDef | None)
         if isinstance(func, FuncDef):
-            arguments = TestArgument.from_fn_def(func, checker=None, source="fixture")
-            assert arguments is not None
+            arguments = strict_not_none(
+                TestArgument.from_fn_def(func, checker=None, source="fixture")
+            )
             context: Context = func
         else:
             arguments = TestArgument.from_type(type)
@@ -71,6 +93,7 @@ class Fixture:
             return_type=FixtureParser.fixture_return_type(type.ret_type, is_generator=is_generator),
             arguments=arguments,
             scope=scope,
+            autouse=autouse,
             context=context,
             type_variables=type.variables,
         )
@@ -97,6 +120,8 @@ class Fixture:
 
     def as_fixture_type(self, *, decorator: Decorator, checker: TypeChecker) -> Type:
         assert decorator.func.type is not None
+        if self.autouse:
+            self.save_to_autouse(checker)
         return checker.named_generic_type(
             f"{TYPES_MODULE}.FixtureType",
             [
@@ -106,8 +131,36 @@ class Fixture:
                     decorator.func.is_generator, fallback=checker.named_type("builtins.object")
                 ),
                 LiteralType(decorator.fullname, fallback=checker.named_type("builtins.object")),
+                LiteralType(self.autouse, fallback=checker.named_type("builtins.object")),
             ],
         )
+
+    def save_to_autouse(self, checker: TypeChecker) -> None:
+        if str(self.module_name) in checker.modules:
+            node = checker.modules[str(self.module_name)].names.setdefault(
+                self.AUTOUSE_NAME,
+                SymbolTableNode(
+                    GDEF,
+                    Var(
+                        self.AUTOUSE_NAME,
+                        UnionType([]),
+                    ),
+                    implicit=True,
+                    module_hidden=True,
+                    plugin_generated=True,
+                ),
+            )
+            literal_type = LiteralType(
+                self.name,
+                fallback=checker.named_type("builtins.str"),
+            )
+            assert isinstance(node.node, Var)
+            assert isinstance(node.type, UnionType)
+            if not any(
+                strict_cast(LiteralType, item).value == literal_type.value
+                for item in node.type.items
+            ):
+                node.type.items.append(literal_type)
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,6 +187,7 @@ class FixtureParser(CheckerWrapper):
             ),
             arguments=arguments,
             scope=self._fixture_scope_from_decorator(fixture_decorator),
+            autouse=self._fixture_autouse_from_decorator(fixture_decorator),
             context=decorator.func,
             type_variables=type_.variables,
         )
@@ -210,7 +264,7 @@ class FixtureParser(CheckerWrapper):
     def _is_fixture_decorator(self, decorator: Expression) -> bool:
         decorator_type = self.checker.lookup_type_or_none(decorator)
         if decorator_type is None:
-            raise DeferralError()
+            raise DeferralError(DeferralReason.REQUIRED_WAIT)
         return self._is_fixture_type(decorator_type) or (
             isinstance(decorator_type, Overloaded)
             and any(self._is_fixture_type(overload.ret_type) for overload in decorator_type.items)
@@ -229,12 +283,9 @@ class FixtureParser(CheckerWrapper):
         return DEFAULT_SCOPE
 
     def _fixture_scope_from_call(self, call: CallExpr) -> FixtureScope:
-        scope_expressions = [
-            arg for name, arg in zip(call.arg_names, call.args, strict=True) if name == "scope"
-        ]
-        if not scope_expressions:
+        scope_expression = ArgMapper.named_arg(call, "scope")
+        if scope_expression is None:
             return DEFAULT_SCOPE
-        [scope_expression] = scope_expressions
         return self._fixture_scope_from_type(
             self.checker.lookup_type(scope_expression), context=scope_expression
         )
@@ -249,6 +300,39 @@ class FixtureParser(CheckerWrapper):
         )
 
         return FixtureScope.unknown
+
+    def _fixture_autouse_from_decorator(self, decorator: Expression) -> bool:
+        if isinstance(decorator, CallExpr):
+            return self._fixture_autouse_from_call(decorator)
+        return False
+
+    def _fixture_autouse_from_call(self, call: CallExpr) -> bool:
+        autouse_expression = ArgMapper.named_arg(call, "autouse")
+        if autouse_expression is None:
+            return False
+        return self._fixture_autouse_from_type(
+            self.checker.lookup_type(autouse_expression), context=autouse_expression
+        )
+
+    def _fixture_autouse_from_type(self, type_: Type, context: Context) -> bool:
+        for value in [True, False]:
+            if is_subtype(
+                type_, LiteralType(value, fallback=self.checker.named_type("builtins.bool"))
+            ):
+                return value
+        if isinstance(type_, LiteralType) and isinstance(type_.value, bool):
+            return type_.value
+        self.fail(
+            """Invalid type for "autouse". This fixture will be not be applied automatically when type checking.""",
+            context=context,
+            code=INVALID_FIXTURE_AUTOUSE,
+        )
+        self.note(
+            "Use `autouse=True` directly.",
+            context=context,
+            code=INVALID_FIXTURE_AUTOUSE,
+        )
+        return False
 
     def is_request_name(self, decorator: Decorator) -> bool:
         if is_request_name := decorator.name == "request":

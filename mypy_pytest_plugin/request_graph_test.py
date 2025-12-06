@@ -1,6 +1,7 @@
 from unittest import mock
 
 from .fixture_manager import FixtureManager
+from .test_info import TestInfo
 from .test_utils import (
     parse,
     simple_module_lookup,
@@ -8,26 +9,28 @@ from .test_utils import (
 )
 
 
-def _test_info_prune_active_requests_and_fixtures_test_body(
+def _request_graph_build_test_body(
     defs: str, arguments: list[str], expected_requests: list[str], expected_fixtures: list[str]
 ) -> None:
     test_info = test_info_from_defs(defs, name="test_info")
     parse_result = parse(defs)
     parse_result.accept_all()
 
-    with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
+    with (
+        mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup),
+        mock.patch.object(
+            TestInfo, "parametrized_argnames", mock.PropertyMock(return_value=arguments)
+        ),
+    ):
         _ = test_info.request_graph
 
-    for argument in arguments:
-        test_info._available_requests[argument].used = True
-
-    active_requests, active_fixtures = test_info.request_graph._prune_active_nodes_and_fixtures()
-    assert set(active_requests.keys()) == set(expected_requests)
-    assert set(active_fixtures.keys()) == set(expected_fixtures)
+    assert sorted(request.name for request in test_info.request_graph.requests) == sorted(
+        expected_requests
+    )
 
 
-def test_info_prune_active_requests_and_fixtures_no_fixtures_no_arguments() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_no_fixtures_no_arguments() -> None:
+    _request_graph_build_test_body(
         """
         def test_info() -> None:
             ...
@@ -39,8 +42,8 @@ def test_info_prune_active_requests_and_fixtures_no_fixtures_no_arguments() -> N
     )
 
 
-def test_info_prune_active_requests_and_fixtures_no_fixtures_arguments_all_used() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_no_fixtures_arguments_all_used() -> None:
+    _request_graph_build_test_body(
         """
         def test_info(x: int, y: bool) -> None:
             ...
@@ -52,8 +55,8 @@ def test_info_prune_active_requests_and_fixtures_no_fixtures_arguments_all_used(
     )
 
 
-def test_info_prune_active_requests_and_fixtures_no_fixtures_arguments_some_used() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_no_fixtures_arguments_some_used() -> None:
+    _request_graph_build_test_body(
         """
         def test_info(x: int, y: bool, z: str) -> None:
             ...
@@ -64,8 +67,8 @@ def test_info_prune_active_requests_and_fixtures_no_fixtures_arguments_some_used
     )
 
 
-def test_info_prune_active_requests_and_fixtures_indirect_fixture_directly_used() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_indirect_fixture_directly_used() -> None:
+    _request_graph_build_test_body(
         """
         import pytest
 
@@ -86,8 +89,8 @@ def test_info_prune_active_requests_and_fixtures_indirect_fixture_directly_used(
     )
 
 
-def test_info_prune_active_requests_and_fixtures_indirect_fixture_indirectly_used() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_indirect_fixture_indirectly_used() -> None:
+    _request_graph_build_test_body(
         """
         import pytest
 
@@ -108,8 +111,8 @@ def test_info_prune_active_requests_and_fixtures_indirect_fixture_indirectly_use
     )
 
 
-def test_info_prune_active_requests_and_fixtures_indirect_fixture_default_used() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_indirect_fixture_default_used() -> None:
+    _request_graph_build_test_body(
         """
         import pytest
 
@@ -130,8 +133,8 @@ def test_info_prune_active_requests_and_fixtures_indirect_fixture_default_used()
     )
 
 
-def test_info_prune_active_requests_and_fixtures_unused_indirect_fixture() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_unused_indirect_fixture() -> None:
+    _request_graph_build_test_body(
         """
         import pytest
 
@@ -152,8 +155,8 @@ def test_info_prune_active_requests_and_fixtures_unused_indirect_fixture() -> No
     )
 
 
-def test_info_prune_active_requests_and_fixtures_partially_unresolved_graph() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_partially_unresolved_graph() -> None:
+    _request_graph_build_test_body(
         """
         import pytest
 
@@ -185,8 +188,8 @@ def test_info_prune_active_requests_and_fixtures_partially_unresolved_graph() ->
     )
 
 
-def test_info_prune_active_requests_and_fixtures_cycle() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_cycle() -> None:
+    _request_graph_build_test_body(
         """
         import pytest
 
@@ -203,15 +206,16 @@ def test_info_prune_active_requests_and_fixtures_cycle() -> None:
         """,
         [],
         [
-            "cycle_1",
+            "cycle_1",  # from test_info
+            "cycle_1",  # from cycle_2
             "cycle_2",
         ],
         ["cycle_1", "cycle_2"],
     )
 
 
-def test_info_prune_active_requests_and_fixtures_partially_flattened() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_partially_flattened() -> None:
+    _request_graph_build_test_body(
         """
         import pytest
 
@@ -227,13 +231,18 @@ def test_info_prune_active_requests_and_fixtures_partially_flattened() -> None:
             ...
         """,
         ["shallow_fixture"],
-        ["shallow_fixture", "arg", "deep_fixture"],
+        [
+            "shallow_fixture",  # test_info
+            "deep_fixture",  # test_info
+            "arg",  # test_info
+            "arg",  # deep_fixture
+        ],
         ["deep_fixture"],
     )
 
 
-def test_info_prune_active_requests_and_fixtures_flattened() -> None:
-    _test_info_prune_active_requests_and_fixtures_test_body(
+def test_request_graph_build_flattened() -> None:
+    _request_graph_build_test_body(
         """
         import pytest
 

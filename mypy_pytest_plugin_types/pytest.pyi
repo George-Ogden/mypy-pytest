@@ -1,7 +1,7 @@
 from collections.abc import Collection
 
 from _pytest.mark import _HiddenParam
-from pytest import Mark, MarkDecorator  # noqa: PT013
+from pytest import Mark, MarkDecorator
 
 class ParameterSet[*Ts]:
     @classmethod
