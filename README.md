@@ -74,6 +74,13 @@ def test_random_string_length(random_0_to_10: int) -> None: # 'test_random_strin
 
 The order of the error messages is unclear, but this isn't an issue if you're using a plugin to your editor.
 
+If you make changes to your Pytest config, Mypy will ignore this and give you a cached result.
+If you want to see the newest version, clear the Mypy cache:
+
+```bash
+rm -rf .mypy_cache/
+```
+
 ## Development
 
 Use the GitHub issue tracker for bugs/feature requests.
