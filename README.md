@@ -53,10 +53,11 @@ See the [Mypy docs](https://mypy.readthedocs.io/en/stable/extending_mypy.html#co
 
 ## Limitations
 
-The Mypy plugin system is fairly limited, so this can only check marked functions.
+The Mypy plugin system is fairly limited.
+
+This plugin only checks marked functions.
 If you're using parametrized testing, that's fine as you `pytest.mark.parametrize`.
 If not, [add a `typed` mark](https://docs.pytest.org/en/stable/how-to/mark.html#registering-marks) then mark any remaining tests you want to check.
-The order of the error messages is unclear, but this isn't an issue if you're using a plugin.
 
 ```python
 import random
@@ -70,6 +71,8 @@ def random_0_to_10() -> float:
 def test_random_string_length(random_0_to_10: int) -> None: # 'test_random_string_length' requests 'random_0_to_10' with type "float", but expects type "int"
     assert 0 <= random_0_to_10 <= 10
 ```
+
+The order of the error messages is unclear, but this isn't an issue if you're using a plugin to your editor.
 
 ## Development
 
