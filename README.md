@@ -83,4 +83,6 @@ rm -rf .mypy_cache/
 
 ## Development
 
+I made this plugin because I couldn't find any alternatives.
+It is heavily biased towards the features I want, and I find it extremely useful.
 Use the GitHub issue tracker for bugs/feature requests.
