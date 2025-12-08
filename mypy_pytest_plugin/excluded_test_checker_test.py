@@ -42,7 +42,7 @@ def test_ignored_names() -> None:
     )
 
     parse_result.accept_all()
-    ignored_tests = ExcludedTestChecker.ignored_test_names(
-        parse_result.raw_defs, parse_result.checker
+    ignored_tests = ExcludedTestChecker(parse_result.checker).ignored_test_names(
+        parse_result.raw_defs
     )
     assert ignored_tests == {"test_1", "test_3", "test_5", "test_6"}

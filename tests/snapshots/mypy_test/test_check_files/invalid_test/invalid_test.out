@@ -1,4 +1,4 @@
-test_samples/invalid_test.py:11: error: No return value expected  [return-value]
+test_samples/invalid_test.py:11: error: Incompatible return value type (got "int", expected "str")  [return-value]
 test_samples/invalid_test.py:30: error: Incompatible return value type (got "list[T]", expected "tuple[T, T]")  [return-value]
 test_samples/invalid_test.py:47: error: Argument has type "list[Any]"; expected "Iterable[Any]".  [iterable-sequence]
 test_samples/invalid_test.py:47: note: This still type checks, but could be made more robust by using `iter()`
@@ -9,6 +9,7 @@ test_samples/invalid_test.py:68: error: Unexpected keyword argument "foo" for "p
 mypy_pytest_plugin_types/pytest.pyi:12: note: "param" defined here
 test_samples/invalid_test.py:15: error: Unknown argname 'y' used as test argument.  [unknown-argname]
 test_samples/invalid_test.py:16: error: Argname 'x' cannot be resolved.  [missing-argname]
+test_samples/invalid_test.py:16: error: Test definitions must return "None", got "Any".  [test-return-type]
 test_samples/invalid_test.py:64: error: Too many arguments  [call-arg]
 test_samples/invalid_test.py:68: error: Argument 1 has incompatible type "str"; expected "int"  [arg-type]
 test_samples/invalid_test.py:69: error: `pytest.mark.usefixtures` is not allowed in a `pytest.param`.  [param-usefixtures]
@@ -18,7 +19,8 @@ test_samples/invalid_test.py:73: error: Argument 1 to "param" has incompatible t
 test_samples/invalid_test.py:73: error: Argument 1 to "param" has incompatible type "*tuple[str, float]"; expected "str"  [arg-type]
 test_samples/invalid_test.py:6: error: Argname 'arg' cannot be resolved.  [missing-argname]
 test_samples/invalid_test.py:10: error: Argname 'x' cannot be resolved.  [missing-argname]
+test_samples/invalid_test.py:10: error: Test definitions must return "None", got "str".  [test-return-type]
 test_samples/invalid_test.py:23: error: Argument 2 has incompatible type "tuple[int, int]"; expected "tuple[int]"  [arg-type]
 test_samples/invalid_test.py:34: error: Argument 1 to "specific_test_case" has incompatible type "str"; expected "int"  [arg-type]
 test_samples/invalid_test.py:34: error: Argument 1 to "specific_test_case" has incompatible type "float"; expected "int"  [arg-type]
-Found 20 errors in 1 file (checked 1 source file)
+Found 22 errors in 1 file (checked 1 source file)

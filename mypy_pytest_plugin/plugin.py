@@ -1,6 +1,6 @@
 from collections.abc import Callable
 import functools
-from typing import cast
+from typing import Literal, cast
 
 from mypy.checker import TypeChecker
 from mypy.nodes import (
@@ -23,6 +23,7 @@ from .iterable_sequence_checker import IterableSequenceChecker
 from .mark_checker import MarkChecker
 from .mock_call_checker import FunctionMockCallChecker, MethodMockCallChecker
 from .param_mark_checker import ParamMarkChecker
+from .return_type_checker import ReturnTypeChecker
 from .test_body_ranges import TestBodyRanges
 from .test_info import TestInfo
 from .test_name_checker import TestNameChecker
@@ -163,19 +164,9 @@ class PytestPlugin(Plugin):
     def _check_pytest_structure(self, ctx: MethodContext | FunctionContext) -> Type:
         if isinstance(ctx.context, Decorator) and isinstance(ctx.api, TypeChecker):
             self._update_return_type(ctx.default_return_type, ctx.api)
-            if not Fixture.is_fixture_and_mark(ctx.context, checker=ctx.api):
-                if fixture := Fixture.from_decorator(ctx.context, checker=ctx.api):
-                    return fixture.as_fixture_type(decorator=ctx.context, checker=ctx.api)
-                ignored_testnames = ExcludedTestChecker.ignored_test_names(
-                    ctx.api.tree.defs, ctx.api
-                )
-                if ctx.context.name not in ignored_testnames and TestNameChecker.is_test_name(
-                    ctx.context.fullname
-                ):
-                    if id(ctx.context) not in self._deferred_tests:
-                        self._deferred_tests.add(id(ctx.context))
-                        raise DeferralError(DeferralReason.SPECULATIVE_WAIT)
-                    self._check_decorators(ctx.context, ctx.api)
+            updated_type = self._type_check_pytest_structure(ctx.context, checker=ctx.api)
+            if updated_type is not None:
+                return updated_type
         return ctx.default_return_type
 
     @classmethod
@@ -186,11 +177,24 @@ class PytestPlugin(Plugin):
         ):
             return_type.fallback = checker.named_type(f"{TYPES_MODULE}.Testable")
 
-    @classmethod
-    def _check_decorators(cls, decorator: Decorator, checker: TypeChecker) -> None:
-        test_info = TestInfo.from_fn_def(decorator, checker=checker)
-        if test_info is not None:
-            test_info.check()
+    def _type_check_pytest_structure(
+        self, decorator: Decorator, *, checker: TypeChecker
+    ) -> Type | None:
+        if not Fixture.is_fixture_and_mark(decorator, checker=checker):
+            if fixture := Fixture.from_decorator(decorator, checker=checker):
+                return fixture.as_fixture_type(decorator=decorator, checker=checker)
+            if ExcludedTestChecker.is_test(
+                decorator.fullname, checker=checker
+            ) and self._is_deferred(decorator):
+                ReturnTypeChecker.check_return_type(decorator.func, checker=checker)
+                TestInfo.check_parametrization(decorator, checker=checker)
+        return None
+
+    def _is_deferred(self, decorator: Decorator) -> Literal[True]:
+        if id(decorator) not in self._deferred_tests:
+            self._deferred_tests.add(id(decorator))
+            raise DeferralError(DeferralReason.SPECULATIVE_WAIT)
+        return True
 
 
 def plugin(version: str) -> type[PytestPlugin]:

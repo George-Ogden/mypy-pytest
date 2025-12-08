@@ -42,6 +42,12 @@ class TestInfo(CheckerWrapper):
     _used_argnames: set[str] = field(default_factory=set, init=False)
 
     @classmethod
+    def check_parametrization(cls, decorator: Decorator, *, checker: TypeChecker) -> None:
+        test_info = TestInfo.from_fn_def(decorator, checker=checker)
+        if test_info is not None:
+            test_info.check()
+
+    @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
         fn_def, decorators = cls._get_fn_and_decorators(fn_def)
         test_arguments = TestArgument.from_fn_def(fn_def, checker=checker, source="test")

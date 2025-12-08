@@ -1,3 +1,7 @@
+test_samples/generics_test.py:6: error: Test definitions must return "None", got "T".  [test-return-type]
+test_samples/generics_test.py:11: error: Test definitions must return "None", got "T".  [test-return-type]
+test_samples/generics_test.py:17: error: Test definitions must return "None", got "T".  [test-return-type]
 test_samples/generics_test.py:21: error: Value of type variable "T" of function cannot be "str"  [type-var]
 test_samples/generics_test.py:21: error: Value of type variable "T" of function cannot be "tuple[()]"  [type-var]
-Found 2 errors in 1 file (checked 1 source file)
+test_samples/generics_test.py:22: error: Test definitions must return "None", got "T".  [test-return-type]
+Found 6 errors in 1 file (checked 1 source file)
