@@ -1,4 +1,4 @@
-test_samples/invalid_test.py:11: error: No return value expected  [return-value]
+test_samples/invalid_test.py:11: error: Incompatible return value type (got "int", expected "str")  [return-value]
 test_samples/invalid_test.py:30: error: Incompatible return value type (got "list[T]", expected "tuple[T, T]")  [return-value]
 test_samples/invalid_test.py:47: error: Argument has type "list[Any]"; expected "Iterable[Any]".  [iterable-sequence]
 test_samples/invalid_test.py:47: note: This still type checks, but could be made more robust by using `iter()`
