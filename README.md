@@ -53,10 +53,11 @@ See the [Mypy docs](https://mypy.readthedocs.io/en/stable/extending_mypy.html#co
 
 ## Limitations
 
-The Mypy plugin system is fairly limited, so this can only check marked functions.
+The Mypy plugin system is fairly limited.
+
+This plugin only checks marked functions.
 If you're using parametrized testing, that's fine as you `pytest.mark.parametrize`.
 If not, [add a `typed` mark](https://docs.pytest.org/en/stable/how-to/mark.html#registering-marks) then mark any remaining tests you want to check.
-The order of the error messages is unclear, but this isn't an issue if you're using a plugin.
 
 ```python
 import random
@@ -71,6 +72,17 @@ def test_random_string_length(random_0_to_10: int) -> None: # 'test_random_strin
     assert 0 <= random_0_to_10 <= 10
 ```
 
+The order of the error messages is unclear, but this isn't an issue if you're using a plugin to your editor.
+
+If you make changes to your Pytest config, Mypy will ignore this and give you a cached result.
+If you want to see the newest version, clear the Mypy cache:
+
+```bash
+rm -rf .mypy_cache/
+```
+
 ## Development
 
+I made this plugin because I couldn't find any alternatives.
+It is heavily biased towards the features I want, and I find it extremely useful.
 Use the GitHub issue tracker for bugs/feature requests.
