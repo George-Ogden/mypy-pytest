@@ -1,4 +1,4 @@
-from typing import Callable, Iterable, Sequence, cast
+from typing import Any, Callable, Generator, Iterable, Sequence, cast
 import pytest
 
 
@@ -7,13 +7,13 @@ def test_missing_argname(arg: int) -> None: ...
 
 
 @pytest.mark.skip
-def test_missing_argname_with_error(x: int) -> None:
+def test_missing_argname_with_error(x: int) -> str:
     return x
 
 
 @pytest.mark.skip()
 @pytest.mark.parametrize("y", range(4))
-def test_wrong_argname_error(x: int) -> None: ...
+def test_wrong_argname_error(x: int) -> Any: ...
 
 
 @pytest.mark.parametrize(

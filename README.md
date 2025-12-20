@@ -5,9 +5,9 @@ A Mypy plugin for type checking Pytest code.
 
 ## Features
 
-- Check your parametrizations are correct
+- Checks your parametrizations are correct
   - [x] You didn't mispel the argnames
-  - [x] Your test cases have the right type
+  - [x] Your test cases have the correct types
   - [x] You didn't forget any arguments
 - Works with fixtures
   - [x] Your fixtures have the correct types

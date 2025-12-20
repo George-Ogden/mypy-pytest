@@ -134,6 +134,12 @@ PARAM_USEFIXTURES: Final[ErrorCode] = ErrorCode(
     category="Pytest",
 )
 
+TEST_RETURN_TYPE: Final[ErrorCode] = ErrorCode(
+    "test-return-type",
+    "Tests must return `None`.",
+    category="robust-testing",
+)
+
 ITERABLE_SEQUENCE: Final[ErrorCode] = ErrorCode(
     "iterable-sequence",
     """"Sequence" passed into a function expecting "Iterable" in a test.""",
