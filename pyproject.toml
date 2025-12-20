@@ -4,54 +4,17 @@ requires-python = ">=3.12,<3.15"
 version = "2.1.1"
 dynamic = ["dependencies"]
 
-[tool.setuptools]
-package-dir = {"mypy_pytest_plugin" = "mypy_pytest_plugin", "mypy_pytest_plugin_types-stubs" = "mypy_pytest_plugin_types"}
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+version = {file = ["version.txt"]}
+
+[tool.setuptools.package-dir]
+"mypy_pytest_plugin" = "mypy_pytest_plugin"
+"mypy_pytest_plugin_types-stubs" = "mypy_pytest_plugin_types"
 
 [tool.setuptools.package-data]
 "mypy_pytest_plugin_types" = ["*.pyi", "py.typed"]
 
-[tool.setuptools.dynamic]
-dependencies = {file = ["requirements.txt"]}
-
-[tool.ruff]
-line-length = 100
-
-[tool.ruff.lint]
-extend-select = ["B", "E", "ERA", "F", "I", "N", "PT", "PYI", "RET", "RUF", "SIM", "UP", "W"]
-extend-ignore = ["E501", "F811", "PT011", "PT012", "PT013", "PYI041", "RET504", "SIM118"]
-exclude = ["test_samples/"]
-
-[tool.ruff.lint.isort]
-force-sort-within-sections = true
-
-[tool.ruff.format]
-quote-style = "double"
-indent-style = "space"
-
-[tool.ruff.lint.flake8-pytest-style]
-parametrize-names-type = "csv"
-
-[tool.mypy]
-warn_unreachable = true
-disallow_subclassing_any = true
-disallow_incomplete_defs = true
-disallow_untyped_defs = true
-warn_unused_ignores = true
-strict_equality = true
-exclude = "test_samples"
-plugins = ["plugin.py", "mypy.plugins.proper_plugin"]
-
-[[tool.mypy.overrides]]
-module = "pytest_snapshot.*"
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = "xdist.*"
-ignore_missing_imports = true
-
-[tool.pytest.ini_options]
-python_files = "*_test.py"
-addopts = '--capture=sys --timeout 60 --timeout-method=thread'
-norecursedirs = ["test_samples"]
-pythonpath = ["."]
-markers = ["used_for_testing: used to verify config in mark attribute tests"]
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
