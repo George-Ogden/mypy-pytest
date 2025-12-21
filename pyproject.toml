@@ -1,7 +1,7 @@
 [project]
 name = "mypy-pytest-plugin"
 requires-python = ">=3.12,<3.15"
-version = "2.1.0"
+version = "2.1.1"
 dynamic = ["dependencies"]
 
 [tool.setuptools]
