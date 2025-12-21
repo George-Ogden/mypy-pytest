@@ -133,6 +133,8 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: str = "") -> M
             raise ValueError(f"Unable to infer types. Errors: {state.early_errors}")
 
         type_checker = state.type_checker()
+        type_checker.msg.errors.flushed_files.clear()
+
         errors = type_checker.errors
         if errors.is_errors():
             for info in errors.error_info_map.values():
