@@ -1,6 +1,4 @@
 -r requirements.txt
-dbg
-git+https://github.com/George-Ogden/dbg
 git+https://github.com/George-Ogden/mirror-rorrim
 git+https://github.com/George-Ogden/pytest-dbg
 inline-snapshot
