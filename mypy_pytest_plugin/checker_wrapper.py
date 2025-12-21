@@ -18,6 +18,9 @@ class CheckerWrapper(abc.ABC):
     def __init__(self) -> None: ...
 
     def fail(self, msg: str, *, context: Context, code: ErrorCode, file: None | str = None) -> None:
+        self.checker.msg.errors.flushed_files.discard(
+            self.checker.msg.errors.file if file is None else file
+        )
         self.checker.msg.fail(msg, context=context, code=code, file=file)
 
     def note(self, msg: str, *, context: Context, code: ErrorCode | None) -> None:
