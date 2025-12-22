@@ -9,7 +9,7 @@ class PytestConfigManager:
     @functools.cache
     def session(cls) -> Session:
         config = _pytest.config.get_config()
-        config.parse(["-s", "--noconftest"])
+        config.parse(["-s"])
         return Session.from_config(config)
 
     @classmethod

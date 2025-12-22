@@ -12,11 +12,6 @@ def indirect_int_fixture(base_int_fixture: int) -> int:
     return base_int_fixture + 1
 
 
-@pytest.fixture
-@pytest.mark.skip
-def fixture_and_mark() -> None: ...
-
-
 def missed_fixture_decorator_in_another_file() -> int:
     return 0
 
@@ -41,3 +36,6 @@ def ordered_fixture1() -> Literal[0]:
 @pytest.fixture
 def ordered_fixture2() -> Literal[1]:
     return 1
+
+
+pytest_plugins = "pytester"

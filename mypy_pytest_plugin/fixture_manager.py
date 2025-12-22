@@ -41,7 +41,7 @@ class FixtureManager(CheckerWrapper):
     @functools.lru_cache
     def default_fixture_module_names(cls) -> Sequence[Fullname]:
         config = _pytest.config.get_config()
-        config.parse(["-s", "--fixtures", "--noconftest"])
+        config.parse(["-s", "--fixtures"])
 
         session = Session.from_config(config)
         fixture_manager = PytestFixtureManager(session)
