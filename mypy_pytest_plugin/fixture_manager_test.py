@@ -79,7 +79,6 @@ def test_fixture_manager_default_fixture_module_names() -> None:
             "_pytest.recwarn",
             "_pytest.subtests",
             "_pytest.tmpdir",
-            "conftest",
             "inline_snapshot.pytest_plugin",
             "pytest_snapshot.plugin",
             "xdist.plugin",
