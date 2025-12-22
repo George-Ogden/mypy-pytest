@@ -41,20 +41,24 @@ class FixtureManager(CheckerWrapper):
     @functools.lru_cache
     def default_fixture_module_names(cls) -> Sequence[Fullname]:
         config = _pytest.config.get_config()
-        config.parse(["-s", "--fixtures", "--noconftest"])
+        config.parse(["-s", "--fixtures"])
 
         session = Session.from_config(config)
         fixture_manager = PytestFixtureManager(session)
         return tuple(
             {
-                cls._fixture_module(fixture_defs[-1])
+                module
                 for fixture_defs in fixture_manager._arg2fixturedefs.values()
+                if (module := cls._fixture_module(fixture_defs[-1])) is not None
             }
         )
 
     @classmethod
-    def _fixture_module(cls, fixture: FixtureDef) -> Fullname:
-        return Fullname.from_string(fixture.func.__module__)
+    def _fixture_module(cls, fixture: FixtureDef) -> Fullname | None:
+        module = Fullname.from_string(fixture.func.__module__)
+        if module == Fullname.from_string("conftest"):
+            return None
+        return module
 
     @filter_unique
     def autouse_fixture_names(self, test_module: Fullname) -> Iterable[str]:

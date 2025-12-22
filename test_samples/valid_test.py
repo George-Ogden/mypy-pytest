@@ -1,5 +1,5 @@
 from typing import Literal
-from pytest import CaptureFixture
+from pytest import CaptureFixture, Pytester
 
 import pytest
 
@@ -38,3 +38,7 @@ def test_iterable_sequence_builtin() -> None:
 
 
 def test_use_builtin_fixture(capsys: CaptureFixture[str]) -> None: ...
+
+
+@pytest.mark.skip
+def test_pytester_fixture(pytester: Pytester) -> None: ...
