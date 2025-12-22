@@ -1,0 +1,2 @@
+test_samples/broken_conftest/conftest.py:5: error: Marks cannot be applied to fixtures.  [marked-fixture]
+Found 1 error in 1 file (checked 1 source file)

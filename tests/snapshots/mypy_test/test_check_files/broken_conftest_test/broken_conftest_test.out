@@ -1,0 +1,2 @@
+test_samples/broken_conftest/broken_conftest_test.py:5: error: Test definitions must return "None", got "int".  [test-return-type]
+Found 1 error in 1 file (checked 1 source file)
