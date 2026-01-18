@@ -100,3 +100,12 @@ class TypeAliasTest:
 
 mock.patch.object(TypeAliasTest, "f", lambda: None)
 mock.patch.object(TypeAliasTest, "f", lambda n: n)
+
+value = None
+mock.patch("patch_test.value", mock.Mock(side_effect=None))
+mock.patch("patch_test.value", mock.Mock(side_effect=[None]))
+mock.patch("patch_test.value", mock.Mock(side_effect=[None, RuntimeError(), RuntimeError]))
+mock.patch("patch_test.value", mock.Mock(side_effect=[RuntimeError]))
+mock.patch("patch_test.value", mock.Mock(side_effect=[RuntimeError()]))
+mock.patch("patch_test.value", mock.Mock(side_effect=RuntimeError()))
+mock.patch("patch_test.value", mock.Mock(side_effect=RuntimeError))

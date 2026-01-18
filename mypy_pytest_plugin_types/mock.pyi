@@ -91,7 +91,11 @@ class CallableMixin[**P, R]:
     def __init__(
         self,
         spec: Any | None = None,
-        side_effect: Callable[P, Any] | Iterable[R | Exception | type[Exception]] | None = None,
+        side_effect: Callable[P, Any]
+        | Iterable[R | Exception | type[Exception]]
+        | Exception
+        | type[Exception]
+        | None = None,
         return_value: R = ...,
         wraps: Callable[P, R] | None = None,
         name: Any | None = None,
