@@ -29,13 +29,14 @@ from .one_item_test_signature import OneItemTestSignature
 from .request import Request
 from .request_graph import RequestGraph
 from .test_signature import TestSignature
+from .using_fixtures_parser import UsingFixturesParser
 
 
 @dataclass(frozen=True, kw_only=True, eq=False)
 class TestInfo(CheckerWrapper):
     fullname: Fullname
     fn_name: str
-    arguments: Sequence[Request]
+    requests: Sequence[Request]
     decorators: Sequence[DecoratorWrapper]
     checker: TypeChecker
     context: Context
@@ -53,12 +54,15 @@ class TestInfo(CheckerWrapper):
         test_arguments = Request.from_fn_def(fn_def, checker=checker, source="test")
         if test_arguments is None:
             return None
+        requests = Request.extend(
+            test_arguments, UsingFixturesParser.use_fixture_requests(decorators, checker=checker)
+        )
         test_decorators = DecoratorWrapper.decorators_from_exprs(decorators, checker=checker)
         return cls(
             fullname=Fullname.from_string(fn_def.fullname),
             fn_name=fn_def.name,
             checker=checker,
-            arguments=test_arguments,
+            requests=requests,
             decorators=test_decorators,
             context=fn_def,
         )
@@ -117,7 +121,7 @@ class TestInfo(CheckerWrapper):
     @functools.cached_property
     def request_graph(self) -> RequestGraph:
         return RequestGraph.build(
-            requests=self.arguments,
+            requests=self.requests,
             available_fixtures=self._available_fixtures,
             parametrized_names=self.parametrized_argnames,
             autouse_names=self.autouse_names,
@@ -129,7 +133,7 @@ class TestInfo(CheckerWrapper):
     @functools.cached_property
     def _available_fixtures(self) -> Mapping[str, Sequence[Fixture]]:
         return self.fixture_manager.resolve_fixtures(
-            request_names=[argument.name for argument in self.arguments],
+            request_names=[argument.name for argument in self.requests],
             test_module=self.module_name,
         )
 

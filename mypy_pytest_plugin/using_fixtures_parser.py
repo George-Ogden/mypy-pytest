@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import ClassVar
 
 from mypy.checker import TypeChecker
-from mypy.nodes import Decorator, Expression, FuncDef
+from mypy.nodes import Expression
 from mypy.types import AnyType, Instance, LiteralType, Type, TypeOfAny, UnionType
 
 from .checker_wrapper import CheckerWrapper
@@ -20,14 +20,12 @@ class UsingFixturesParser(CheckerWrapper):
 
     @classmethod
     def use_fixture_requests(
-        cls, fn_def: Decorator | FuncDef, checker: TypeChecker
+        cls, decorators: Iterable[Expression], checker: TypeChecker
     ) -> list[Request]:
-        if isinstance(fn_def, Decorator):
-            return list(UsingFixturesParser(checker).requests_from_fn_def(fn_def))
-        return []
+        return list(UsingFixturesParser(checker).requests_from_decorators(decorators))
 
-    def requests_from_fn_def(self, fn_def: Decorator) -> Iterable[Request]:
-        for decorator in fn_def.decorators:
+    def requests_from_decorators(self, decorators: Iterable[Expression]) -> Iterable[Request]:
+        for decorator in decorators:
             yield from self.requests_from_decorator(decorator)
 
     def requests_from_decorator(self, decorator: Expression) -> Iterable[Request]:

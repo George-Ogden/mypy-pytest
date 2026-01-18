@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
+import itertools
 from typing import Literal, Self
 
 from mypy.checker import TypeChecker
@@ -32,6 +33,7 @@ from .error_codes import (
     VARIADIC_KEYWORD_ARGUMENT,
     VARIADIC_POSITIONAL_ARGUMENT,
 )
+from .utils import filter_unique
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -68,6 +70,16 @@ class Request:
             return None
         return cls(
             name=argument.name, type_=argument.typ, type_variables=type_variables, context=Context()
+        )
+
+    @classmethod
+    def extend(
+        cls, requests: Sequence[Request], extra_requests: Iterable[Request]
+    ) -> Sequence[Request]:
+        return list(
+            filter_unique(
+                itertools.chain(requests, extra_requests), key=lambda request: request.name
+            )
         )
 
 

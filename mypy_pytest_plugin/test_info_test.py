@@ -165,9 +165,7 @@ def _test_info_sub_signature_test_body(
     with mock.patch.object(
         TestInfo,
         "argname_types",
-        mock.PropertyMock(
-            return_value={argument.name: argument for argument in test_info.arguments}
-        ),
+        mock.PropertyMock(return_value={request.name: request for request in test_info.requests}),
     ):
         sub_signature = test_info.sub_signature(argnames)
 
