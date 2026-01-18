@@ -1,50 +1,58 @@
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 import functools
 from typing import ClassVar
 
 from mypy.checker import TypeChecker
 from mypy.nodes import CallExpr, Expression
-from mypy.types import Instance, LiteralType, UnionType
+from mypy.types import AnyType, Instance, TypeOfAny
 
 from .checker_wrapper import CheckerWrapper
+from .defer import DeferralError, DeferralReason
 from .names_parser import NamesParser
-from .types_module import TYPES_MODULE
+from .request import Request
 from .use_fixture_names_parser import UseFixtureNamesParser
 
 
 @dataclass(frozen=True)
 class UseFixturesParser(CheckerWrapper):
     checker: TypeChecker
-    USING_FIXTURES_TYPE_NAME: ClassVar[str] = f"{TYPES_MODULE}._UsingFixturesMarkDecorator"
+    USE_FIXTURES_TYPE_FULLNAME: ClassVar[str] = "_pytest.mark.structures._UsefixturesMarkDecorator"
 
     @classmethod
-    def type_for_usefixtures(cls, call: CallExpr, *, checker: TypeChecker) -> Instance:
-        return cls(checker)._type_for_usefixtures(call)
+    def use_fixture_requests(
+        cls, decorators: Iterable[Expression], checker: TypeChecker
+    ) -> list[Request]:
+        return list(UseFixturesParser(checker).requests_from_decorators(decorators))
 
-    def _type_for_usefixtures(self, call: CallExpr) -> Instance:
-        using_fixtures_type = self.checker.named_generic_type(
-            self.USING_FIXTURES_TYPE_NAME,
-            [self._type_for_usefixture_args(call.args)],
-        )
-        using_fixtures_type.set_line(call)
-        return using_fixtures_type
+    def requests_from_decorators(self, decorators: Iterable[Expression]) -> Iterable[Request]:
+        for decorator in decorators:
+            yield from self.requests_from_decorator(decorator)
 
-    def _type_for_usefixture_args(self, args: Sequence[Expression]) -> UnionType:
-        return UnionType(
-            [
-                arg_type
-                for arg in args
-                if (arg_type := self._type_for_usefixtures_argument(arg)) is not None
-            ]
-        )
+    def requests_from_decorator(self, decorator: Expression) -> Iterable[Request]:
+        if isinstance(decorator, CallExpr):
+            return self.requests_from_call(decorator)
+        return []
 
-    def _type_for_usefixtures_argument(self, arg: Expression) -> LiteralType | None:
+    def requests_from_call(self, call: CallExpr) -> Iterable[Request]:
+        type_ = self.checker.lookup_type_or_none(call.callee)
+        if type_ is None:
+            raise DeferralError(DeferralReason.REQUIRED_WAIT)
+        if isinstance(type_, Instance) and type_.type.fullname == self.USE_FIXTURES_TYPE_FULLNAME:
+            return self.requests_from_call_args(call.args)
+        return []
+
+    def requests_from_call_args(self, args: Sequence[Expression]) -> Iterable[Request]:
+        for arg in args:
+            if (request := self.request_from_arg(arg)) is not None:
+                yield request
+
+    def request_from_arg(self, arg: Expression) -> Request | None:
         if (name := self.name_parser.parse_name(arg)) is None:
             return None
-        name_type = LiteralType(name, self.checker.str_type())
-        name_type.set_line(arg)
-        return name_type
+        return Request(
+            name=name, type_=AnyType(TypeOfAny.unannotated), type_variables=[], context=arg
+        )
 
     @functools.cached_property
     def name_parser(self) -> NamesParser:

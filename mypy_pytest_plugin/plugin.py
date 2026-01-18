@@ -98,7 +98,7 @@ class PytestPlugin(Plugin):
             return type_
         return ctx.default_signature
 
-    def check_param_marks(self, ctx: FunctionContext) -> Type:
+    def check_param_mark(self, ctx: FunctionContext) -> Type:
         if isinstance(ctx.api, TypeChecker) and isinstance(ctx.context, CallExpr):
             ParamMarkChecker(ctx.api).check_param_marks(ctx.context)
         return ctx.default_return_type
@@ -107,7 +107,7 @@ class PytestPlugin(Plugin):
         if fullname.startswith("unittest.mock"):
             return functools.partial(FunctionMockCallChecker.check_mock_calls, fullname=fullname)
         if fullname == "_pytest.mark.param":
-            return self.check_param_marks
+            return self.check_param_mark
         if fullname == "_pytest.fixtures.fixture":
             hook_fn = self.check_pytest_structure
         else:

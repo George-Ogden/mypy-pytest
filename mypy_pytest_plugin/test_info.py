@@ -29,7 +29,7 @@ from .one_item_test_signature import OneItemTestSignature
 from .request import Request
 from .request_graph import RequestGraph
 from .test_signature import TestSignature
-from .using_fixtures_parser import UsingFixturesParser
+from .use_fixtures_parser import UseFixturesParser
 
 
 @dataclass(frozen=True, kw_only=True, eq=False)
@@ -55,7 +55,7 @@ class TestInfo(CheckerWrapper):
         if test_arguments is None:
             return None
         requests = Request.extend(
-            test_arguments, UsingFixturesParser.use_fixture_requests(decorators, checker=checker)
+            test_arguments, UseFixturesParser.use_fixture_requests(decorators, checker=checker)
         )
         test_decorators = DecoratorWrapper.decorators_from_exprs(decorators, checker=checker)
         return cls(
