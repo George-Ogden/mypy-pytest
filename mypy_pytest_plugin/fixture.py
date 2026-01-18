@@ -6,16 +6,7 @@ import enum
 from typing import ClassVar, Final, Self, cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import (
-    GDEF,
-    CallExpr,
-    Context,
-    Decorator,
-    Expression,
-    FuncDef,
-    SymbolTableNode,
-    Var,
-)
+from mypy.nodes import GDEF, CallExpr, Context, Decorator, Expression, FuncDef, SymbolTableNode, Var
 from mypy.subtypes import is_subtype
 from mypy.types import (
     AnyType,
@@ -40,7 +31,7 @@ from .error_codes import (
     REQUEST_KEYWORD,
 )
 from .fullname import Fullname
-from .test_argument import TestArgument
+from .request import Request
 from .types_module import TYPES_MODULE
 from .utils import strict_cast, strict_not_none
 
@@ -56,7 +47,7 @@ class Fixture:
     fullname: Fullname
     file: str
     return_type: Type
-    arguments: Sequence[TestArgument]
+    arguments: Sequence[Request]
     scope: FixtureScope
     autouse: bool
     type_variables: Sequence[TypeVarLikeType]
@@ -80,12 +71,10 @@ class Fixture:
         func = type.definition
         assert isinstance(func, FuncDef | None)
         if isinstance(func, FuncDef):
-            arguments = strict_not_none(
-                TestArgument.from_fn_def(func, checker=None, source="fixture")
-            )
+            arguments = strict_not_none(Request.from_fn_def(func, checker=None, source="fixture"))
             context: Context = func
         else:
-            arguments = TestArgument.from_type(type)
+            arguments = Request.from_type(type)
             context = Context()
         return cls(
             fullname=Fullname.from_string(fullname),
@@ -102,8 +91,8 @@ class Fixture:
     def is_fixture_and_mark(cls, decorator: Decorator, *, checker: TypeChecker) -> bool:
         return FixtureParser(checker).is_fixture_and_mark(decorator)
 
-    def as_argument(self) -> TestArgument:
-        return TestArgument(
+    def as_argument(self) -> Request:
+        return Request(
             name=self.name,
             type_=self.return_type,
             context=self.context,
@@ -141,19 +130,13 @@ class Fixture:
                 self.AUTOUSE_NAME,
                 SymbolTableNode(
                     GDEF,
-                    Var(
-                        self.AUTOUSE_NAME,
-                        UnionType([]),
-                    ),
+                    Var(self.AUTOUSE_NAME, UnionType([])),
                     implicit=True,
                     module_hidden=True,
                     plugin_generated=True,
                 ),
             )
-            literal_type = LiteralType(
-                self.name,
-                fallback=checker.named_type("builtins.str"),
-            )
+            literal_type = LiteralType(self.name, fallback=checker.named_type("builtins.str"))
             assert isinstance(node.node, Var)
             assert isinstance(node.type, UnionType)
             if not any(
@@ -176,7 +159,7 @@ class FixtureParser(CheckerWrapper):
             or self.is_request_name(decorator)
         ):
             return None
-        arguments = TestArgument.from_fn_def(decorator.func, checker=self.checker, source="fixture")
+        arguments = Request.from_fn_def(decorator.func, checker=self.checker, source="fixture")
         if arguments is None:
             return None
         return Fixture(
@@ -236,9 +219,7 @@ class FixtureParser(CheckerWrapper):
             self.checker.lookup_type(expression), self.checker.named_type("pytest.MarkDecorator")
         ):
             self.fail(
-                "Marks cannot be applied to fixtures.",
-                context=expression,
-                code=MARKED_FIXTURE,
+                "Marks cannot be applied to fixtures.", context=expression, code=MARKED_FIXTURE
             )
         return is_mark
 
@@ -293,11 +274,7 @@ class FixtureParser(CheckerWrapper):
     def _fixture_scope_from_type(self, type_: Type, context: Context) -> FixtureScope:
         if isinstance(type_, LiteralType) and type_.value in FixtureScope._member_names_:
             return FixtureScope[cast(str, type_.value)]
-        self.fail(
-            "Invalid type for fixture scope.",
-            context=context,
-            code=INVALID_FIXTURE_SCOPE,
-        )
+        self.fail("Invalid type for fixture scope.", context=context, code=INVALID_FIXTURE_SCOPE)
 
         return FixtureScope.unknown
 
@@ -327,11 +304,7 @@ class FixtureParser(CheckerWrapper):
             context=context,
             code=INVALID_FIXTURE_AUTOUSE,
         )
-        self.note(
-            "Use `autouse=True` directly.",
-            context=context,
-            code=INVALID_FIXTURE_AUTOUSE,
-        )
+        self.note("Use `autouse=True` directly.", context=context, code=INVALID_FIXTURE_AUTOUSE)
         return False
 
     def is_request_name(self, decorator: Decorator) -> bool:

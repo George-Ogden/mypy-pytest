@@ -17,7 +17,7 @@ def test_one_item_test_signature_items_signature() -> None:
 
         def expected(x: int) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -29,7 +29,7 @@ def test_one_item_test_signature_items_signature_generic() -> None:
 
         def expected[T](x: T) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -47,7 +47,7 @@ def test_one_item_test_signature_test_case_signature() -> None:
 
         def expected(x: float | ParameterSet[float]) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -60,7 +60,7 @@ def test_one_item_test_signature_test_case_signature_generic() -> None:
 
         def expected[T](x: T | ParameterSet[T]) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -79,7 +79,7 @@ def test_one_item_test_signature_sequence_signature() -> None:
 
         def expected(_: Iterable[int | ParameterSet[int]], /) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -94,7 +94,7 @@ def test_one_item_test_signature_sequence_signature_generic() -> None:
 
         def expected[T: int](_: Iterable[T | ParameterSet[T]], /) -> None:
             ...
-        """,
+        """
     )
 
 

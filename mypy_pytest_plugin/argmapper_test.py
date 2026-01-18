@@ -15,9 +15,7 @@ def _named_arg_mapping_test_body(defs: str, expected_keys: list[str]) -> None:
 
     raw_arg_map = ArgMapper.named_arg_mapping(call, parse_result.checker)
 
-    def dump_arg_map(
-        arg_map: dict[str, Expression],
-    ) -> dict[str, tuple[type, dict[str, Any]]]:
+    def dump_arg_map(arg_map: dict[str, Expression]) -> dict[str, tuple[type, dict[str, Any]]]:
         return {key: (dump_expr(expr)) for key, expr in arg_map.items()}
 
     assert dump_arg_map(raw_arg_map) == dump_arg_map(

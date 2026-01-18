@@ -16,13 +16,7 @@ def test_missing_argname_with_error(x: int) -> str:
 def test_wrong_argname_error(x: int) -> Any: ...
 
 
-@pytest.mark.parametrize(
-    "foo, bar",
-    [
-        ([1], (1,)),
-        ([2, 2], (2, 2)),
-    ],
-)
+@pytest.mark.parametrize("foo, bar", [([1], (1,)), ([2, 2], (2, 2))])
 def test_invalid_type(foo: list[int], bar: tuple[int]) -> None: ...
 
 

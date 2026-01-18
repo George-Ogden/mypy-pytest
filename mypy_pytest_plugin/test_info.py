@@ -5,37 +5,29 @@ import itertools
 from typing import Self
 
 from mypy.checker import TypeChecker
-from mypy.nodes import (
-    Context,
-    Decorator,
-    Expression,
-    FuncDef,
-)
+from mypy.nodes import Context, Decorator, Expression, FuncDef
 
 from .argnames_parser import ArgnamesParser
 from .argvalues import Argvalues
 from .checker_wrapper import CheckerWrapper
 from .decorator_wrapper import DecoratorWrapper
-from .error_codes import (
-    DUPLICATE_ARGNAME,
-    REPEATED_FIXTURE_ARGNAME,
-    UNKNOWN_ARGNAME,
-)
+from .error_codes import DUPLICATE_ARGNAME, REPEATED_FIXTURE_ARGNAME, UNKNOWN_ARGNAME
 from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
+from .request import Request
 from .request_graph import RequestGraph
-from .test_argument import TestArgument
 from .test_signature import TestSignature
+from .use_fixtures_parser import UseFixturesParser
 
 
 @dataclass(frozen=True, kw_only=True, eq=False)
 class TestInfo(CheckerWrapper):
     fullname: Fullname
     fn_name: str
-    arguments: Sequence[TestArgument]
+    requests: Sequence[Request]
     decorators: Sequence[DecoratorWrapper]
     checker: TypeChecker
     context: Context
@@ -50,15 +42,18 @@ class TestInfo(CheckerWrapper):
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
         fn_def, decorators = cls._get_fn_and_decorators(fn_def)
-        test_arguments = TestArgument.from_fn_def(fn_def, checker=checker, source="test")
+        test_arguments = Request.from_fn_def(fn_def, checker=checker, source="test")
         if test_arguments is None:
             return None
+        requests = Request.extend(
+            test_arguments, UseFixturesParser.use_fixture_requests(decorators, checker=checker)
+        )
         test_decorators = DecoratorWrapper.decorators_from_exprs(decorators, checker=checker)
         return cls(
             fullname=Fullname.from_string(fn_def.fullname),
             fn_name=fn_def.name,
             checker=checker,
-            arguments=test_arguments,
+            requests=requests,
             decorators=test_decorators,
             context=fn_def,
         )
@@ -117,7 +112,7 @@ class TestInfo(CheckerWrapper):
     @functools.cached_property
     def request_graph(self) -> RequestGraph:
         return RequestGraph.build(
-            test_arguments=self.arguments,
+            requests=self.requests,
             available_fixtures=self._available_fixtures,
             parametrized_names=self.parametrized_argnames,
             autouse_names=self.autouse_names,
@@ -129,7 +124,7 @@ class TestInfo(CheckerWrapper):
     @functools.cached_property
     def _available_fixtures(self) -> Mapping[str, Sequence[Fixture]]:
         return self.fixture_manager.resolve_fixtures(
-            request_names=[argument.name for argument in self.arguments],
+            request_names=[argument.name for argument in self.requests],
             test_module=self.module_name,
         )
 
@@ -138,7 +133,7 @@ class TestInfo(CheckerWrapper):
         return self.fixture_manager.autouse_fixture_names(self.module_name)
 
     @functools.cached_property
-    def argname_types(self) -> Mapping[str, TestArgument]:
+    def argname_types(self) -> Mapping[str, Request]:
         return self.request_graph.argname_types(self.parametrized_argnames)
 
     @property

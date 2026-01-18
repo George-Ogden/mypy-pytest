@@ -2,11 +2,7 @@ from unittest import mock
 
 from .fixture_manager import FixtureManager
 from .test_info import TestInfo
-from .test_utils import (
-    parse,
-    simple_module_lookup,
-    test_info_from_defs,
-)
+from .test_utils import parse, simple_module_lookup, test_info_from_defs
 
 
 def _request_graph_build_test_body(

@@ -348,8 +348,7 @@ def fixture_return_type_test_body(defs: str, is_generator: bool) -> None:
     assert expected_type is not None
 
     assert is_same_type(
-        FixtureParser.fixture_return_type(original_type, is_generator=is_generator),
-        expected_type,
+        FixtureParser.fixture_return_type(original_type, is_generator=is_generator), expected_type
     )
 
 

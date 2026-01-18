@@ -3,6 +3,7 @@ line-length = 100
 [format]
 quote-style = "double"
 indent-style = "space"
+skip-magic-trailing-comma = true
 
 [lint]
 exclude = ["test_samples/"]
@@ -12,6 +13,7 @@ extend-unfixable = ["B905"]
 
 [lint.isort]
 force-sort-within-sections = true
+split-on-trailing-comma=false
 
 [lint.flake8-pytest-style]
 parametrize-names-type = "csv"

@@ -25,6 +25,19 @@ DUPLICATE_ARGNAME: Final[ErrorCode] = ErrorCode(
 )
 
 
+INVALID_USEFIXTURES: Final[ErrorCode] = ErrorCode(
+    "invalid-usefixtures-name",
+    "Invalid Python identifier used with `pytest.mark.usefixtures`.",
+    category="Pytest",
+)
+
+UNREADABLE_USEFIXTURES: Final[ErrorCode] = ErrorCode(
+    "unreadable-usefixtures-name",
+    "Unable to parse fixture name from `pytest.mark.usefixtures`.",
+    category="Pytest",
+)
+
+
 REPEATED_FIXTURE_ARGNAME: Final[ErrorCode] = ErrorCode(
     "repeated-fixture-argname",
     "Pytest parametrization contains an argument that is shadowed by a fixture.",
@@ -36,9 +49,7 @@ MISSING_ARGNAME: Final[ErrorCode] = ErrorCode(
 )
 
 UNREADABLE_ARGNAMES_ARGVALUES: Final[ErrorCode] = ErrorCode(
-    "unreadable-argnames-argvalues",
-    "Unable to read argnames or argvalues.",
-    category="Pytest",
+    "unreadable-argnames-argvalues", "Unable to read argnames or argvalues.", category="Pytest"
 )
 
 
@@ -75,15 +86,11 @@ VARIADIC_KEYWORD_ARGUMENT: Final[ErrorCode] = ErrorCode(
 )
 
 DUPLICATE_FIXTURE: Final[ErrorCode] = ErrorCode(
-    "duplicate-fixture",
-    "Only one use of `pytest.fixture` is allowed per test.",
-    category="Pytest",
+    "duplicate-fixture", "Only one use of `pytest.fixture` is allowed per test.", category="Pytest"
 )
 
 MARKED_FIXTURE: Final[ErrorCode] = ErrorCode(
-    "marked-fixture",
-    "Do not use `pytest.mark` with `pytest.fixture`.",
-    category="Pytest",
+    "marked-fixture", "Do not use `pytest.mark` with `pytest.fixture`.", category="Pytest"
 )
 INVALID_FIXTURE_AUTOUSE: Final[ErrorCode] = ErrorCode(
     "invalid-fixture-autouse",
@@ -117,9 +124,7 @@ REQUEST_TYPE: Final[ErrorCode] = ErrorCode(
 )
 
 REQUEST_KEYWORD: Final[ErrorCode] = ErrorCode(
-    "request-keyword",
-    """"request" is a reserved word in Pytest.""",
-    category="Pytest",
+    "request-keyword", """"request" is a reserved word in Pytest.""", category="Pytest"
 )
 
 UNKNOWN_MARK: Final[ErrorCode] = ErrorCode(
@@ -135,9 +140,7 @@ PARAM_USEFIXTURES: Final[ErrorCode] = ErrorCode(
 )
 
 TEST_RETURN_TYPE: Final[ErrorCode] = ErrorCode(
-    "test-return-type",
-    "Tests must return `None`.",
-    category="robust-testing",
+    "test-return-type", "Tests must return `None`.", category="robust-testing"
 )
 
 ITERABLE_SEQUENCE: Final[ErrorCode] = ErrorCode(

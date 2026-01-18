@@ -4,16 +4,9 @@ import re
 
 from mypy.checker import TypeChecker
 from mypy.nodes import CallExpr, Expression, SymbolTableNode, TypeInfo
-from mypy.plugin import (
-    FunctionContext,
-    MethodContext,
-)
+from mypy.plugin import FunctionContext, MethodContext
 from mypy.typeops import bind_self, type_object_type
-from mypy.types import (
-    FunctionLike,
-    Instance,
-    Type,
-)
+from mypy.types import FunctionLike, Instance, Type
 
 from .object_patch_call_checker import ObjectPatchCallChecker
 from .patch_call_checker import PatchCallChecker
@@ -50,11 +43,7 @@ class MockCallChecker[T: MethodContext | FunctionContext](abc.ABC):
         )
         return result_type
 
-    def inject_mock_stub(
-        self,
-        callee: Expression,
-        fullname: str,
-    ) -> Type | None:
+    def inject_mock_stub(self, callee: Expression, fullname: str) -> Type | None:
         fullname = re.sub(r"^unittest", TYPES_MODULE, fullname, count=1)
         if (
             symbol_table_node := self._lookup_symbol_table_node(fullname)

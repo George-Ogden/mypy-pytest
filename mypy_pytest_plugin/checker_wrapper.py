@@ -39,10 +39,7 @@ class CheckerWrapper(abc.ABC):
         )
 
     def lookup_fullname_type(
-        self,
-        fullname: Fullname,
-        *,
-        context: Context | None = None,
+        self, fullname: Fullname, *, context: Context | None = None
     ) -> Type | None:
         result = self.lookup_fullname(
             fullname, context=context, predicate=lambda node: hasattr(node, "type")
@@ -77,10 +74,7 @@ class CheckerWrapper(abc.ABC):
         context: Context | None = None,
         predicate: None | Callable[[Any], bool] = None,
     ) -> tuple[MypyFile, Any] | None:
-        module_name, target = (
-            Fullname(()),
-            fullname,
-        )
+        module_name, target = (Fullname(()), fullname)
         while target:
             module_name = module_name.push_back(target.head)
             target = target.pop_front()

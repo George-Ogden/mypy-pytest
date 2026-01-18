@@ -95,10 +95,7 @@ class MultiParseResult(_ParseResultBase):
 
 def parse_multiple(modules: Sequence[tuple[str, str]], *, header: str = "") -> MultiParseResult:
     modules = [
-        (
-            module_name,
-            f"{header + '\n'}{textwrap.dedent(code)}".strip(),
-        )
+        (module_name, f"{header + '\n'}{textwrap.dedent(code)}".strip())
         for module_name, code in modules
     ]
 
@@ -210,9 +207,7 @@ def test_signature_from_fn_type(
 test_signature_from_fn_type.__test__ = False  # type: ignore
 
 
-def get_signature_and_vals(
-    defs: str,
-) -> tuple[TestSignature, Expression]:
+def get_signature_and_vals(defs: str) -> tuple[TestSignature, Expression]:
     parse_result = parse(defs, header=f"import {TYPES_MODULE}")
     fn_type = parse_result.types["test_case"]
     assert isinstance(fn_type, CallableType)
@@ -255,10 +250,7 @@ def test_signature_custom_signature_test_body(
 test_signature_custom_signature_test_body.__test__ = False  # type: ignore
 
 
-def test_signature_custom_check_test_body[
-    T: TestSignature,
-    U: Expression,
-](
+def test_signature_custom_check_test_body[T: TestSignature, U: Expression](
     defs: str,
     passes: bool,
     body: Callable[[T, U], None],
@@ -269,10 +261,7 @@ def test_signature_custom_check_test_body[
     assert isinstance(val, bound)
 
     checker = test_signature.checker
-    type_check_result = type_checks(
-        lambda: body(cast(T, test_signature), val),
-        checker=checker,
-    )
+    type_check_result = type_checks(lambda: body(cast(T, test_signature), val), checker=checker)
     messages = get_error_messages(checker)
 
     assert type_check_result == passes, messages

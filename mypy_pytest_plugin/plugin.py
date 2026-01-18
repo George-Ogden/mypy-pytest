@@ -3,13 +3,7 @@ import functools
 from typing import Literal, cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import (
-    CallExpr,
-    Decorator,
-    Expression,
-    MemberExpr,
-    MypyFile,
-)
+from mypy.nodes import CallExpr, Decorator, Expression, MemberExpr, MypyFile
 from mypy.options import Options
 from mypy.plugin import AttributeContext, FunctionContext, FunctionSigContext, MethodContext, Plugin
 from mypy.types import CallableType, FunctionLike, Type
@@ -98,7 +92,7 @@ class PytestPlugin(Plugin):
             return type_
         return ctx.default_signature
 
-    def check_param_marks(self, ctx: FunctionContext) -> Type:
+    def check_param_mark(self, ctx: FunctionContext) -> Type:
         if isinstance(ctx.api, TypeChecker) and isinstance(ctx.context, CallExpr):
             ParamMarkChecker(ctx.api).check_param_marks(ctx.context)
         return ctx.default_return_type
@@ -107,7 +101,7 @@ class PytestPlugin(Plugin):
         if fullname.startswith("unittest.mock"):
             return functools.partial(FunctionMockCallChecker.check_mock_calls, fullname=fullname)
         if fullname == "_pytest.mark.param":
-            return self.check_param_marks
+            return self.check_param_mark
         if fullname == "_pytest.fixtures.fixture":
             hook_fn = self.check_pytest_structure
         else:

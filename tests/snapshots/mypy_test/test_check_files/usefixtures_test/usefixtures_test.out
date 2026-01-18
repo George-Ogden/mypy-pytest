@@ -1,0 +1,9 @@
+test_samples/usefixtures_test.py:14: error: Argname 'missing_fixture' cannot be resolved.  [missing-argname]
+test_samples/usefixtures_test.py:18: error: Argname 'missing_fixture' cannot be resolved.  [missing-argname]
+test_samples/usefixtures_test.py:27: error: 'test_invalid_type' requests 'defined_fixture' with type "str", but expects type "int". This happens when executing 'test_invalid_type'.  [fixture-arg-type]
+test_samples/usefixtures_test.py:31: error: Argname 'argument' cannot be resolved (requested in 'usefixtures_test.test_indirect_fixture_unresolved').  [missing-argname]
+test_samples/usefixtures_test.py:39: error: Argument 1 has incompatible type "float"; expected "int | ParameterSet[int]"  [arg-type]
+test_samples/usefixtures_test.py:44: error: Marks cannot be applied to fixtures.  [marked-fixture]
+test_samples/usefixtures_test.py:45: error: Argument 1 to "__call__" of "_UsefixturesMarkDecorator" has incompatible type "Callable[[], None]"; expected "str"  [arg-type]
+test_samples/usefixtures_test.py:45: error: Marks cannot be applied to fixtures.  [marked-fixture]
+Found 8 errors in 1 file (checked 1 source file)

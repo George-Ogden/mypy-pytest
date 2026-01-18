@@ -1,18 +1,10 @@
 from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import cast
+from typing import cast, override
 
-from mypy.checker import TypeChecker
-from mypy.nodes import (
-    Context,
-    Expression,
-    ListExpr,
-    StrExpr,
-    TupleExpr,
-)
+from mypy.nodes import Context, Expression, ListExpr, StrExpr, TupleExpr
 
-from .checker_wrapper import CheckerWrapper
 from .error_codes import (
     DUPLICATE_ARGNAME,
     INVALID_ARGNAME,
@@ -20,13 +12,12 @@ from .error_codes import (
     UNREADABLE_ARGNAME,
     UNREADABLE_ARGNAMES,
 )
+from .names_parser import NamesParser
 from .utils import cache_by_id
 
 
 @dataclass(frozen=True)
-class ArgnamesParser(CheckerWrapper):
-    checker: TypeChecker
-
+class ArgnamesParser(NamesParser):
     def __post_init__(self) -> None:
         object.__setattr__(self, "parse_names", cache_by_id(self.parse_names))
 
@@ -37,29 +28,17 @@ class ArgnamesParser(CheckerWrapper):
             case ListExpr() | TupleExpr():
                 argnames = self.parse_names_sequence(expression)
             case _:
-                self.fail(
-                    "Unable to identify argnames. (Use a comma-separated string, list of strings or tuple of strings).",
-                    context=expression,
-                    code=UNREADABLE_ARGNAMES,
-                )
+                self._fail_unreadable_argnames(expression)
                 return None
         argnames = self._check_duplicate_argnames(argnames, expression)
         return argnames
 
-    def _check_valid_identifier(self, name: str, context: StrExpr) -> bool:
-        if not (valid_identifier := name.isidentifier()):
-            self.fail(
-                f"Invalid identifier {name!r}.",
-                context=context,
-                code=INVALID_ARGNAME,
-            )
-        elif not (valid_identifier := (name != "request")):
-            self.fail(
-                f"{name!r} is not allowed as an argname; it is a reserved word in Pytest.",
-                context=context,
-                code=REQUEST_KEYWORD,
-            )
-        return valid_identifier
+    def _fail_unreadable_argnames(self, context: Context) -> None:
+        self.fail(
+            "Unable to identify argnames. (Use a comma-separated string, list of strings or tuple of strings).",
+            context=context,
+            code=UNREADABLE_ARGNAMES,
+        )
 
     def parse_names_string(self, expression: StrExpr) -> str | list[str] | None:
         individual_names = [name.strip() for name in expression.value.split(",")]
@@ -71,21 +50,8 @@ class ArgnamesParser(CheckerWrapper):
             return name
         return filtered_names
 
-    def _parse_name(self, expression: Expression) -> str | None:
-        if isinstance(expression, StrExpr):
-            name = expression.value
-            if self._check_valid_identifier(name, expression):
-                return name
-        else:
-            self.fail(
-                "Unable to read identifier. (Use a sequence of strings instead.)",
-                context=expression,
-                code=UNREADABLE_ARGNAME,
-            )
-        return None
-
     def parse_names_sequence(self, expr: TupleExpr | ListExpr) -> list[str] | None:
-        names = [self._parse_name(item) for item in expr.items]
+        names = [self.parse_name(item) for item in expr.items]
         if all([isinstance(name, str) for name in names]):
             return cast(list[str], names)
         return None
@@ -109,8 +75,30 @@ class ArgnamesParser(CheckerWrapper):
 
     def _warn_duplicate_argnames(self, duplicates: Iterable[str], context: Context) -> None:
         for argname in duplicates:
-            self.fail(
-                f"Duplicated argname {argname!r}.",
-                context=context,
-                code=DUPLICATE_ARGNAME,
-            )
+            self.fail(f"Duplicated argname {argname!r}.", context=context, code=DUPLICATE_ARGNAME)
+
+    @override
+    def _fail_invalid_identifier(self, name: str, context: Context) -> None:
+        self.fail(
+            f"Invalid identifier {name!r} for argname.", context=context, code=INVALID_ARGNAME
+        )
+
+    @override
+    def _fail_keyword_identifier(self, name: str, context: Context) -> None:
+        self.fail(f"Keyword {name!r} used as an argname.", context=context, code=INVALID_ARGNAME)
+
+    @override
+    def _fail_unreadable_identifier(self, context: Context) -> None:
+        self.fail(
+            "Unable to read argname. (Use string literals instead.)",
+            context=context,
+            code=UNREADABLE_ARGNAME,
+        )
+
+    @override
+    def _fail_request_identifier(self, name: str, context: Context) -> None:
+        self.fail(
+            f"{name!r} is not allowed as an argname; it is a reserved word in Pytest.",
+            context=context,
+            code=REQUEST_KEYWORD,
+        )

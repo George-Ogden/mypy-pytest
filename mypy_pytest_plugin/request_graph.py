@@ -17,31 +17,27 @@ from mypy.subtypes import is_subtype
 from mypy.types import AnyType, CallableType, TypeOfAny, UninhabitedType
 
 from .checker_wrapper import CheckerWrapper
-from .error_codes import (
-    FIXTURE_ARGUMENT_TYPE,
-    INVERTED_FIXTURE_SCOPE,
-    MISSING_ARGNAME,
-)
+from .error_codes import FIXTURE_ARGUMENT_TYPE, INVERTED_FIXTURE_SCOPE, MISSING_ARGNAME
 from .fixture import Fixture, FixtureScope
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .request import Request
-from .test_argument import TestArgument
+from .request_node import RequestNode
 
 
 @dataclass(frozen=True, slots=True, eq=False)
 class RequestGraphBuilder:
-    original_requests: Sequence[Request]
+    original_requests: Sequence[RequestNode]
     available_fixtures: Mapping[str, Sequence[Fixture]]
     parametrized_names: Collection[str]
-    requests: list[Request] = field(default_factory=list, init=False)
+    requests: list[RequestNode] = field(default_factory=list, init=False)
     visited_fixture_ids: set[int] = field(default_factory=set, init=False)
 
     def build(self) -> None:
         for request in self.original_requests:
             self.resolve_request(request, [request.name])
 
-    def resolve_request(self, request: Request, path: list[str]) -> None:
+    def resolve_request(self, request: RequestNode, path: list[str]) -> None:
         self.requests.append(request)
         if request.name in self.parametrized_names:
             request.resolver = "param"
@@ -53,7 +49,7 @@ class RequestGraphBuilder:
                 if id(fixture) not in self.visited_fixture_ids:
                     self.visited_fixture_ids.add(id(fixture))
                     for arg in fixture.arguments:
-                        request = Request(
+                        request = RequestNode(
                             arg,
                             file=fixture.file,
                             source="fixture",
@@ -69,14 +65,14 @@ class RequestGraphBuilder:
 class RequestGraph(CheckerWrapper):
     fullname: Fullname
     checker: TypeChecker
-    requests: Sequence[Request]
+    requests: Sequence[RequestNode]
     context: Context
 
     @classmethod
     def build(
         cls,
         *,
-        test_arguments: Iterable[TestArgument],
+        requests: Iterable[Request],
         autouse_names: Iterable[str],
         parametrized_names: Collection[str],
         available_fixtures: Mapping[str, Sequence[Fixture]],
@@ -85,11 +81,13 @@ class RequestGraph(CheckerWrapper):
         context: Context,
     ) -> RequestGraph:
         original_requests = [
-            Request(test_arg, file=checker.path, source="argument", source_name=fullname.name)
-            for test_arg in test_arguments
+            RequestNode(test_arg, file=checker.path, source="argument", source_name=fullname.name)
+            for test_arg in requests
         ]
         original_requests.extend(
-            Request.from_autouse_name(autouse_name, module=fullname.module_name, checker=checker)
+            RequestNode.from_autouse_name(
+                autouse_name, module=fullname.module_name, checker=checker
+            )
             for autouse_name in autouse_names
         )
         builder = RequestGraphBuilder(
@@ -113,20 +111,20 @@ class RequestGraph(CheckerWrapper):
     def options(self) -> Options:
         return self.checker.options
 
-    def argname_types(self, argnames: Collection[str]) -> dict[str, TestArgument]:
+    def argname_types(self, argnames: Collection[str]) -> dict[str, Request]:
         return {
             requests[0].name: self._meet_requests(requests)
             for requests in self._argument_requests(argnames)
         }
 
-    def _argument_requests(self, argnames: Collection[str]) -> Iterable[Sequence[Request]]:
+    def _argument_requests(self, argnames: Collection[str]) -> Iterable[Sequence[RequestNode]]:
         argument_requests = defaultdict(list)
         for request in self:
             if request.name in argnames:
                 argument_requests[request.name].append(request)
         return argument_requests.values()
 
-    def _meet_requests(self, requests: Sequence[Request]) -> TestArgument:
+    def _meet_requests(self, requests: Sequence[RequestNode]) -> Request:
         target_type = functools.reduce(meet_types, (request.type_ for request in requests))
         request = requests[0]
         if isinstance(target_type, UninhabitedType):
@@ -138,7 +136,7 @@ class RequestGraph(CheckerWrapper):
                 code=VALID_TYPE,
             )
             target_type = AnyType(TypeOfAny.from_error)
-        return TestArgument(
+        return Request(
             name=request.name,
             type_=target_type,
             type_variables=list(
@@ -147,7 +145,7 @@ class RequestGraph(CheckerWrapper):
             context=self.context,
         )
 
-    def __iter__(self) -> Iterator[Request]:
+    def __iter__(self) -> Iterator[RequestNode]:
         return iter(self.requests)
 
     def check(self) -> None:
@@ -194,11 +192,7 @@ class RequestGraph(CheckerWrapper):
             if (
                 isinstance(request.resolver, Fixture)
                 and request.scope > request.resolver.scope
-                and FixtureScope.unknown
-                not in [
-                    request.scope,
-                    request.resolver.scope,
-                ]
+                and FixtureScope.unknown not in [request.scope, request.resolver.scope]
             ):
                 self.checker.msg.fail(
                     f"{request.source_name!r} (scope={request.scope.name!r}) requests {request.name!r} (scope={request.resolver.scope.name!r}).",
