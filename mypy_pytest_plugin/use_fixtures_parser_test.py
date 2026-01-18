@@ -16,6 +16,7 @@ def _inject_using_fixtures_mock_test_body(
     source: str, expected_fixture_names: list[str], *, errors: list[str] | None = None
 ) -> None:
     parse_result = parse(source, header="import mypy_pytest_plugin_types")
+    parse_result.accept_all()
     checker = parse_result.checker
 
     usefixtures_call = parse_result.defs["call"]
@@ -131,4 +132,18 @@ def test_inject_fixture_using_fixtures_mock_request_argname() -> None:
         """,
         [],
         errors=["request-keyword"],
+    )
+
+
+def test_parse_usefixtures_indirect_name() -> None:
+    _inject_using_fixtures_mock_test_body(
+        """
+        import pytest
+        from typing import Literal
+
+        fixture_name: Literal["fixture"] = "fixture"
+
+        call = pytest.mark.usefixtures(fixture_name)
+        """,
+        ["fixture"],
     )

@@ -8,6 +8,7 @@ from mypy.nodes import (
     Expression,
     StrExpr,
 )
+from mypy.types import LiteralType, Type
 
 from .checker_wrapper import CheckerWrapper
 
@@ -16,7 +17,7 @@ from .checker_wrapper import CheckerWrapper
 class NamesParser(CheckerWrapper):
     checker: TypeChecker
 
-    def _check_valid_identifier(self, name: str, context: StrExpr) -> bool:
+    def _check_valid_identifier(self, name: str, context: Context) -> bool:
         if not (valid_identifier := name.isidentifier()):
             self._fail_invalid_identifier(name, context)
         elif not (valid_identifier := (not keyword.iskeyword(name))):
@@ -25,14 +26,25 @@ class NamesParser(CheckerWrapper):
             self._fail_request_identifier(name, context)
         return valid_identifier
 
-    def parse_name(self, expression: Expression) -> str | None:
-        if isinstance(expression, StrExpr):
-            name = expression.value
-            if self._check_valid_identifier(name, expression):
+    def parse_string_name(self, expression: StrExpr) -> str | None:
+        name = expression.value
+        if self._check_valid_identifier(name, expression):
+            return name
+        return None
+
+    def parse_name_from_type(self, type_: Type, context: Context) -> str | None:
+        if isinstance(type_, LiteralType) and isinstance(type_.value, str):
+            name = type_.value
+            if self._check_valid_identifier(name, context):
                 return name
         else:
-            self._fail_unreadable_identifier(expression)
+            self._fail_unreadable_identifier(context)
         return None
+
+    def parse_name(self, expression: Expression) -> str | None:
+        if isinstance(expression, StrExpr):
+            return self.parse_string_name(expression)
+        return self.parse_name_from_type(self.checker.lookup_type(expression), context=expression)
 
     @abc.abstractmethod
     def _fail_invalid_identifier(self, name: str, context: Context) -> None: ...
