@@ -26,8 +26,8 @@ from .fixture_manager import FixtureManager
 from .fullname import Fullname
 from .many_items_test_signature import ManyItemsTestSignature
 from .one_item_test_signature import OneItemTestSignature
+from .request import Request
 from .request_graph import RequestGraph
-from .test_argument import TestArgument
 from .test_signature import TestSignature
 
 
@@ -35,7 +35,7 @@ from .test_signature import TestSignature
 class TestInfo(CheckerWrapper):
     fullname: Fullname
     fn_name: str
-    arguments: Sequence[TestArgument]
+    arguments: Sequence[Request]
     decorators: Sequence[DecoratorWrapper]
     checker: TypeChecker
     context: Context
@@ -50,7 +50,7 @@ class TestInfo(CheckerWrapper):
     @classmethod
     def from_fn_def(cls, fn_def: FuncDef | Decorator, *, checker: TypeChecker) -> Self | None:
         fn_def, decorators = cls._get_fn_and_decorators(fn_def)
-        test_arguments = TestArgument.from_fn_def(fn_def, checker=checker, source="test")
+        test_arguments = Request.from_fn_def(fn_def, checker=checker, source="test")
         if test_arguments is None:
             return None
         test_decorators = DecoratorWrapper.decorators_from_exprs(decorators, checker=checker)
@@ -117,7 +117,7 @@ class TestInfo(CheckerWrapper):
     @functools.cached_property
     def request_graph(self) -> RequestGraph:
         return RequestGraph.build(
-            test_arguments=self.arguments,
+            requests=self.arguments,
             available_fixtures=self._available_fixtures,
             parametrized_names=self.parametrized_argnames,
             autouse_names=self.autouse_names,
@@ -138,7 +138,7 @@ class TestInfo(CheckerWrapper):
         return self.fixture_manager.autouse_fixture_names(self.module_name)
 
     @functools.cached_property
-    def argname_types(self) -> Mapping[str, TestArgument]:
+    def argname_types(self) -> Mapping[str, Request]:
         return self.request_graph.argname_types(self.parametrized_argnames)
 
     @property

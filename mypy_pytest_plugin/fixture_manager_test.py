@@ -8,7 +8,7 @@ from mypy.subtypes import is_same_type
 from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
-from .test_argument import TestArgument
+from .request import Request
 from .test_utils import parse_multiple, simple_module_lookup
 from .utils import strict_cast, strict_not_none
 
@@ -100,12 +100,12 @@ def _fixture_manager_resolve_fixtures_test_body(
     assert isinstance(fixture_def, FuncDef)
     parse_result.checker_accept_all(checker)
 
-    test_arguments = TestArgument.from_fn_def(fixture_def, checker=checker, source="test")
-    assert test_arguments is not None
+    requests = Request.from_fn_def(fixture_def, checker=checker, source="test")
+    assert requests is not None
 
     with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
         fixtures = FixtureManager(checker).resolve_fixtures(
-            [test_argument.name for test_argument in test_arguments],
+            [request.name for request in requests],
             Fullname.from_string(last_module_name),
         )
 

@@ -40,7 +40,7 @@ from .error_codes import (
     REQUEST_KEYWORD,
 )
 from .fullname import Fullname
-from .test_argument import TestArgument
+from .request import Request
 from .types_module import TYPES_MODULE
 from .utils import strict_cast, strict_not_none
 
@@ -56,7 +56,7 @@ class Fixture:
     fullname: Fullname
     file: str
     return_type: Type
-    arguments: Sequence[TestArgument]
+    arguments: Sequence[Request]
     scope: FixtureScope
     autouse: bool
     type_variables: Sequence[TypeVarLikeType]
@@ -80,12 +80,10 @@ class Fixture:
         func = type.definition
         assert isinstance(func, FuncDef | None)
         if isinstance(func, FuncDef):
-            arguments = strict_not_none(
-                TestArgument.from_fn_def(func, checker=None, source="fixture")
-            )
+            arguments = strict_not_none(Request.from_fn_def(func, checker=None, source="fixture"))
             context: Context = func
         else:
-            arguments = TestArgument.from_type(type)
+            arguments = Request.from_type(type)
             context = Context()
         return cls(
             fullname=Fullname.from_string(fullname),
@@ -102,8 +100,8 @@ class Fixture:
     def is_fixture_and_mark(cls, decorator: Decorator, *, checker: TypeChecker) -> bool:
         return FixtureParser(checker).is_fixture_and_mark(decorator)
 
-    def as_argument(self) -> TestArgument:
-        return TestArgument(
+    def as_argument(self) -> Request:
+        return Request(
             name=self.name,
             type_=self.return_type,
             context=self.context,
@@ -176,7 +174,7 @@ class FixtureParser(CheckerWrapper):
             or self.is_request_name(decorator)
         ):
             return None
-        arguments = TestArgument.from_fn_def(decorator.func, checker=self.checker, source="fixture")
+        arguments = Request.from_fn_def(decorator.func, checker=self.checker, source="fixture")
         if arguments is None:
             return None
         return Fixture(
