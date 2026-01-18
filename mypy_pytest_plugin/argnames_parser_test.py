@@ -149,6 +149,12 @@ def test_argnames_parser_parse_names_sequence_one_invalid() -> None:
     )
 
 
+def test_argnames_parser_parse_names_sequence_multiple_keywords() -> None:
+    _argnames_parser_parse_names_sequence_test_body(
+        "('if', 'it', 'is')", None, errors=["invalid-argname", "invalid-argname"]
+    )
+
+
 def test_argnames_parser_parse_names_sequence_one_undeterminable() -> None:
     _argnames_parser_parse_names_sequence_test_body(
         "('a', 'ab'.upper(), 'c')", None, errors=["unreadable-argname"]

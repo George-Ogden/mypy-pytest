@@ -25,6 +25,19 @@ DUPLICATE_ARGNAME: Final[ErrorCode] = ErrorCode(
 )
 
 
+INVALID_USEFIXTURES: Final[ErrorCode] = ErrorCode(
+    "invalid-usefixtures-name",
+    "Invalid Python identifier used with `pytest.mark.usefixtures`.",
+    category="Pytest",
+)
+
+UNREADABLE_USEFIXTURES: Final[ErrorCode] = ErrorCode(
+    "unreadable-usefixtures-name",
+    "Unable to parse fixture name from `pytest.mark.usefixtures`.",
+    category="Pytest",
+)
+
+
 REPEATED_FIXTURE_ARGNAME: Final[ErrorCode] = ErrorCode(
     "repeated-fixture-argname",
     "Pytest parametrization contains an argument that is shadowed by a fixture.",
