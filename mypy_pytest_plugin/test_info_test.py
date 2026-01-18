@@ -117,7 +117,7 @@ def test_test_info_from_fn_def_request_arg_any_type() -> None:
 
         def test_info(request: Any) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -140,7 +140,7 @@ def test_test_info_from_fn_def_request_arg_correct_type() -> None:
 
         def test_info(request: FixtureRequest) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -753,7 +753,7 @@ def test_test_info_check_fixture_shadowed_scope() -> None:
         @pytest.mark.parametrize("function_fixture", [None])
         def test_info(class_fixture: None) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -815,7 +815,7 @@ def test_test_info_check_fixture_and_arg_both_supplied() -> None:
         )
         def test_info(fixture: None, arg: None) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -833,7 +833,7 @@ def test_test_info_check_fixture_and_arg_one_supplied() -> None:
         )
         def test_info(fixture: None, arg: None) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -852,7 +852,7 @@ def test_test_info_check_fixture_valid_argname_generic_types() -> None:
         )
         def test_info(fixture: Any) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -868,7 +868,7 @@ def test_test_info_check_fixture_valid_subtype() -> None:
 
         def test_info(true_fixture: bool) -> None:
             ...
-        """,
+        """
     )
 
 
@@ -888,7 +888,7 @@ def test_test_info_check_valid_argument_subtype() -> None:
 
         def test_info(fixture: None) -> None:
             ...
-        """,
+        """
     )
 
 

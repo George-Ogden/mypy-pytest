@@ -169,16 +169,4 @@ def test_lookup_fullname_many_nested_modules_does_not_exist() -> None:
 
 
 def test_lookup_fullname_many_nested_modules_exists_as_module() -> None:
-    _lookup_fullname_type_test_body(
-        [
-            (
-                "test_module",
-                "",
-            ),
-            (
-                "test_module.x",
-                "",
-            ),
-        ],
-        "test_module.x",
-    )
+    _lookup_fullname_type_test_body([("test_module", ""), ("test_module.x", "")], "test_module.x")

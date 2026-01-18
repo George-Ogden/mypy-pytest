@@ -13,14 +13,8 @@ def no_yield_fixture() -> Iterable[int]:
 
 
 @pytest.mark.skip
-def test_generators(
-    yield_fixture: int,
-    no_yield_fixture: int,
-) -> None: ...
+def test_generators(yield_fixture: int, no_yield_fixture: int) -> None: ...
 
 
 @pytest.mark.skip
-def test_no_generators(
-    yield_fixture: Iterable[int],
-    no_yield_fixture: Iterable[int],
-) -> None: ...
+def test_no_generators(yield_fixture: Iterable[int], no_yield_fixture: Iterable[int]) -> None: ...

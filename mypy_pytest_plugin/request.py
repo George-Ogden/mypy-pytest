@@ -8,13 +8,7 @@ from typing import Literal, Self
 from mypy.checker import TypeChecker
 from mypy.errorcodes import ErrorCode
 from mypy.messages import format_type
-from mypy.nodes import (
-    ArgKind,
-    Argument,
-    Context,
-    FuncDef,
-    TypeInfo,
-)
+from mypy.nodes import ArgKind, Argument, Context, FuncDef, TypeInfo
 from mypy.subtypes import is_subtype
 from mypy.types import (
     AnyType,
@@ -112,10 +106,7 @@ class RequestParser:
         return [argument for argument in requests if argument is not None]
 
     def _validate_test_argument(
-        self,
-        argument: Argument,
-        type_: Type,
-        type_variables: Sequence[TypeVarLikeType],
+        self, argument: Argument, type_: Type, type_variables: Sequence[TypeVarLikeType]
     ) -> Request | None:
         if argument.initializer is not None:
             message = f"`{argument.variable.name}` has a default value and is therefore ignored."
@@ -144,10 +135,7 @@ class RequestParser:
         return None
 
     def filter_request_arguments(
-        self,
-        arguments: Sequence[Request] | None,
-        *,
-        source: Literal["test", "fixture"],
+        self, arguments: Sequence[Request] | None, *, source: Literal["test", "fixture"]
     ) -> Sequence[Request] | None:
         if arguments is None:
             return None

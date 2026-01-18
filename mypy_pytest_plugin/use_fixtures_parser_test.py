@@ -4,11 +4,7 @@ from mypy.nodes import CallExpr, Decorator, FuncDef, RefExpr
 from mypy.types import AnyType
 
 from .test_info import TestInfo
-from .test_utils import (
-    check_error_messages,
-    get_error_messages,
-    parse,
-)
+from .test_utils import check_error_messages, get_error_messages, parse
 from .use_fixtures_parser import UseFixturesParser
 
 

@@ -1,17 +1,10 @@
 from collections.abc import Callable
 from typing import cast
 
-from mypy.nodes import (
-    Expression,
-)
+from mypy.nodes import Expression
 
 from .argnames_parser import ArgnamesParser
-from .test_utils import (
-    check_error_messages,
-    default_argnames_parser,
-    get_error_messages,
-    parse,
-)
+from .test_utils import check_error_messages, default_argnames_parser, get_error_messages, parse
 
 
 def _argnames_parser_parse_names_custom_test_body[T: Expression](
@@ -94,10 +87,7 @@ def test_argnames_parser_parse_names_string_with_reserved_name() -> None:
 
 
 def _argnames_parser_parse_names_sequence_test_body(
-    source: str,
-    names: list[str] | None,
-    *,
-    errors: list[str] | None = None,
+    source: str, names: list[str] | None, *, errors: list[str] | None = None
 ) -> None:
     _argnames_parser_parse_names_custom_test_body(
         source, names, errors, ArgnamesParser.parse_names_sequence
@@ -168,10 +158,7 @@ def test_argnames_parser_parse_names_sequence_with_reserved_name() -> None:
 
 
 def _argnames_parser_parse_names_test_body(
-    source: str,
-    names: list[str] | str | None,
-    *,
-    errors: list[str] | None = None,
+    source: str, names: list[str] | str | None, *, errors: list[str] | None = None
 ) -> None:
     _argnames_parser_parse_names_custom_test_body(source, names, errors, ArgnamesParser.parse_names)
 

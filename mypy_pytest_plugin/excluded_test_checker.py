@@ -3,13 +3,7 @@ from dataclasses import dataclass
 import itertools
 
 from mypy.checker import TypeChecker
-from mypy.nodes import (
-    AssignmentStmt,
-    Expression,
-    MemberExpr,
-    NameExpr,
-    Statement,
-)
+from mypy.nodes import AssignmentStmt, Expression, MemberExpr, NameExpr, Statement
 from mypy.subtypes import is_same_type
 from mypy.types import LiteralType
 
@@ -35,7 +29,7 @@ class ExcludedTestChecker(CheckerWrapper):
 
     def _ignored_test_names_from_statements(self, statements: Sequence[Statement]) -> set[str]:
         return self._ignored_test_names_from_assignments(
-            [statement for statement in statements if isinstance(statement, AssignmentStmt)],
+            [statement for statement in statements if isinstance(statement, AssignmentStmt)]
         )
 
     def _ignored_test_names_from_assignments(

@@ -60,8 +60,5 @@ class ManyItemsTestSignature(TestSignature):
 
     @property
     def sequence_signature(self) -> CallableType:
-        arg_type = self.checker.named_generic_type(
-            "typing.Iterable",
-            args=[self.signature_type()],
-        )
+        arg_type = self.checker.named_generic_type("typing.Iterable", args=[self.signature_type()])
         return self._one_unnamed_arg_fn(arg_type)

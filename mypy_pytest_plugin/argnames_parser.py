@@ -3,13 +3,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import cast, override
 
-from mypy.nodes import (
-    Context,
-    Expression,
-    ListExpr,
-    StrExpr,
-    TupleExpr,
-)
+from mypy.nodes import Context, Expression, ListExpr, StrExpr, TupleExpr
 
 from .error_codes import (
     DUPLICATE_ARGNAME,
@@ -81,27 +75,17 @@ class ArgnamesParser(NamesParser):
 
     def _warn_duplicate_argnames(self, duplicates: Iterable[str], context: Context) -> None:
         for argname in duplicates:
-            self.fail(
-                f"Duplicated argname {argname!r}.",
-                context=context,
-                code=DUPLICATE_ARGNAME,
-            )
+            self.fail(f"Duplicated argname {argname!r}.", context=context, code=DUPLICATE_ARGNAME)
 
     @override
     def _fail_invalid_identifier(self, name: str, context: Context) -> None:
         self.fail(
-            f"Invalid identifier {name!r} for argname.",
-            context=context,
-            code=INVALID_ARGNAME,
+            f"Invalid identifier {name!r} for argname.", context=context, code=INVALID_ARGNAME
         )
 
     @override
     def _fail_keyword_identifier(self, name: str, context: Context) -> None:
-        self.fail(
-            f"Keyword {name!r} used as an argname.",
-            context=context,
-            code=INVALID_ARGNAME,
-        )
+        self.fail(f"Keyword {name!r} used as an argname.", context=context, code=INVALID_ARGNAME)
 
     @override
     def _fail_unreadable_identifier(self, context: Context) -> None:

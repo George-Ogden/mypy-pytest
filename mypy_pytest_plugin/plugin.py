@@ -3,13 +3,7 @@ import functools
 from typing import Literal, cast
 
 from mypy.checker import TypeChecker
-from mypy.nodes import (
-    CallExpr,
-    Decorator,
-    Expression,
-    MemberExpr,
-    MypyFile,
-)
+from mypy.nodes import CallExpr, Decorator, Expression, MemberExpr, MypyFile
 from mypy.options import Options
 from mypy.plugin import AttributeContext, FunctionContext, FunctionSigContext, MethodContext, Plugin
 from mypy.types import CallableType, FunctionLike, Type

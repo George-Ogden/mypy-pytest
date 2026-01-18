@@ -2,15 +2,9 @@ from dataclasses import dataclass
 from typing import override
 
 from mypy.checker import TypeChecker
-from mypy.nodes import (
-    Context,
-)
+from mypy.nodes import Context
 
-from .error_codes import (
-    INVALID_USEFIXTURES,
-    REQUEST_KEYWORD,
-    UNREADABLE_USEFIXTURES,
-)
+from .error_codes import INVALID_USEFIXTURES, REQUEST_KEYWORD, UNREADABLE_USEFIXTURES
 from .names_parser import NamesParser
 
 
@@ -29,9 +23,7 @@ class UseFixtureNamesParser(NamesParser):
     @override
     def _fail_keyword_identifier(self, name: str, context: Context) -> None:
         self.fail(
-            f"Keyword {name!r} used as a fixture name.",
-            context=context,
-            code=INVALID_USEFIXTURES,
+            f"Keyword {name!r} used as a fixture name.", context=context, code=INVALID_USEFIXTURES
         )
 
     @override

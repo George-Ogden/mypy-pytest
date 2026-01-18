@@ -5,22 +5,13 @@ import itertools
 from typing import Self
 
 from mypy.checker import TypeChecker
-from mypy.nodes import (
-    Context,
-    Decorator,
-    Expression,
-    FuncDef,
-)
+from mypy.nodes import Context, Decorator, Expression, FuncDef
 
 from .argnames_parser import ArgnamesParser
 from .argvalues import Argvalues
 from .checker_wrapper import CheckerWrapper
 from .decorator_wrapper import DecoratorWrapper
-from .error_codes import (
-    DUPLICATE_ARGNAME,
-    REPEATED_FIXTURE_ARGNAME,
-    UNKNOWN_ARGNAME,
-)
+from .error_codes import DUPLICATE_ARGNAME, REPEATED_FIXTURE_ARGNAME, UNKNOWN_ARGNAME
 from .fixture import Fixture
 from .fixture_manager import FixtureManager
 from .fullname import Fullname

@@ -3,15 +3,7 @@ from dataclasses import dataclass
 from mypy.checker import TypeChecker
 from mypy.expandtype import expand_type_by_instance
 from mypy.nodes import CallExpr, Expression, StrExpr
-from mypy.types import (
-    CallableType,
-    Instance,
-    LiteralType,
-    Overloaded,
-    Parameters,
-    Type,
-    UnionType,
-)
+from mypy.types import CallableType, Instance, LiteralType, Overloaded, Parameters, Type, UnionType
 
 from .argmapper import ArgMapper
 from .checker_wrapper import CheckerWrapper
@@ -90,9 +82,6 @@ class PatchCallChecker(CheckerWrapper):
             return original_type
         if isinstance(original_type, Instance):
             return UnionType(
-                [
-                    self.checker.named_type(f"{TYPES_MODULE}.mock.MagicMock"),
-                    original_type,
-                ]
+                [self.checker.named_type(f"{TYPES_MODULE}.mock.MagicMock"), original_type]
             )
         return None

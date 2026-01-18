@@ -17,11 +17,7 @@ from mypy.subtypes import is_subtype
 from mypy.types import AnyType, CallableType, TypeOfAny, UninhabitedType
 
 from .checker_wrapper import CheckerWrapper
-from .error_codes import (
-    FIXTURE_ARGUMENT_TYPE,
-    INVERTED_FIXTURE_SCOPE,
-    MISSING_ARGNAME,
-)
+from .error_codes import FIXTURE_ARGUMENT_TYPE, INVERTED_FIXTURE_SCOPE, MISSING_ARGNAME
 from .fixture import Fixture, FixtureScope
 from .fixture_manager import FixtureManager
 from .fullname import Fullname
@@ -196,11 +192,7 @@ class RequestGraph(CheckerWrapper):
             if (
                 isinstance(request.resolver, Fixture)
                 and request.scope > request.resolver.scope
-                and FixtureScope.unknown
-                not in [
-                    request.scope,
-                    request.resolver.scope,
-                ]
+                and FixtureScope.unknown not in [request.scope, request.resolver.scope]
             ):
                 self.checker.msg.fail(
                     f"{request.source_name!r} (scope={request.scope.name!r}) requests {request.name!r} (scope={request.resolver.scope.name!r}).",

@@ -1,11 +1,5 @@
 from collections.abc import AsyncIterator, Callable, Iterable, Iterator, Sequence
-from typing import (
-    Any,
-    Literal,
-    Self,
-    overload,
-    type_check_only,
-)
+from typing import Any, Literal, Self, overload, type_check_only
 from unittest.mock import _Call, _CallList, _patch, _patch_dict, _patch_pass_arg
 
 from _typeshed import MaybeNone

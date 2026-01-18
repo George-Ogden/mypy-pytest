@@ -87,8 +87,7 @@ def test_fixture_manager_default_fixture_module_names() -> None:
 
 
 def _fixture_manager_resolve_fixtures_test_body(
-    modules: Sequence[tuple[str, str]],
-    expected_fixtures: dict[str, list[str]],
+    modules: Sequence[tuple[str, str]], expected_fixtures: dict[str, list[str]]
 ) -> None:
     parse_result = parse_multiple(modules, header="import _pytest.fixtures\nimport typing")
 
@@ -105,8 +104,7 @@ def _fixture_manager_resolve_fixtures_test_body(
 
     with mock.patch.object(FixtureManager, "_module_lookup", simple_module_lookup):
         fixtures = FixtureManager(checker).resolve_fixtures(
-            [request.name for request in requests],
-            Fullname.from_string(last_module_name),
+            [request.name for request in requests], Fullname.from_string(last_module_name)
         )
 
     assert not checker.errors.is_errors()
@@ -150,7 +148,7 @@ def test_fixture_manager_resolve_fixtures_no_fixtures() -> None:
                 def test_request(x: int, y: str) -> None:
                     ...
                 """,
-            ),
+            )
         ],
         dict(x=[], y=[]),
     )
@@ -210,7 +208,7 @@ def test_fixture_manager_resolve_fixtures_long_chain_same_file() -> None:
                 def test_request(fixture_1: None) -> None:
                     ...
                 """,
-            ),
+            )
         ],
         dict(
             fixture_1=["file_test.fixture_1"],
@@ -415,7 +413,7 @@ def test_fixture_manager_resolve_fixtures_request_cycles() -> None:
                 def test_request(direct_cycle: None, indirect_cycle_1: None) -> None:
                     ...
                 """,
-            ),
+            )
         ],
         dict(
             direct_cycle=["file_test.direct_cycle"],
@@ -456,7 +454,7 @@ def test_fixture_manager_resolve_fixtures_autouse_fixtures() -> None:
 
                 __autouse__: Literal["automatic_fixture", "automatic_fixture2"]
                 """,
-            ),
+            )
         ],
         dict(
             manual_fixture=["file_test.manual_fixture"],
@@ -507,9 +505,7 @@ def test_fixture_manager_resolve_fixtures_autouse_fixture_ignored() -> None:
                 "file_test.masked_automatic_fixture",
                 "conftest.masked_automatic_fixture",
             ],
-            requested_fixture=[
-                "conftest.requested_fixture",
-            ],
+            requested_fixture=["conftest.requested_fixture"],
         ),
     )
 
@@ -639,11 +635,7 @@ def test_fixture_manager_resolve_autouse_fixtures_nested_conftest() -> None:
                 """,
             ),
         ],
-        [
-            "conftest_fixture",
-            "file_fixture1",
-            "file_fixture2",
-        ],
+        ["conftest_fixture", "file_fixture1", "file_fixture2"],
     )
 
 
@@ -702,11 +694,7 @@ def test_fixture_manager_resolve_autouse_fixtures_conflicting_names() -> None:
                 """,
             ),
         ],
-        [
-            "conftest_fixture",
-            "file_fixture",
-            "fixture",
-        ],
+        ["conftest_fixture", "file_fixture", "fixture"],
     )
 
 
@@ -740,8 +728,5 @@ def test_fixture_manager_resolve_autouse_fixtures_builtin() -> None:
                 """,
             ),
         ],
-        [
-            "capture_fixture",
-            "fixture",
-        ],
+        ["capture_fixture", "fixture"],
     )

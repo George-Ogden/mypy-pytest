@@ -3,11 +3,7 @@ from dataclasses import dataclass
 import keyword
 
 from mypy.checker import TypeChecker
-from mypy.nodes import (
-    Context,
-    Expression,
-    StrExpr,
-)
+from mypy.nodes import Context, Expression, StrExpr
 from mypy.types import LiteralType, Type
 
 from .checker_wrapper import CheckerWrapper
