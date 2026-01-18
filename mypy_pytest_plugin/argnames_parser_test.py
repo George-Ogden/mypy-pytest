@@ -15,6 +15,7 @@ def _argnames_parser_parse_names_custom_test_body[T: Expression](
 ) -> None:
     source = f"names = {source}"
     parse_result = parse(source)
+    parse_result.accept_all()
     checker = parse_result.checker
 
     names_node = cast(T, parse_result.defs["names"])

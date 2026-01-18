@@ -7,6 +7,7 @@ from mypy.nodes import Context, Expression, StrExpr
 from mypy.types import LiteralType, Type
 
 from .checker_wrapper import CheckerWrapper
+from .defer import DeferralError, DeferralReason
 
 
 @dataclass(frozen=True)
@@ -37,10 +38,16 @@ class NamesParser(CheckerWrapper):
             self._fail_unreadable_identifier(context)
         return None
 
+    def parse_name_from_expression(self, expression: Expression) -> str | None:
+        type_ = self.checker.lookup_type_or_none(expression)
+        if type_ is None:
+            raise DeferralError(DeferralReason.REQUIRED_WAIT)
+        return self.parse_name_from_type(type_, context=expression)
+
     def parse_name(self, expression: Expression) -> str | None:
         if isinstance(expression, StrExpr):
             return self.parse_string_name(expression)
-        return self.parse_name_from_type(self.checker.lookup_type(expression), context=expression)
+        return self.parse_name_from_expression(expression)
 
     @abc.abstractmethod
     def _fail_invalid_identifier(self, name: str, context: Context) -> None: ...
