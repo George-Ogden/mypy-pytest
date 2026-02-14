@@ -107,7 +107,7 @@ class Mock[**P, R](CallableMixin[P, R], NonCallableMock[P, R]): ...
 # This class does not exist at runtime, it's a hack to add methods to the
 # patch() function.
 @type_check_only
-class _patcher[T]:  # noqa: N801
+class _patcher[T, U]:  # noqa: N801
     TEST_PREFIX: str
     dict: type[_patch_dict]
     # This overload also covers the case, where new==DEFAULT. In this case, the return type is _patch[Any].
@@ -127,6 +127,19 @@ class _patcher[T]:  # noqa: N801
         unsafe: bool = False,
     ) -> _patch[T]: ...
     @overload
+    def __call__(  # type: ignore[overload-overlap]
+        self,
+        target: str,
+        new: U,
+        spec: Literal[False] | None = None,
+        create: bool = False,
+        spec_set: Literal[False] | None = None,
+        autospec: Literal[False] | None = None,
+        new_callable: None = None,
+        *,
+        unsafe: bool = False,
+    ) -> _patch[U]: ...
+    @overload
     def __call__(
         self,
         target: str,
@@ -137,11 +150,11 @@ class _patcher[T]:  # noqa: N801
         # If not False or None, this is passed to new_callable
         spec_set: Any | Literal[False] | None = None,
         autospec: Literal[False] | None = None,
-        new_callable: Callable[..., T],
+        new_callable: Callable[..., T | U],
         unsafe: bool = False,
         # kwargs are passed to new_callable
         **kwargs: Any,
-    ) -> _patch_pass_arg[T]: ...
+    ) -> _patch_pass_arg[T | U]: ...
     @overload
     def __call__(
         self,
@@ -164,7 +177,7 @@ class _patcher[T]:  # noqa: N801
     def object(
         target: Any,
         attribute: str,
-        new: T,
+        new: T | U,
         spec: Literal[False] | None = None,
         create: bool = False,
         spec_set: Literal[False] | None = None,
@@ -172,7 +185,7 @@ class _patcher[T]:  # noqa: N801
         new_callable: None = None,
         *,
         unsafe: bool = False,
-    ) -> _patch[T]: ...
+    ) -> _patch[T | U]: ...
     @overload
     @staticmethod
     def object(
@@ -185,11 +198,11 @@ class _patcher[T]:  # noqa: N801
         # If not False or None, this is passed to new_callable
         spec_set: Any | Literal[False] | None = None,
         autospec: Literal[False] | None = None,
-        new_callable: Callable[..., T],
+        new_callable: Callable[..., T | U],
         unsafe: bool = False,
         # kwargs are passed to new_callable
         **kwargs: Any,
-    ) -> _patch_pass_arg[T]: ...
+    ) -> _patch_pass_arg[T | U]: ...
     @overload
     @staticmethod
     def object(
@@ -216,10 +229,10 @@ class _patcher[T]:  # noqa: N801
         spec_set: Any | Literal[False] | None = None,
         autospec: Literal[False] | None = None,
         *,
-        new_callable: Callable[..., T],
+        new_callable: Callable[..., T | U],
         # The kwargs must be DEFAULT
         **kwargs: Any,
-    ) -> _patch_pass_arg[T]: ...
+    ) -> _patch_pass_arg[T | U]: ...
     @overload
     @staticmethod
     def multiple(
@@ -230,10 +243,10 @@ class _patcher[T]:  # noqa: N801
         # If not False or None, this is passed to new_callable
         spec_set: Any | Literal[False] | None,
         autospec: Literal[False] | None,
-        new_callable: Callable[..., T],
+        new_callable: Callable[..., T | U],
         # The kwargs must be DEFAULT
         **kwargs: Any,
-    ) -> _patch_pass_arg[T]: ...
+    ) -> _patch_pass_arg[T | U]: ...
     @overload
     @staticmethod
     def multiple(
@@ -249,7 +262,7 @@ class _patcher[T]:  # noqa: N801
     @staticmethod
     def stopall() -> None: ...
 
-patch: _patcher[Any]
+patch: _patcher[Any, Any]
 
 class MagicMixin:
     def __lt__(self, other: object) -> Any: ...

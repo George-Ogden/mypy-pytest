@@ -150,7 +150,7 @@ def test_specialized_patcher_type_original_callable_no_args() -> None:
         original: Callable[[], Any]
         """,
         snapshot(
-            "mypy_pytest_plugin_types.mock._patcher[mypy_pytest_plugin_types.mock.Mock[[], Any] | def () -> Any]"
+            "mypy_pytest_plugin_types.mock._patcher[mypy_pytest_plugin_types.mock.Mock[[], Any], def () -> Any]"
         ),
     )
 
@@ -162,7 +162,7 @@ def test_specialized_patcher_type_original_callable_pos_only_args() -> None:
             return False
         """,
         snapshot(
-            "mypy_pytest_plugin_types.mock._patcher[mypy_pytest_plugin_types.mock.Mock[[builtins.int, builtins.str], builtins.bool] | def (builtins.int, builtins.str) -> builtins.bool]"
+            "mypy_pytest_plugin_types.mock._patcher[mypy_pytest_plugin_types.mock.Mock[[builtins.int, builtins.str], builtins.bool], def (builtins.int, builtins.str) -> builtins.bool]"
         ),
     )
 
@@ -174,7 +174,7 @@ def test_specialized_patcher_type_original_callable_complex_signature() -> None:
             return False
         """,
         snapshot(
-            "mypy_pytest_plugin_types.mock._patcher[mypy_pytest_plugin_types.mock.Mock[[builtins.int, *, y: builtins.str], builtins.bool] | def (builtins.int, *, y: builtins.str) -> builtins.bool]"
+            "mypy_pytest_plugin_types.mock._patcher[mypy_pytest_plugin_types.mock.Mock[[builtins.int, *, y: builtins.str], builtins.bool], def (builtins.int, *, y: builtins.str) -> builtins.bool]"
         ),
     )
 
@@ -196,7 +196,7 @@ def test_specialized_patcher_type_original_overloaded() -> None:
             ...
         """,
         snapshot(
-            "mypy_pytest_plugin_types.mock._patcher[Overload(def (*, x: builtins.int) -> builtins.int, def (*, y: builtins.str) -> builtins.str)]"
+            "mypy_pytest_plugin_types.mock._patcher[Overload(def (*, x: builtins.int) -> builtins.int, def (*, y: builtins.str) -> builtins.str), Overload(def (*, x: builtins.int) -> builtins.int, def (*, y: builtins.str) -> builtins.str)]"
         ),
     )
 
@@ -207,6 +207,6 @@ def test_specialized_patcher_type_object_type() -> None:
         original: int
         """,
         snapshot(
-            "mypy_pytest_plugin_types.mock._patcher[mypy_pytest_plugin_types.mock.MagicMock[Any, Any] | builtins.int]"
+            "mypy_pytest_plugin_types.mock._patcher[mypy_pytest_plugin_types.mock.MagicMock[Any, Any], builtins.int]"
         ),
     )

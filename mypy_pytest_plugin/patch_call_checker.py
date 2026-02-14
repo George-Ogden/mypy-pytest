@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from mypy.checker import TypeChecker
 from mypy.expandtype import expand_type_by_instance
 from mypy.nodes import CallExpr, Expression, StrExpr
-from mypy.types import CallableType, Instance, LiteralType, Overloaded, Parameters, Type, UnionType
+from mypy.types import CallableType, Instance, LiteralType, Overloaded, Parameters, Type
 
 from .argmapper import ArgMapper
 from .checker_wrapper import CheckerWrapper
@@ -43,10 +43,10 @@ class PatchCallChecker(CheckerWrapper):
     def _specialized_patcher_type(
         self, original_type: Type, *, attribute: str | None = None
     ) -> Type | None:
-        if (mock_bound := self._mock_bound(original_type)) is None:
+        if (mock_bounds := self._mock_bounds(original_type)) is None:
             return None
         instance_type = self.checker.named_generic_type(
-            f"{TYPES_MODULE}.mock._patcher", [mock_bound]
+            f"{TYPES_MODULE}.mock._patcher", list(mock_bounds)
         )
         if attribute is None:
             return instance_type
@@ -61,7 +61,7 @@ class PatchCallChecker(CheckerWrapper):
             return attribute_type
         return expand_type_by_instance(attribute_type, instance_type)
 
-    def _mock_bound(self, original_type: Type) -> Type | None:
+    def _mock_bounds(self, original_type: Type) -> tuple[Type, Type] | None:
         if isinstance(original_type, CallableType):
             parameters = Parameters(
                 original_type.arg_types,
@@ -72,16 +72,13 @@ class PatchCallChecker(CheckerWrapper):
                 imprecise_arg_kinds=original_type.imprecise_arg_kinds,
             )
             ret = original_type.ret_type
-            return UnionType(
-                [
-                    self.checker.named_generic_type(f"{TYPES_MODULE}.mock.Mock", [parameters, ret]),
-                    original_type,
-                ]
+            return (
+                self.checker.named_generic_type(f"{TYPES_MODULE}.mock.Mock", [parameters, ret]),
+                original_type,
             )
+
         if isinstance(original_type, Overloaded):
-            return original_type
+            return original_type, original_type
         if isinstance(original_type, Instance):
-            return UnionType(
-                [self.checker.named_type(f"{TYPES_MODULE}.mock.MagicMock"), original_type]
-            )
+            return (self.checker.named_type(f"{TYPES_MODULE}.mock.MagicMock"), original_type)
         return None
