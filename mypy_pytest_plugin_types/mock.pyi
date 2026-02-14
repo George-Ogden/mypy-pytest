@@ -150,6 +150,38 @@ class _patcher[T, U]:  # noqa: N801
         # If not False or None, this is passed to new_callable
         spec_set: Any | Literal[False] | None = None,
         autospec: Literal[False] | None = None,
+        new_callable: Callable[..., T],
+        unsafe: bool = False,
+        # kwargs are passed to new_callable
+        **kwargs: Any,
+    ) -> _patch_pass_arg[T]: ...
+    @overload
+    def __call__(
+        self,
+        target: str,
+        *,
+        # If not False or None, this is passed to new_callable
+        spec: Any | Literal[False] | None = None,
+        create: bool = False,
+        # If not False or None, this is passed to new_callable
+        spec_set: Any | Literal[False] | None = None,
+        autospec: Literal[False] | None = None,
+        new_callable: Callable[..., U],
+        unsafe: bool = False,
+        # kwargs are passed to new_callable
+        **kwargs: Any,
+    ) -> _patch_pass_arg[U]: ...
+    @overload
+    def __call__(
+        self,
+        target: str,
+        *,
+        # If not False or None, this is passed to new_callable
+        spec: Any | Literal[False] | None = None,
+        create: bool = False,
+        # If not False or None, this is passed to new_callable
+        spec_set: Any | Literal[False] | None = None,
+        autospec: Literal[False] | None = None,
         new_callable: Callable[..., T | U],
         unsafe: bool = False,
         # kwargs are passed to new_callable
@@ -177,6 +209,34 @@ class _patcher[T, U]:  # noqa: N801
     def object(
         target: Any,
         attribute: str,
+        new: T,
+        spec: Literal[False] | None = None,
+        create: bool = False,
+        spec_set: Literal[False] | None = None,
+        autospec: Literal[False] | None = None,
+        new_callable: None = None,
+        *,
+        unsafe: bool = False,
+    ) -> _patch[T]: ...
+    @overload
+    @staticmethod
+    def object(
+        target: Any,
+        attribute: str,
+        new: U,
+        spec: Literal[False] | None = None,
+        create: bool = False,
+        spec_set: Literal[False] | None = None,
+        autospec: Literal[False] | None = None,
+        new_callable: None = None,
+        *,
+        unsafe: bool = False,
+    ) -> _patch[U]: ...
+    @overload
+    @staticmethod
+    def object(
+        target: Any,
+        attribute: str,
         new: T | U,
         spec: Literal[False] | None = None,
         create: bool = False,
@@ -186,6 +246,40 @@ class _patcher[T, U]:  # noqa: N801
         *,
         unsafe: bool = False,
     ) -> _patch[T | U]: ...
+    @overload
+    @staticmethod
+    def object(
+        target: Any,
+        attribute: str,
+        *,
+        # If not False or None, this is passed to new_callable
+        spec: Any | Literal[False] | None = None,
+        create: bool = False,
+        # If not False or None, this is passed to new_callable
+        spec_set: Any | Literal[False] | None = None,
+        autospec: Literal[False] | None = None,
+        new_callable: Callable[..., T],
+        unsafe: bool = False,
+        # kwargs are passed to new_callable
+        **kwargs: Any,
+    ) -> _patch_pass_arg[T]: ...
+    @overload
+    @staticmethod
+    def object(
+        target: Any,
+        attribute: str,
+        *,
+        # If not False or None, this is passed to new_callable
+        spec: Any | Literal[False] | None = None,
+        create: bool = False,
+        # If not False or None, this is passed to new_callable
+        spec_set: Any | Literal[False] | None = None,
+        autospec: Literal[False] | None = None,
+        new_callable: Callable[..., U],
+        unsafe: bool = False,
+        # kwargs are passed to new_callable
+        **kwargs: Any,
+    ) -> _patch_pass_arg[U]: ...
     @overload
     @staticmethod
     def object(
@@ -223,16 +317,29 @@ class _patcher[T, U]:  # noqa: N801
     def multiple(
         target: Any | str,
         # If not False or None, this is passed to new_callable
-        spec: Any | Literal[False] | None = None,
-        create: bool = False,
+        spec: Any | Literal[False] | None,
+        create: bool,
         # If not False or None, this is passed to new_callable
-        spec_set: Any | Literal[False] | None = None,
-        autospec: Literal[False] | None = None,
-        *,
-        new_callable: Callable[..., T | U],
+        spec_set: Any | Literal[False] | None,
+        autospec: Literal[False] | None,
+        new_callable: Callable[..., T],
         # The kwargs must be DEFAULT
         **kwargs: Any,
-    ) -> _patch_pass_arg[T | U]: ...
+    ) -> _patch_pass_arg[T]: ...
+    @overload
+    @staticmethod
+    def multiple(
+        target: Any | str,
+        # If not False or None, this is passed to new_callable
+        spec: Any | Literal[False] | None,
+        create: bool,
+        # If not False or None, this is passed to new_callable
+        spec_set: Any | Literal[False] | None,
+        autospec: Literal[False] | None,
+        new_callable: Callable[..., U],
+        # The kwargs must be DEFAULT
+        **kwargs: Any,
+    ) -> _patch_pass_arg[U]: ...
     @overload
     @staticmethod
     def multiple(
