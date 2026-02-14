@@ -61,6 +61,11 @@ mock.patch("patch_test.Foo.cls", cls)
 mock.patch("patch_test.Foo.instance", lambda: None)
 mock.patch("patch_test.Foo.instance", instance)
 
+with mock.patch("patch_test.Foo.static", mock.Mock(return_value=None)) as m1:
+    m1.assert_called()
+with mock.patch("patch_test.Foo.static", static) as m2:
+    m2.assert_called()
+
 
 @overload
 def foo(x: int, /) -> int: ...

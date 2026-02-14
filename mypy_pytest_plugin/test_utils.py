@@ -173,7 +173,7 @@ def get_error_messages(checker: TypeChecker) -> str:
 
 def check_error_messages(messages: str, *, errors: list[str] | None) -> None:
     if errors:
-        error_codes = [match for match in re.findall(r"\[([a-z\-]*)\]$", messages, re.MULTILINE)]
+        error_codes = list(re.findall(r"\[([a-z\-]*)\]$", messages, re.MULTILINE))
         assert error_codes == errors, messages
     else:
         assert not messages, messages

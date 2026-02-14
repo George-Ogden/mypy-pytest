@@ -13,6 +13,11 @@ mock.patch.object(X(), "x", 3)
 mock.patch.object(X(), "x", "y")
 mock.patch.object(X(), "x", mock.MagicMock())
 
+with mock.patch("patch_object_test.X.xx", mock.Mock(return_value=None)) as m1:
+    m1.assert_called()
+with mock.patch("patch_object_test.X.xx", lambda self: None) as m2:
+    m2.assert_called()
+
 
 class Y:
     x: X
