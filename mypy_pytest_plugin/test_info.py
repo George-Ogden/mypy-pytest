@@ -183,7 +183,7 @@ class TestInfo(CheckerWrapper):
     def _check_arg_names(self, arg_names: str | list[str], *, context: Context) -> bool:
         if isinstance(arg_names, str):
             arg_names = [arg_names]
-        return all([self._check_arg_name(arg_name, context) for arg_name in arg_names])
+        return all([self._check_arg_name(arg_name, context) for arg_name in arg_names])  # noqa: C419
 
     def _check_arg_name(self, arg_name: str, context: Context) -> bool:
         if known_name := (arg_name in self.argname_types):

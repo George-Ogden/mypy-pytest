@@ -212,7 +212,7 @@ class FixtureParser(CheckerWrapper):
         ) and self._contains_mark_decorators(decorator.decorators)
 
     def _contains_mark_decorators(self, decorators: list[Expression]) -> bool:
-        return any([self._is_mark(decorator) for decorator in decorators])
+        return any([self._is_mark(decorator) for decorator in decorators])  # noqa: C419
 
     def _is_mark(self, expression: Expression) -> bool:
         if is_mark := is_subtype(

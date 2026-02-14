@@ -43,7 +43,7 @@ class ArgnamesParser(NamesParser):
     def parse_names_string(self, expression: StrExpr) -> str | list[str] | None:
         individual_names = [name.strip() for name in expression.value.split(",")]
         filtered_names = [name for name in individual_names if name]
-        if any([not self._check_valid_identifier(name, expression) for name in filtered_names]):
+        if any([not self._check_valid_identifier(name, expression) for name in filtered_names]):  # noqa: C419
             return None
         if len(filtered_names) == 1:
             [name] = filtered_names
@@ -52,7 +52,7 @@ class ArgnamesParser(NamesParser):
 
     def parse_names_sequence(self, expr: TupleExpr | ListExpr) -> list[str] | None:
         names = [self.parse_name(item) for item in expr.items]
-        if all([isinstance(name, str) for name in names]):
+        if all([isinstance(name, str) for name in names]):  # noqa: C419
             return cast(list[str], names)
         return None
 
