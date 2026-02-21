@@ -18,11 +18,11 @@ jobs:
     with:
       python-versions: "['3.12', '3.13', '3.14']"
       timeout-minutes: 15
-      pytest-flags: -vv mypy_pytest_plugin -n auto --shard-id=${{ matrix.shard }} --num-shards=${{ matrix.total-shards }}
+      pytest-flags: -vv mypy_pytest_plugin -n auto --shard-id=${{ matrix.shard }} --num-shards=${{ matrix.total-shards }} --inline-snapshot=disable
 
   integration_tests:
-    uses: George-Ogden/actions/.github/workflows/python-test.yaml@v3.2.0
+    uses: George-Ogden/actions/.github/workflows/python-test.yaml@v4.0.1
     with:
       python-versions: "['3.12', '3.13', '3.14']"
       timeout-minutes: 10
-      pytest-flags: -vv tests -n auto
+      pytest-flags: -vv tests -n auto --inline-snapshot=disable
