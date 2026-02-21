@@ -17,7 +17,7 @@ class CheckerWrapper(abc.ABC):
     @abc.abstractmethod
     def __init__(self) -> None: ...
 
-    def fail(self, msg: str, *, context: Context, code: ErrorCode, file: None | str = None) -> None:
+    def fail(self, msg: str, *, context: Context, code: ErrorCode, file: str | None = None) -> None:
         self.checker.msg.fail(msg, context=context, code=code, file=file)
 
     def note(self, msg: str, *, context: Context, code: ErrorCode | None) -> None:
@@ -55,7 +55,7 @@ class CheckerWrapper(abc.ABC):
         fullname: Fullname,
         *,
         context: Context | None = None,
-        predicate: None | Callable[[Any], TypeGuard[T]] = None,
+        predicate: Callable[[Any], TypeGuard[T]] | None = None,
     ) -> tuple[MypyFile, T] | None: ...
 
     @overload
@@ -64,7 +64,7 @@ class CheckerWrapper(abc.ABC):
         fullname: Fullname,
         *,
         context: Context | None = None,
-        predicate: None | Callable[[Any], bool] = None,
+        predicate: Callable[[Any], bool] | None = None,
     ) -> tuple[MypyFile, Any] | None: ...
 
     def lookup_fullname(
@@ -72,7 +72,7 @@ class CheckerWrapper(abc.ABC):
         fullname: Fullname,
         *,
         context: Context | None = None,
-        predicate: None | Callable[[Any], bool] = None,
+        predicate: Callable[[Any], bool] | None = None,
     ) -> tuple[MypyFile, Any] | None:
         module_name, target = (Fullname(()), fullname)
         while target:
@@ -92,10 +92,10 @@ class CheckerWrapper(abc.ABC):
     ) -> T | None: ...
     @overload
     def _lookup_fullname_in_module(
-        self, module: MypyFile, target: Fullname, *, predicate: None | Callable[[Any], bool]
+        self, module: MypyFile, target: Fullname, *, predicate: Callable[[Any], bool] | None
     ) -> Any | None: ...
     def _lookup_fullname_in_module(
-        self, module: MypyFile, target: Fullname, *, predicate: None | Callable[[Any], bool]
+        self, module: MypyFile, target: Fullname, *, predicate: Callable[[Any], bool] | None
     ) -> Any | None:
         resource: Any = module
         for name in target:

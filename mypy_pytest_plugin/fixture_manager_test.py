@@ -80,7 +80,6 @@ def test_fixture_manager_default_fixture_module_names() -> None:
             "_pytest.subtests",
             "_pytest.tmpdir",
             "inline_snapshot.pytest_plugin",
-            "pytest_snapshot.plugin",
             "xdist.plugin",
         ]
     )
@@ -321,12 +320,12 @@ def test_fixture_manager_resolve_fixtures_request_builtins() -> None:
     _fixture_manager_resolve_fixtures_test_body(
         [
             (
-                "pytest_snapshot.plugin",
+                "xdist.plugin",
                 """
                 import pytest
 
                 @pytest.fixture
-                def snapshot() -> None:
+                def worker() -> None:
                     ...
                 """,
             ),
@@ -345,12 +344,12 @@ def test_fixture_manager_resolve_fixtures_request_builtins() -> None:
                 """
                 from typing import Any
 
-                def test_request(capsys: Any, snapshot: Any) -> None:
+                def test_request(capsys: Any, worker: Any) -> None:
                     ...
                 """,
             ),
         ],
-        dict(capsys=["_pytest.capture.capsys"], snapshot=["pytest_snapshot.plugin.snapshot"]),
+        dict(capsys=["_pytest.capture.capsys"], worker=["xdist.plugin.worker"]),
     )
 
 
@@ -525,7 +524,7 @@ def _fixture_manager_resolve_autouse_fixtures_test_body(
                 isinstance(decorator := node.node, Decorator)
                 and (fixture := Fixture.from_decorator(decorator, checker)) is not None
             ):
-                overrides[(module_name, name)] = fixture.as_fixture_type(
+                overrides[module_name, name] = fixture.as_fixture_type(
                     decorator=decorator, checker=checker
                 )
         if autouse_node is not None:

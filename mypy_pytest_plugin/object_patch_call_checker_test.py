@@ -66,7 +66,7 @@ def test_attribute_arg_readable() -> None:
 
 
 def _attribute_type_test_body(
-    defs: str, attribute: str, *, errors: None | list[str] = None
+    defs: str, attribute: str, *, errors: list[str] | None = None
 ) -> None:
     parse_result = parse(defs)
     checker = parse_result.checker

@@ -65,7 +65,7 @@ class ArgnamesParser(NamesParser):
 
     def _check_duplicate_argnames_sequence(
         self, argnames: list[str], context: Context
-    ) -> None | list[str]:
+    ) -> list[str] | None:
         argname_counts = Counter(argnames)
         duplicates = [argname for argname, count in argname_counts.items() if count > 1]
         if duplicates:
