@@ -21,7 +21,7 @@ class RequestNode:
     file: str
     source: Literal["argument", "fixture", "autouse"]
     source_name: str
-    resolver: Fixture | None | Literal["param"] = None
+    resolver: Fixture | Literal["param"] | None = None
     scope: FixtureScope = FixtureScope.function
 
     @classmethod

@@ -525,7 +525,7 @@ def _fixture_manager_resolve_autouse_fixtures_test_body(
                 isinstance(decorator := node.node, Decorator)
                 and (fixture := Fixture.from_decorator(decorator, checker)) is not None
             ):
-                overrides[(module_name, name)] = fixture.as_fixture_type(
+                overrides[module_name, name] = fixture.as_fixture_type(
                     decorator=decorator, checker=checker
                 )
         if autouse_node is not None:

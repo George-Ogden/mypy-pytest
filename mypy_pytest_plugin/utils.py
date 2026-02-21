@@ -53,13 +53,13 @@ def filter_unique[**P, R: Hashable](
 ) -> Callable[P, Iterable[R]]: ...
 
 
-def filter_unique(it: Any, key: None | Callable[[Any], Any] = None) -> Any:
+def filter_unique(it: Any, key: Callable[[Any], Any] | None = None) -> Any:
     if callable(it):
         return lambda *args, **kwargs: _filter_unique_iterator(it(*args, **kwargs), None)
     return _filter_unique_iterator(it, key)
 
 
-def _filter_unique_iterator(it: Iterable[Any], key: None | Callable[[Any], Any]) -> Iterable[Any]:
+def _filter_unique_iterator(it: Iterable[Any], key: Callable[[Any], Any] | None) -> Iterable[Any]:
     seen = set()
     if key is None:
         key = identity
