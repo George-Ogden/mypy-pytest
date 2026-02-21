@@ -6,6 +6,5 @@ inline-snapshot
 prek
 pytest
 pytest-shard
-pytest-snapshot
 pytest-timeout
 pytest-xdist
