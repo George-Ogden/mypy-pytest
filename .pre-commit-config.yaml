@@ -24,19 +24,19 @@ repos:
       - id: requirements-txt-fixer
 
   - repo: https://github.com/George-Ogden/linter/
-    rev: v2.0.0
+    rev: v2.1.0
     hooks:
       - id: lint
         args: [--fix]
 
-  - repo: https://github.com/koalaman/shellcheck-precommit
+  - repo: https://github.com/koalaman/shellcheck-precommit/
     rev: v0.11.0
     hooks:
       - id: shellcheck
         args: [--severity=warning]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit/
-    rev: v0.15.2
+    rev: v0.15.4
     hooks:
       - id: ruff-check
         args: [--fix]
@@ -54,13 +54,13 @@ repos:
     hooks:
       - id: actionlint
 
-  - repo: https://github.com/codespell-project/codespell
+  - repo: https://github.com/codespell-project/codespell/
     rev: v2.4.1
     hooks:
       - id: codespell
 
   - repo: https://github.com/George-Ogden/pre-commit-hooks/
-    rev: v2.3.0
+    rev: v2.4.0
     hooks:
       - id: check-merge-conflict
       - id: dbg-check
@@ -73,4 +73,5 @@ repos:
         args: [-r, requirements-dev.txt, --show-traceback]
         exclude: test_samples/
       - id: spell-check-commit-msgs
+      - id: mirror-auto-msg
       - id: version-txt-auto-msg
