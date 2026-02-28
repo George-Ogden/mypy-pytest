@@ -14,7 +14,7 @@ class Fullname:
         return cls(())
 
     def __str__(self) -> str:
-        return ".".join(self._parts)
+        return str.join(".", self._parts)
 
     def __bool__(self) -> bool:
         return bool(self._parts)
