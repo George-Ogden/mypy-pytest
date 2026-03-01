@@ -21,7 +21,8 @@ mock.patch(
     mock.MagicMock(
         side_effect=(
             cast(
-                list[float | RuntimeError | type[RuntimeError]], [1.0, RuntimeError, RuntimeError()]
+                list[float | KeyboardInterrupt | type[KeyboardInterrupt]],
+                [1.0, KeyboardInterrupt, KeyboardInterrupt()],
             )
         )
     ),
@@ -109,8 +110,10 @@ mock.patch.object(TypeAliasTest, "f", lambda n: n)
 value = None
 mock.patch("patch_test.value", mock.Mock(side_effect=None))
 mock.patch("patch_test.value", mock.Mock(side_effect=[None]))
-mock.patch("patch_test.value", mock.Mock(side_effect=[None, RuntimeError(), RuntimeError]))
-mock.patch("patch_test.value", mock.Mock(side_effect=[RuntimeError]))
-mock.patch("patch_test.value", mock.Mock(side_effect=[RuntimeError()]))
-mock.patch("patch_test.value", mock.Mock(side_effect=RuntimeError()))
-mock.patch("patch_test.value", mock.Mock(side_effect=RuntimeError))
+mock.patch(
+    "patch_test.value", mock.Mock(side_effect=[None, KeyboardInterrupt(), KeyboardInterrupt])
+)
+mock.patch("patch_test.value", mock.Mock(side_effect=[KeyboardInterrupt]))
+mock.patch("patch_test.value", mock.Mock(side_effect=[KeyboardInterrupt()]))
+mock.patch("patch_test.value", mock.Mock(side_effect=KeyboardInterrupt()))
+mock.patch("patch_test.value", mock.Mock(side_effect=KeyboardInterrupt))

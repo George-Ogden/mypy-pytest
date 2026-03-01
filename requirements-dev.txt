@@ -8,3 +8,4 @@ pytest
 pytest-shard
 pytest-timeout
 pytest-xdist
+ruff

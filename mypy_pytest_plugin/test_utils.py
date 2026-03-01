@@ -168,7 +168,7 @@ def parse(code: str, *, header: str = "", module_name: str = "test_module") -> P
 
 
 def get_error_messages(checker: TypeChecker) -> str:
-    return "\n".join(checker.errors.new_messages())
+    return str.join("\n", checker.errors.new_messages())
 
 
 def check_error_messages(messages: str, *, errors: list[str] | None) -> None:

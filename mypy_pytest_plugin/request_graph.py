@@ -131,7 +131,7 @@ class RequestGraph(CheckerWrapper):
             types = [format_type(request.type_, self.options) for request in requests]
             sources = [repr(request.source_name) for request in requests]
             self.fail(
-                f"Unable to identify type for {request.name}. Received {', '.join(types)} from {', '.join(sources)}",
+                f"Unable to identify type for {request.name}. Received {str.join(', ', types)} from {str.join(', ', sources)}",
                 context=self.context,
                 code=VALID_TYPE,
             )
