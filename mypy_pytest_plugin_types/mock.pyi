@@ -86,9 +86,9 @@ class CallableMixin[**P, R]:
         self,
         spec: Any | None = None,
         side_effect: Callable[P, Any]
-        | Iterable[R | Exception | type[Exception]]
-        | Exception
-        | type[Exception]
+        | Iterable[R | BaseException | type[BaseException]]
+        | BaseException
+        | type[BaseException]
         | None = None,
         return_value: R = ...,
         wraps: Callable[P, R] | None = None,
