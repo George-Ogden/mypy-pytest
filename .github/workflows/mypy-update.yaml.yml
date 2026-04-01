@@ -1,0 +1,84 @@
+name: Automated Mypy Version Sync
+
+on:
+  schedule:
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+  issues: read
+
+jobs:
+  update-mypy-version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Update Mypy version in requirements.txt
+        run: |
+          MYPY_VERSION=$(pip index versions --json mypy | jq -r '.latest' | cat)
+          echo "VERSION=${MYPY_VERSION}" >> "$GITHUB_ENV"
+          sed -i "s/^mypy=.*/mypy==$MYPY_VERSION/" requirements.txt
+
+      - name: Check for changes
+        id: compare
+        shell: bash
+        run: |
+          if git diff -s --exit-code; then
+            echo "update_needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "update_needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup git identity and branch name
+        if: steps.compare.outputs.update_needed == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          echo "BRANCH_NAME=update-mypy-version-${{ env.VERSION }}" >> "$GITHUB_ENV"
+
+      - name: Commit changes
+        if: steps.compare.outputs.update_needed == 'true'
+        shell: bash
+        run: |
+          git commit -am "Automated update to mypy==${{ env.VERSION }}"
+
+      - name: Bump version version.txt
+        if: steps.compare.outputs.update_needed == 'true'
+        shell: bash
+        run: |
+          v=$(<version.txt); IFS=. read -r x y z <<<"$v"; echo "$x.$y.$((z+1))" > version.txt
+          git commit version.txt -m "Bump version $v -> $(<version.txt)"
+
+      - name: Push changes
+        if: steps.compare.outputs.update_needed == 'true'
+        shell: bash
+        run: |
+          git checkout -b "${{ env.BRANCH_NAME }}" || true
+          git pull origin "${{ env.BRANCH_NAME }}" --no-edit --rebase=true -X ours || true
+          git push origin "${{ env.BRANCH_NAME }}"
+
+      - name: Create Pull Request
+        if: steps.compare.outputs.update_needed == 'true'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          (gh pr create \
+            --title "Automated Mypy version sync" \
+            --body "Update Mypy version to ${{ env.VERSION }}" \
+            --head "${{ env.BRANCH_NAME }}" \
+            --base master && \
+          gh pr merge \
+            --auto \
+            --merge "${{ env.BRANCH_NAME }}") || true
