@@ -1,2 +1,2 @@
-mypy
+mypy==1.19.1
 pytest
