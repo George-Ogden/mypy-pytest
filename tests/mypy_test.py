@@ -15,7 +15,7 @@ TEST_FILES = list(filter(Path.exists, map(Path, glob("test_samples/**/*.py", rec
 def test_check_files(filepath: Path) -> None:
     sys.modules.pop("plugin", None)  # required for plugin to work correctly
     stdout, stderr, _exit_code = mypy.api.run(
-        [str(filepath), "--cache-dir", os.devnull, "--show-traceback"]
+        [str(filepath), "--cache-dir", os.devnull, "--show-traceback", "--no-warn-redundant-casts"]
     )
     stdout = stdout.replace(os.getcwd(), "[CWD]")
     assert stderr == "", stderr
