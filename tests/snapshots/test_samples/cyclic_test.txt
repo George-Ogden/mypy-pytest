@@ -1,4 +1,4 @@
-test_samples/cyclic_test.py:6: error: Argname 'direct_cycle' cannot be resolved (requested in 'cyclic_test.test_request').  [missing-argname]
-test_samples/cyclic_test.py:18: error: Argname 'indirect_cycle_1' cannot be resolved (requested in 'cyclic_test.test_request').  [missing-argname]
-test_samples/cyclic_test.py:22: error: 'base_int_fixture' requests 'base_int_fixture' with type "int", but expects type "None". This happens when executing 'test_request'.  [fixture-arg-type]
+test_samples/cyclic_test.py:27: error: Argname 'direct_cycle' cannot be resolved (requested by direct_cycle at test_samples/cyclic_test.py:6).  [missing-argname]
+test_samples/cyclic_test.py:27: error: Argname 'indirect_cycle_1' cannot be resolved (requested by indirect_cycle_3 at test_samples/cyclic_test.py:18).  [missing-argname]
+test_samples/cyclic_test.py:27: error: 'base_int_fixture' requests 'base_int_fixture' with type "int", but expects type "None". (base_int_fixture defined at test_samples/cyclic_test.py:22).  [fixture-arg-type]
 Found 3 errors in 1 file (checked 1 source file)

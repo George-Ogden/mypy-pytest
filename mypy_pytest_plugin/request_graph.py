@@ -159,13 +159,12 @@ class RequestGraph(CheckerWrapper):
                 suffix = (
                     ""
                     if request.source == "argument"
-                    else f" (requested in {str(self.fullname)!r})"
+                    else f" (requested by {request.source_name} at {request.location})"
                 )
                 self.fail(
                     f"Argname {request.name!r} cannot be resolved{suffix}.",
-                    context=request.context,
+                    context=self.context,
                     code=MISSING_ARGNAME,
-                    file=request.file,
                 )
                 self._check_unmarked_fixture(request.name)
 
@@ -179,12 +178,12 @@ class RequestGraph(CheckerWrapper):
                 ),
             )
             if result is not None:
-                module, node = result
+                _module, node = result
                 if isinstance(node.type, CallableType):
-                    self.checker.msg.note(
+                    self.note(
                         f"{fixture_name!r} is defined in '{module_name}', but not marked as a fixture.",
-                        context=node,
-                        file=module.path,
+                        context=self.context,
+                        code=None,
                     )
 
     def _check_scope(self) -> None:
@@ -194,10 +193,9 @@ class RequestGraph(CheckerWrapper):
                 and request.scope > request.resolver.scope
                 and FixtureScope.unknown not in [request.scope, request.resolver.scope]
             ):
-                self.checker.msg.fail(
-                    f"{request.source_name!r} (scope={request.scope.name!r}) requests {request.name!r} (scope={request.resolver.scope.name!r}).",
-                    context=request.context,
-                    file=request.file,
+                self.fail(
+                    f"{request.source_name!r} (scope={request.scope.name!r}) requests {request.name!r} (scope={request.resolver.scope.name!r}).{request.suffix}",
+                    context=self.context,
                     code=INVERTED_FIXTURE_SCOPE,
                 )
 
@@ -206,10 +204,8 @@ class RequestGraph(CheckerWrapper):
             if isinstance(request.resolver, Fixture) and not is_subtype(
                 request.resolver.return_type, request.type_
             ):
-                self.checker.msg.fail(
-                    f"{request.source_name!r} requests {request.name!r} with type {format_type(request.resolver.return_type, self.options)}, but expects type {format_type(request.type_, self.options)}. "
-                    f"This happens when executing {self.name!r}.",
-                    context=request.context,
-                    file=request.file,
+                self.fail(
+                    f"{request.source_name!r} requests {request.name!r} with type {format_type(request.resolver.return_type, self.options)}, but expects type {format_type(request.type_, self.options)}.{request.suffix}",
+                    context=self.context,
                     code=FIXTURE_ARGUMENT_TYPE,
                 )

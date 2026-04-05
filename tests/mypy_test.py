@@ -1,6 +1,6 @@
 from glob import glob
 import operator
-import os
+import os.path
 from pathlib import Path
 import sys
 
@@ -17,6 +17,7 @@ def test_check_files(filepath: Path) -> None:
     stdout, stderr, _exit_code = mypy.api.run(
         [str(filepath), "--cache-dir", os.devnull, "--show-traceback"]
     )
+    stdout = stdout.replace(os.getcwd(), "[CWD]")
     assert stderr == "", stderr
     stdout_snapshot_file = "snapshots" / filepath.with_suffix(".txt")
     assert stdout == external_file(stdout_snapshot_file)

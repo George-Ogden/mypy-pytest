@@ -136,7 +136,7 @@ def parse_multiple(modules: Sequence[tuple[str, str]], *, header: str = "") -> M
         if errors.is_errors():
             for info in errors.error_info_map.values():
                 for err in info:
-                    print(f"{err.file}:{err.line}: {err.message}")
+                    print(f"{module_name}:{err.line}: {err.message}")
             raise TypeError()
 
         defs: dict[str, Expression | FuncDef | Decorator] = {}

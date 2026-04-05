@@ -53,3 +53,17 @@ class RequestNode:
     @property
     def type_variables(self) -> Sequence[TypeVarLikeType]:
         return self.request.type_variables
+
+    @property
+    def location(self) -> str:
+        """Display the location in a clickable format."""
+        return f"{self.file}:{self.context.line}"
+
+    @property
+    def suffix(self) -> str:
+        """Message to add after an error. This is non-empty if the source is a fixture, not a test."""
+        return (
+            ""
+            if self.source == "argument"
+            else f" ({self.source_name} defined at {self.location})."
+        )
