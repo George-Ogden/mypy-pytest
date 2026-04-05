@@ -15,7 +15,7 @@ class TestSignature(abc.ABC):
     type_variables: Sequence[TypeVarLikeType]
 
     def _equal_names(self, other: object) -> TypeGuard[Self]:
-        return type(other) is type(self) and cast(Self, self).fn_name == cast(Self, other).fn_name
+        return type(other) is type(self) and cast(Self, self).fn_name == other.fn_name
 
     @abc.abstractmethod
     def __len__(self) -> int: ...
