@@ -1,7 +1,9 @@
-from typing import Literal
-from pytest import CaptureFixture, Pytester
+from collections.abc import Iterable
+import itertools
+from typing import Literal, cast, Any
 
 import pytest
+from pytest import CaptureFixture, Pytester
 
 
 @pytest.mark.parametrize("x", range(5))
@@ -26,19 +28,28 @@ def test_skipped_error(x: str) -> None:
     return x
 
 
+@pytest.mark.skip
 def test_call_edge_cases() -> None:
     f_string = f"x{3}"
     list_addition = [1, 2, 3]
     list_addition += [4, 5, 6]
 
 
+@pytest.mark.skip
 def test_iterable_sequence_builtin() -> None:
     l = [1, 2, 3, 4]
     t = tuple(l)
 
 
+@pytest.mark.skip
 def test_use_builtin_fixture(capsys: CaptureFixture[str]) -> None: ...
 
 
 @pytest.mark.skip
 def test_pytester_fixture(pytester: Pytester) -> None: ...
+
+
+@pytest.mark.skip
+def test_ignore_iterable_sequence() -> None:
+    sequence = [1, 2, 3]
+    itertools.cycle(cast(Iterable[int], sequence))
