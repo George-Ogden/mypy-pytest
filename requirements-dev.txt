@@ -1,11 +1,12 @@
 -r requirements.txt
+georges-utils
 git+https://github.com/George-Ogden/mirror-rorrim; python_version >= "3.12"
-git+https://github.com/George-Ogden/mypy-pytest; python_version >= "3.12"
 git+https://github.com/George-Ogden/pytest-dbg; python_version >= "3.11"
 inline-snapshot
 prek
-pytest
+py-spy
+pytest>=9.0.0
 pytest-shard
 pytest-timeout
 pytest-xdist
-ruff
+ruff==0.15.9

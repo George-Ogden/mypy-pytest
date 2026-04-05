@@ -31,6 +31,7 @@ class PytestPlugin(Plugin):
             options.per_module_options.setdefault(module_pattern, {})["ignore_missing_imports"] = (
                 True
             )
+        options.warn_unused_configs = False
         options.per_module_options.setdefault("mypy_pytest_plugin_types.*", {})[
             "disallow_subclassing_any"
         ] = False

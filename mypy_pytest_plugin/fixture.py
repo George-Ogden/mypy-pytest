@@ -3,7 +3,7 @@ from __future__ import annotations
 from collections.abc import Collection, Sequence
 from dataclasses import dataclass
 import enum
-from typing import ClassVar, Final, Self, cast
+from typing import ClassVar, Final, Self
 
 from mypy.checker import TypeChecker
 from mypy.nodes import GDEF, CallExpr, Context, Decorator, Expression, FuncDef, SymbolTableNode, Var
@@ -273,7 +273,7 @@ class FixtureParser(CheckerWrapper):
 
     def _fixture_scope_from_type(self, type_: Type, context: Context) -> FixtureScope:
         if isinstance(type_, LiteralType) and type_.value in FixtureScope._member_names_:
-            return FixtureScope[cast(str, type_.value)]
+            return FixtureScope[type_.value]
         self.fail("Invalid type for fixture scope.", context=context, code=INVALID_FIXTURE_SCOPE)
 
         return FixtureScope.unknown
