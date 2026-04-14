@@ -1,7 +1,7 @@
 import abc
 from collections.abc import Sequence
 from dataclasses import dataclass
-from typing import Self, TypeGuard, cast
+from typing import Self, TypeGuard
 
 from mypy.checker import TypeChecker
 from mypy.nodes import ArgKind, Context, Expression
@@ -15,7 +15,7 @@ class TestSignature(abc.ABC):
     type_variables: Sequence[TypeVarLikeType]
 
     def _equal_names(self, other: object) -> TypeGuard[Self]:
-        return type(other) is type(self) and cast(Self, self).fn_name == other.fn_name
+        return type(other) is type(self) and self.fn_name == other.fn_name
 
     @abc.abstractmethod
     def __len__(self) -> int: ...

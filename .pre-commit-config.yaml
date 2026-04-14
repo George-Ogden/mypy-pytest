@@ -20,8 +20,11 @@ repos:
       - id: no-commit-to-branch
         fail_fast: true
       - id: end-of-file-fixer
+        stages: [pre-commit]
       - id: mixed-line-ending
+        stages: [pre-commit]
       - id: trailing-whitespace
+        stages: [pre-commit]
       - id: requirements-txt-fixer
 
   - repo: https://github.com/George-Ogden/linter/
@@ -37,7 +40,7 @@ repos:
         args: [--severity=warning]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit/
-    rev: v0.15.9
+    rev: v0.15.10
     hooks:
       - id: ruff-check
         args: [--fix]

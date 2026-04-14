@@ -9,4 +9,4 @@ pytest>=9.0.0
 pytest-shard
 pytest-timeout
 pytest-xdist
-ruff==0.15.9
+ruff==0.15.10
