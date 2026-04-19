@@ -40,7 +40,7 @@ repos:
         args: [--severity=warning]
 
   - repo: https://github.com/astral-sh/ruff-pre-commit/
-    rev: v0.15.10
+    rev: v0.15.11
     hooks:
       - id: ruff-check
         args: [--fix]
@@ -64,7 +64,7 @@ repos:
       - id: codespell
 
   - repo: https://github.com/George-Ogden/pre-commit-hooks/
-    rev: v3.1.0
+    rev: v3.1.1
     hooks:
       - id: check-merge-conflict
       - id: dbg-check
