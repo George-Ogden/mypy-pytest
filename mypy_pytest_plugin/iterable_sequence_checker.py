@@ -36,8 +36,12 @@ class IterableSequenceChecker(CheckerWrapper):
             self.check_iterable_sequence_argument(argument, expected_type)
 
     def check_iterable_sequence_argument(self, argument: Expression, expected_type: Type) -> None:
-        argument_type = self.checker.lookup_type(argument)
-        if self.is_sequence(argument_type) and self.is_iterable(expected_type):
+        argument_type = self.checker.lookup_type_or_none(argument)
+        if (
+            argument_type is not None
+            and self.is_sequence(argument_type)
+            and self.is_iterable(expected_type)
+        ):
             self._display_error_message(expected_type, argument_type, argument)
 
     def _display_error_message(
