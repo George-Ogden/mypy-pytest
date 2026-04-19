@@ -1,7 +1,8 @@
+from collections.abc import Callable, Iterable, Sequence
 from typing import Literal
-from pytest import CaptureFixture, Pytester
 
 import pytest
+from pytest import CaptureFixture, Pytester
 
 
 @pytest.mark.parametrize("x", range(5))
@@ -42,3 +43,10 @@ def test_use_builtin_fixture(capsys: CaptureFixture[str]) -> None: ...
 
 @pytest.mark.skip
 def test_pytester_fixture(pytester: Pytester) -> None: ...
+
+
+def test_range_argument() -> None:
+    def cached_iterator[**P, T](fn: Callable[P, Iterable[T]]) -> Callable[P, Sequence[T]]:
+        raise NotImplementedError()
+
+    cached_iterator(range)
