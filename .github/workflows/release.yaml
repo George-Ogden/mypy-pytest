@@ -11,6 +11,7 @@ permissions:
 
 jobs:
   tag-and-release:
-    uses: George-Ogden/actions/.github/workflows/python-release.yaml@v4.3.0
+    uses: George-Ogden/actions/.github/workflows/python-release.yaml@v4.6.3
     with:
       validation-code: "import mypy.version; from mypy_pytest_plugin import plugin; plugin(mypy.version.__version__)"
+      python-version: "3.14"
