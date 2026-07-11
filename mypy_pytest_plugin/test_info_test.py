@@ -963,13 +963,13 @@ def test_test_info_check_untyped_request() -> None:
         from typing import Any
 
         @pytest.fixture
-        def yield_fixture(request):
+        def yielding_fixture(request):
             yield None
 
         @pytest.mark.parametrize(
             "number", [1.0, 2]
         )
-        def test_info(yield_fixture: Any, number) -> None:
+        def test_info(yielding_fixture: Any, number) -> None:
             ...
         """
     )
