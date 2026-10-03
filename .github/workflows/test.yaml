@@ -3,10 +3,10 @@ name: Run Python Tests
 on:
   push:
     branches:
-      - master
+      - m
   pull_request:
     branches:
-      - master
+      - m
 
 jobs:
   unit_tests:
@@ -14,7 +14,7 @@ jobs:
       matrix:
         shard: [0, 1, 2]
         total-shards: [3]
-    uses: George-Ogden/actions/.github/workflows/python-test.yaml@v4.6.3
+    uses: George-Ogden/actions/.github/workflows/python-test.yaml@v4.6.4
     with:
       python-versions: "['3.12', '3.13', '3.14']"
       timeout-minutes: 15
