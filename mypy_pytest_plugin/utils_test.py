@@ -66,7 +66,7 @@ def test_strict_not_none_is_none() -> None:
         # non unique
         ([1, 2, 3, 3, 2, 5, 1, 3, 0], None, [1, 2, 3, 5, 0]),
         # non unique with key
-        ([1, 2, -2, -3, -4, 4, 0, -1, 3], lambda x: abs(x), [1, 2, -3, -4, 0]),
+        ([1, 2, -2, -3, -4, 4, 0, -1, 3], lambda x: abs(x), [1, 2, -3, -4, 0]),  # ruff: ignore[unnecessary-lambda]
         # infinite unique
         (itertools.count(), None, list(range(10))),
         # infinite not unique

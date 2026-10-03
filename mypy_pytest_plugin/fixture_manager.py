@@ -104,7 +104,7 @@ class FixtureManager(CheckerWrapper):
                     unresolved_fixtures.extend(argument.name for argument in fixture.arguments)
         return fixtures
 
-    @functools.lru_cache  # noqa: B019
+    @functools.lru_cache  # ruff: ignore[cached-instance-method]
     def resolve_fixture(self, request_name: str, test_module: Fullname) -> list[Fixture]:
         fixtures = []
         for module_name in self.resolution_sequence(test_module):

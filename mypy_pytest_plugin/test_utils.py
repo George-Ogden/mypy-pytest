@@ -204,7 +204,7 @@ def test_signature_from_fn_type(
     )
 
 
-test_signature_from_fn_type.__test__ = False  # type: ignore
+test_signature_from_fn_type.__test__ = False  # type: ignore[attr-defined]
 
 
 def get_signature_and_vals(defs: str) -> tuple[TestSignature, Expression]:
@@ -247,7 +247,7 @@ def test_signature_custom_signature_test_body(
     assert is_same_type(type_, expected_type)
 
 
-test_signature_custom_signature_test_body.__test__ = False  # type: ignore
+test_signature_custom_signature_test_body.__test__ = False  # type: ignore[attr-defined]
 
 
 def test_signature_custom_check_test_body[T: TestSignature, U: Expression](
@@ -255,7 +255,7 @@ def test_signature_custom_check_test_body[T: TestSignature, U: Expression](
     passes: bool,
     body: Callable[[T, U], None],
     *,
-    bound: type[U] = Expression,  # type: ignore  # noqa: PT028
+    bound: type[U] = Expression,  # type: ignore[assignment]  # ruff: ignore[pytest-parameter-with-default-argument]
 ) -> None:
     test_signature, val = get_signature_and_vals(defs)
     assert isinstance(val, bound)
@@ -267,7 +267,7 @@ def test_signature_custom_check_test_body[T: TestSignature, U: Expression](
     assert type_check_result == passes, messages
 
 
-test_signature_custom_check_test_body.__test__ = False  # type: ignore
+test_signature_custom_check_test_body.__test__ = False  # type: ignore[attr-defined]
 
 
 def default_argnames_parser(checker: TypeChecker) -> ArgnamesParser:
@@ -284,7 +284,7 @@ def test_info_from_defs(defs: str, *, name: str) -> TestInfo:
     return test_info
 
 
-test_info_from_defs.__test__ = False  # type: ignore
+test_info_from_defs.__test__ = False  # type: ignore[attr-defined]
 
 
 def simple_module_lookup(

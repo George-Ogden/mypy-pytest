@@ -17,7 +17,7 @@ def strict_cast(type: object, expr: Any, /) -> Any: ...
 
 def strict_cast(type: object, expr: Any, /) -> Any:
     try:
-        type_checks = isinstance(expr, type)  # type: ignore
+        type_checks = isinstance(expr, type)  # type: ignore[arg-type]
     except TypeError:
         ...
     else:
