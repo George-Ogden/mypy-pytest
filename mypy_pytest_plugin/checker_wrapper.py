@@ -23,7 +23,7 @@ class CheckerWrapper(abc.ABC):
     def note(self, msg: str, *, context: Context, code: ErrorCode | None) -> None:
         self.checker.note(msg, context=context, code=code)
 
-    @functools.lru_cache  # noqa: B019
+    @functools.lru_cache  # ruff: ignore[cached-instance-method]
     def named_type(self, fullname: Fullname) -> Instance:
         node = self.lookup_fullname(
             fullname,

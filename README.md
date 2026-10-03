@@ -63,12 +63,16 @@ If not, [add a `typed` mark](https://docs.pytest.org/en/stable/how-to/mark.html#
 import random
 import pytest
 
+
 @pytest.fixture
 def random_0_to_10() -> float:
     return random.random() * 10
 
+
 @pytest.mark.typed
-def test_random_string_length(random_0_to_10: int) -> None: # 'test_random_string_length' requests 'random_0_to_10' with type "float", but expects type "int"
+def test_random_string_length(
+    random_0_to_10: int,
+) -> None:  # 'test_random_string_length' requests 'random_0_to_10' with type "float", but expects type "int"
     assert 0 <= random_0_to_10 <= 10
 ```
 
