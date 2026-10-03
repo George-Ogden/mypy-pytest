@@ -78,7 +78,7 @@ jobs:
             --title "Automated Mypy version sync" \
             --body "Update Mypy version to ${{ env.VERSION }}" \
             --head "${{ env.BRANCH_NAME }}" \
-            --base master && \
+            --base m && \
           gh pr merge \
             --auto \
             --merge "${{ env.BRANCH_NAME }}") || true
