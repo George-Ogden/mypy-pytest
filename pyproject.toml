@@ -5,7 +5,10 @@ authors = [{ name = "George Ogden" }]
 license-files = ["LICENSE"]
 readme = "README.md"
 dynamic = ["version"]
-dependencies = []
+dependencies = [
+  "mypy==2.4.0",
+  "pytest",
+]
 
 [dependency-groups]
 dev = [
@@ -17,9 +20,12 @@ dev = [
 ]
 test = [
   "inline-snapshot",
+  "platformdirs>=4.12.0",
   "pytest>=9.0.0",
   "pytest-dbg ; python_full_version >= '3.11'",
+  "pytest-shard",
   "pytest-timeout",
+  "pytest-xdist",
   { include-group = "utils" },
 ]
 lint = [
@@ -30,7 +36,6 @@ lint = [
 ]
 types = [
   "mypy",
-  "mypy-pytest-plugin ; python_full_version >= '3.12'",
   { include-group = "test" },
 ]
 utils = [
@@ -48,7 +53,6 @@ extra-type-helpers = { git = "https://github.com/George-Ogden/extra-types" }
 georges-utils = { git = "https://github.com/George-Ogden/utils" }
 linter = { git = "https://github.com/George-Ogden/linter/" }
 mirror-rorrim = { git = "https://github.com/George-Ogden/mirror-rorrim" }
-mypy-pytest-plugin = { git = "https://github.com/George-Ogden/mypy-pytest" }
 pytest-dbg = { git = "https://github.com/George-Ogden/pytest-dbg" }
 
 [tool.setuptools.dynamic]
