@@ -1,6 +1,6 @@
 [project]
 name = "mypy-pytest-plugin"
-requires-python = ">=3.12,<3.15"
+requires-python = ">=3.12,<3.16"
 authors = [{ name = "George Ogden" }]
 license-files = ["LICENSE"]
 readme = "README.md"
