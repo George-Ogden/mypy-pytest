@@ -6,7 +6,7 @@ license-files = ["LICENSE"]
 readme = "README.md"
 dynamic = ["version"]
 dependencies = [
-  "mypy==2.4.0",
+  "mypy==2.4.1",
   "pytest<9.2.0",
 ]
 
