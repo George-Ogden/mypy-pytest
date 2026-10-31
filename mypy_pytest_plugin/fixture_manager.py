@@ -48,7 +48,8 @@ class FixtureManager(CheckerWrapper):
         return tuple(
             {
                 module
-                for fixture_defs in fixture_manager._arg2fixturedefs.values()
+                for node_fixture_defs in fixture_manager._arg2node2fixturedefs.values()
+                for fixture_defs in node_fixture_defs.values()
                 if (module := cls._fixture_module(fixture_defs[-1])) is not None
             }
         )
