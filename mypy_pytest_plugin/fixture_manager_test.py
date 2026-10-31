@@ -79,6 +79,7 @@ def test_fixture_manager_default_fixture_module_names() -> None:
             "_pytest.recwarn",
             "_pytest.subtests",
             "_pytest.tmpdir",
+            "anyio.pytest_plugin",
             "inline_snapshot.pytest_plugin",
             "platformdirs.pytest_plugin",
             "utils.plugins.pytest_plugin",
