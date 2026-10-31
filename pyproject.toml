@@ -7,7 +7,7 @@ readme = "README.md"
 dynamic = ["version"]
 dependencies = [
   "mypy==2.4.0",
-  "pytest",
+  "pytest<9.2.0",
 ]
 
 [dependency-groups]
