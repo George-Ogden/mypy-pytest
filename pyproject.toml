@@ -19,6 +19,7 @@ dev = [
   { include-group = "types" },
 ]
 test = [
+  "anyio",  # Includes a plugin and is part of the other dev-dependencies.
   "inline-snapshot",
   "platformdirs>=4.12.0",
   "pytest>=9.0.0",
